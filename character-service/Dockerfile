@@ -5,13 +5,13 @@ FROM python:3.10-slim
 WORKDIR /EncounterTool
 
 # Copy the requirements file
-COPY requirements.txt .
+COPY ./requirements.txt .
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the project files
-COPY . .
+COPY .. .
 
 # Expose the Django development server port
 EXPOSE 8000

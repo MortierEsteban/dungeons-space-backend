@@ -1,5 +1,5 @@
 from django.db.models.enums import IntEnum
-from Classes import *
+from refservice.enums.Classes import *
 from typing import List, Tuple, Dict, Set
 
 class CharacterTypeEnum(IntEnum):
