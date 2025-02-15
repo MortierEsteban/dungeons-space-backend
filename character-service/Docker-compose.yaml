@@ -1,0 +1,52 @@
+networks:
+  character-service:
+    name: character-service
+    driver: bridge
+
+volumes:
+  db:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: $DB_PATH
+  backend_code:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: $BACKEND_PATH
+services:
+
+  postgres:
+    container_name: postgres-character
+    image: postgres:latest
+    restart: always
+    ports:
+      - "8001:5432"
+    env_file:
+      - .env
+    volumes:
+      - db:/var/lib/postgresql/data
+    networks:
+      - character-service
+
+  backend-character-service:
+    container_name: backend-character-service
+    build:
+      context: .
+    depends_on:
+      - postgres
+    ports:
+      - "8000:8000"
+    restart: always
+    networks:
+      - character-service
+    volumes:
+      - backend_code:/app
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}

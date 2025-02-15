@@ -6,6 +6,8 @@ WORKDIR /EncounterTool
 
 # Copy the requirements file
 COPY ./requirements.txt .
+#COPY ../register-eureka.sh .
+#RUN sh register-eureka.sh
 
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
