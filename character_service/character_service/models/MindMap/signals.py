@@ -1,7 +1,8 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .Node import NodeView
-from EncounterTool.models.Data.Character import Character
+from ..Data.Character import Character
+
 
 @receiver(post_save, sender=Character)
 def create_node_for_character(sender, instance, created, **kwargs):

@@ -6,11 +6,9 @@ env = environ.Env(
     # Set default values and casting types
     DEBUG=(bool, False)
 )
-
 # Reading the .env file
 environ.Env.read_env()
 
-print(env())
 # Base directory of the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,7 +23,7 @@ DATABASES = {
         'NAME': env("POSTGRES_DB"),
         'USER': env("POSTGRES_USER"),
         'PASSWORD': env("POSTGRES_PASSWORD"),
-        'HOST': env("POSTGRES_HOST", default="localhost"),
+        'HOST': env("POSTGRES_HOST", default="127.0.0.1"),
         'PORT': env("POSTGRES_PORT", default="5432"),
     }
 }

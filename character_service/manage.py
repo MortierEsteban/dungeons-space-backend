@@ -3,10 +3,13 @@
 import os
 import sys
 
+from requests import get
+
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'character-service.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'character_service.config.settings')
+    # print(get("http://127.0.0.1:8761/eureka/apps"))
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
