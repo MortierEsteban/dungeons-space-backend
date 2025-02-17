@@ -2,6 +2,8 @@ networks:
   character-service:
     name: character-service
     driver: bridge
+  eureka-network:
+    external: true
 
 volumes:
   db:
@@ -40,6 +42,7 @@ services:
     restart: always
     networks:
       - character-service
+      - eureka-network
     volumes:
       - backend_code:/app
     env_file:

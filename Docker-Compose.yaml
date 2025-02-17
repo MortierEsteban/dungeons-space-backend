@@ -4,8 +4,15 @@ services:
     image: medined/eureka-server:2.3.0.RELEASE
     ports:
       - "8761:8761"
+    networks:
+      - eureka-network
   #  healthcheck:
   #    test: ["CMD-SHELL", "curl -f http://localhost:8761"]
   #    interval: 10s
   #    timeout: 10s
   #    retries: 10
+
+networks:
+  eureka-network:
+    name: eureka-network
+    driver: bridge
