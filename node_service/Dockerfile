@@ -1,15 +1,23 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:latest
+FROM golang:1.24.0
 
 # Set destination for COPY
 WORKDIR /app
 
+RUN go install github.com/air-verse/air@latest
+
 # Download Go modules
+COPY go.mod go.sum ./
 RUN go mod download
 
+
+# Copy the source code. Note the slash at the end, as explained in
+# https://docs.docker.com/reference/dockerfile/#copy
+COPY *.go ./
+
 # Build
-RUN #CGO_ENABLED=0 GOOS=linux go build -o /docker-gs-ping
+#RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-gs-ping
 
 # Optional:
 # To bind to a TCP port, runtime parameters must be supplied to the docker command.
@@ -20,4 +28,4 @@ RUN #CGO_ENABLED=0 GOOS=linux go build -o /docker-gs-ping
 EXPOSE 8080
 
 # Run
-CMD ["air server -p 8080"]
+CMD ["air", "-c", ".air.toml"]

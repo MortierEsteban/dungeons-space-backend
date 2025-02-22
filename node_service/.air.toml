@@ -1,10 +1,10 @@
-root = "C:\\Users\\esteb\\Desktop\\jdr\\DnDCampain-LLSPJHTC\\Encounter-tool\\Backend\\EncounterTool\\node_service"
+root = "."
 testdata_dir = "testdata"
 tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  bin = "tmp\\main.exe"
+  bin = "tmp/main.exe"
   cmd = "go build -o ./tmp/main.exe cmd/node_service/main.go "
   delay = 1000
   exclude_dir = ["assets", "tmp", "vendor", "testdata"]
@@ -18,7 +18,7 @@ tmp_dir = "tmp"
   include_file = []
   kill_delay = "0s"
   log = "build-errors.log"
-  poll = false
+  poll = true
   poll_interval = 0
   post_cmd = []
   pre_cmd = []

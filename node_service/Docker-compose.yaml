@@ -1,6 +1,6 @@
 networks:
   node_service:
-    name: character-service
+    name: node_service
     driver: bridge
   dungeon-space-network:
     external: true
@@ -21,9 +21,11 @@ volumes:
 
 services:
   postgres:
-    container_name: postgres-character
+    container_name: postgres-node
     image: postgres:latest
     restart: always
+    env_file:
+      - .env
     ports:
       - "$POSTGRES_PORT:$POSTGRES_PORT"
     volumes:
@@ -32,13 +34,13 @@ services:
       - node_service
 
   backend-node-service:
-    container_name: backend-character-service
+    container_name: backend-node-service
     build:
       context: .
     depends_on:
       - postgres
     ports:
-      - "8000:8000"
+      - "$SERVICE_PORT:$SERVICE_PORT"
     restart: always
     networks:
       - node_service
