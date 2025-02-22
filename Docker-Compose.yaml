@@ -1,18 +1,52 @@
 services:
-  backend-gateway:
-    container_name: eureka_server
-    image: medined/eureka-server:2.3.0.RELEASE
-    ports:
-      - "8761:8761"
+#  backend-service-discovery:
+#    container_name: eureka_server
+#    image: medined/eureka-server:2.3.0.RELEASE
+#    ports:
+#      - "8761:8761"
+#    networks:
+#      - dungeon-space-network
+#  #  healthcheck:
+#  #    test: ["CMD-SHELL", "curl -f http://localhost:8761"]
+#  #    interval: 10s
+#  #    timeout: 10s
+#  #    retries: 10
+#
+  kong-database:
+    container_name: kong-database
+    image: postgres:latest
     networks:
-      - eureka-network
-  #  healthcheck:
-  #    test: ["CMD-SHELL", "curl -f http://localhost:8761"]
-  #    interval: 10s
-  #    timeout: 10s
-  #    retries: 10
-
+      - dungeon-space-network
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - kong-db:/var/lib/postgresql/data
+  kong-gateway:
+    depends_on:
+      - kong-database
+    container_name: kong-gateway
+    image: kong:latest
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "8034:8034"
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
+    networks:
+      - dungeon-space-network
 networks:
-  eureka-network:
-    name: eureka-network
+  dungeon-space-network:
+    name: dungeon-space-network
     driver: bridge
+
+volumes:
+  kong-db:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: H:\projects\dungeon's space
