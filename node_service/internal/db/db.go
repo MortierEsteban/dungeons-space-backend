@@ -10,7 +10,7 @@ import (
 
 func DbConn() *gorm.DB {
 	db, err := gorm.Open(
-		postgres.Open(dsn()), &gorm.Config{},
+		postgres.Open(Dsn()), &gorm.Config{},
 	)
 	if err != nil {
 		log.Fatalf("There was error connecting to the database: %v", err)
