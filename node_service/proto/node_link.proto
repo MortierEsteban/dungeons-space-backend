@@ -1,0 +1,40 @@
+syntax = "proto3";
+import "node.proto";
+option go_package = "./proto";
+service NodeLinkService{
+  rpc Create(CreateNodeLinkRequest) returns (SuccessResponse);
+  rpc Delete(SingleNodeLinkRequest) returns (SuccessResponse);
+  rpc Update(UpdateNodeLinkRequest) returns (SuccessResponse);
+  rpc FindLinkedByNodeId(SingleNodeLinkRequest) returns (MultipleNodeLinkResponse);
+//  rpc FindNodesByLinked(MultipleNodeLinkRequest) returns (NodeLinkResponse);
+}
+
+message UpdateNodeLinkRequest{
+  optional uint32 Magnitude = 1;
+  optional string Description = 2;
+  optional string colour = 3;
+}
+message CreateNodeLinkRequest{
+  int32 nodeId  = 1;
+  int32 linkId = 2;
+
+  optional string Description = 6;
+  optional uint32 Magnitude = 4;
+  optional string colour = 5;
+}
+message NodeLinkResponse{
+  uint32 id = 1;
+  int32 nodeId  = 2;
+  int32 linkId = 3;
+
+  optional string Description =4;
+  optional uint32 Magnitude = 5;
+  optional string colour = 6;
+}
+message MultipleNodeLinkResponse{
+  repeated  NodeLinkResponse links = 1;
+}
+
+message SingleNodeLinkRequest{
+  uint32 id = 1;
+}
