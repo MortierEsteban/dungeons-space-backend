@@ -3,7 +3,7 @@ package repositories
 import (
 	"fmt"
 	"github.com/MortierEsteban/dungeons-space-backend/node_service/internal/models"
-	repositories "github.com/MortierEsteban/dungeons-space-backend/node_service/pkg/repositories"
+	repositories "github.com/MortierEsteban/dungeons-space-backend/node_service/pkg/v1/repositories"
 	"gorm.io/gorm"
 )
 
