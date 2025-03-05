@@ -1,4 +1,4 @@
-package repository
+package v1
 
 import (
 	"gorm.io/gorm"
@@ -24,12 +24,13 @@ func NewGormRepository[T any](db *gorm.DB) *GormRepository[T] {
 
 // Implement methods for gormRepository
 func (r *GormRepository[T]) Create(item *T) error {
-	return r.Db.Create(item).Error
+	err := r.Db.Create(item).Error
+	return err
 }
 
 func (r *GormRepository[T]) GetByID(id uint) (*T, error) {
 	var item T
-	err := r.Db.First(&item, id).Error
+	err := r.Db.Preload("Links").First(&item, id).Error
 	return &item, err
 }
 
@@ -45,4 +46,18 @@ func (r *GormRepository[T]) Update(item *T) error {
 
 func (r *GormRepository[T]) Delete(id uint) error {
 	return r.Db.Delete(new(T), id).Error
+}
+
+type UseCaseInterface[T any] interface {
+	// Create creates a user with the data supplied
+	Create(T) (T, error)
+
+	// Get retrieves the user instance
+	Get(id uint) (T, error)
+
+	// Update method updates the user and returns if any error occurred
+	Update(T) error
+
+	// Delete Deletes the user whose ID is supplied
+	Delete(id uint) error
 }

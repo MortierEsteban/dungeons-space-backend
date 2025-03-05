@@ -11,44 +11,45 @@ service NodeService{
 
 message NodeRequest {
   string Name = 1;
-  optional string Description = 2;
-  repeated int32 Links = 3;
-  optional uint32 ReferencedId = 4;
-  optional bool PlayerVisible = 5;
+  string Description = 2;
+  repeated int64 Links = 3;
+  uint64 ReferencedId = 4;
+  bool PlayerVisible = 5;
   string Service = 6;
 }
+
 message UpdateNodeRequest {
-  uint32 id = 1;
+  uint64 id = 1;
   string Name = 2;
-  optional string Description = 3;
-  repeated int32 Links = 4;
-  optional uint32 ReferencedId = 5;
-  optional bool PlayerVisible = 6;
+  string Description = 3;
+  repeated int64 Links = 4;
+  uint64 ReferencedId = 5;
+  bool PlayerVisible = 6;
   string Service = 7;
 }
 
 message SuccessResponse{
   string response = 1;
-  optional int32 id = 2;
+  int64 id = 2;
 }
 
 message SingleNodeRequest{
-  int32 id =1;
+  uint64 id =1;
 }
 
 message NodeResponse{
-  int32 id = 1;
+  int64 id = 1;
   string Name = 2;
   string Service = 7;
   repeated NodeResponse Links = 4;
 
-  optional string Description = 3;
-  optional uint32 ReferencedId = 5;
-  optional bool PlayerVisible =6;
+  string Description = 3;
+  uint64 ReferencedId = 5;
+  bool PlayerVisible =6;
 }
 
 message ReferencedIdRequest{
-  int32  id = 1;
+  int64  id = 1;
 }
 message  MultipleNodeResponse{
   repeated NodeResponse nodes = 1;

@@ -2,18 +2,18 @@ package repositories
 
 import (
 	"github.com/MortierEsteban/dungeons-space-backend/node_service/internal/models"
-	repositories "github.com/MortierEsteban/dungeons-space-backend/node_service/pkg/v1/repositories"
+	interfaces "github.com/MortierEsteban/dungeons-space-backend/node_service/pkg/v1"
 	"gorm.io/gorm"
 )
 
 type NodeLinkRepository struct {
-	*repositories.GormRepository[models.NodeLink]
+	*interfaces.GormRepository[models.NodeLink]
 }
 
 // NewNodeRepository creates a new instance of NodeRepository.
 func NewNodeLinkRepository(db *gorm.DB) *NodeLinkRepository {
 	return &NodeLinkRepository{
-		GormRepository: repositories.NewGormRepository[models.NodeLink](db),
+		GormRepository: interfaces.NewGormRepository[models.NodeLink](db),
 	}
 }
 

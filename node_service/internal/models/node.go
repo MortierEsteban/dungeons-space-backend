@@ -16,7 +16,7 @@ type Node struct {
 
 	Name          string
 	Description   *string
-	Links         *[]Node `gorm:"many2many:node_links"`
+	Links         []Node `gorm:"many2many:node_links"`
 	ReferencedId  *uint
 	PlayerVisible bool `gorm:"default:false; not null"`
 	Service       string
@@ -27,6 +27,9 @@ type NodeLink struct {
 
 	NodeId int `gorm:"primaryKey"`
 	LinkId int `gorm:"primaryKey"`
+	// Add a ForeignKey constraint explicitly if needed
+	Node Node `gorm:"foreignKey:NodeId;references:ID"`
+	Link Node `gorm:"foreignKey:LinkId;references:ID"`
 
 	Description *string
 	Magnitude   uint   `gorm:"default:1;not null"`

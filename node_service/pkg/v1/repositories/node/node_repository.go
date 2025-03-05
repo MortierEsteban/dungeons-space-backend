@@ -3,18 +3,18 @@ package repositories
 import (
 	"fmt"
 	"github.com/MortierEsteban/dungeons-space-backend/node_service/internal/models"
-	repositories "github.com/MortierEsteban/dungeons-space-backend/node_service/pkg/v1/repositories"
+	interfaces "github.com/MortierEsteban/dungeons-space-backend/node_service/pkg/v1"
 	"gorm.io/gorm"
 )
 
 type NodeRepository struct {
-	*repositories.GormRepository[models.Node]
+	*interfaces.GormRepository[models.Node]
 }
 
 // NewNodeRepository creates a new instance of NodeRepository.
 func NewNodeRepository(db *gorm.DB) *NodeRepository {
 	return &NodeRepository{
-		GormRepository: repositories.NewGormRepository[models.Node](db),
+		GormRepository: interfaces.NewGormRepository[models.Node](db),
 	}
 }
 
@@ -51,7 +51,7 @@ func checkLink(r *NodeRepository, node *models.Node, link *models.Node) error {
 
 	// Check if the link already exists in the node's links
 	if node.Links != nil {
-		for _, existingLink := range *node.Links {
+		for _, existingLink := range node.Links {
 			print(fmt.Sprintf("Existing id: %d\n", existingLink.ID))
 			if existingLink.ID == link.ID {
 				return fmt.Errorf("link with ID %d already exists for node with ID %d", link.ID, node.ID)

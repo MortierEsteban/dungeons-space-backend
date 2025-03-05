@@ -38,6 +38,7 @@ services:
       - "8002:8002"
     networks:
       - dungeon-space-network
+
 networks:
   dungeon-space-network:
     name: dungeon-space-network
