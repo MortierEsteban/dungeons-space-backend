@@ -1,21 +1,31 @@
-# Use the official Python image
-FROM python:3.10-slim
+# syntax=docker/dockerfile:1
 
-# Set the working directory in the container
+FROM golang:1.24.0
+
+# Set destination for COPY
 WORKDIR /app
 
-# Copy only requirements first to leverage Docker caching
-COPY requirements.txt /app/
+RUN go install github.com/air-verse/air@latest
 
-# Install dependencies before copying the full app
-RUN pip install -r requirements.txt
+# Download Go modules
+COPY go.mod go.sum ./
+RUN go mod download
 
-# Now copy the full app (after dependencies are installed)
-COPY . /app
 
-# Expose the Django development server port
-EXPOSE 8000
+# Copy the source code. Note the slash at the end, as explained in
+# https://docs.docker.com/reference/dockerfile/#copy
+COPY *.go ./
 
-# Run the Django server
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
-#CMD ["sleep", "100000"]
+# Build
+#RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-gs-ping
+
+# Optional:
+# To bind to a TCP port, runtime parameters must be supplied to the docker command.
+# But we can document in the Dockerfile what ports
+# the application is going to listen on by default.
+
+# https://docs.docker.com/reference/dockerfile/#expose
+EXPOSE 8080
+
+# Run
+CMD ["air", "-c", ".air.toml"]
