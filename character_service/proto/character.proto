@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package character;
+
+service CharacterService {
+  rpc CreateCharacter (CreateCharacterRequest) returns (CharacterResponse);
+  rpc GetCharacter (GetCharacterRequest) returns (CharacterResponse);
+  rpc ListCharacters (ListCharactersRequest) returns (ListCharactersResponse);
+  // TODO: Implement UpdateCharacter and DeleteCharacter
+}
+
+message Character {
+  string id = 1;
+  string name = 2;
+  int32 max_hp = 3;
+  string character_type = 4;
+  string c_class = 5;
+  string subclass = 6;
+  int32 height = 7;
+  int32 weight = 8;
+  map<string, int32> ability_scores = 9;
+  string race = 10;
+  repeated string proficiency = 11;
+  repeated string languages = 12;
+  string description = 13;
+  repeated string inventory = 14;
+  string background = 15;
+  int32 initiative = 16;
+  repeated string status = 17;
+  int32 saving_throws_success = 18;
+  int32 saving_throws_fail = 19;
+}
+
+message CreateCharacterRequest {
+  Character character = 1;
+}
+
+message GetCharacterRequest {
+  string id = 1;
+}
+
+message ListCharactersRequest {}
+
+message CharacterResponse {
+  Character character = 1;
+}
+
+message ListCharactersResponse {
+  repeated Character characters = 1;
+}
