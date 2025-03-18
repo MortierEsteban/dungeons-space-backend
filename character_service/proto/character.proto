@@ -2,33 +2,52 @@ syntax = "proto3";
 
 package character;
 
+option go_package = "./proto";
+
+
 service CharacterService {
   rpc CreateCharacter (CreateCharacterRequest) returns (CharacterResponse);
   rpc GetCharacter (GetCharacterRequest) returns (CharacterResponse);
   rpc ListCharacters (ListCharactersRequest) returns (ListCharactersResponse);
-  // TODO: Implement UpdateCharacter and DeleteCharacter
+  rpc UpdateCharacter (UpdateCharacterRequest) returns (CharacterResponse);
+  rpc DeleteCharacter (DeleteCharacterRequest) returns (DeleteCharacterResponse);
+}
+
+message AbilityScores {
+  int32 strength = 1;
+  int32 dexterity = 2;
+  int32 constitution = 3;
+  int32 intelligence = 4;
+  int32 wisdom = 5;
 }
 
 message Character {
-  string id = 1;
+  uint64 id = 1;
   string name = 2;
   int32 max_hp = 3;
-  string character_type = 4;
-  string c_class = 5;
-  string subclass = 6;
-  int32 height = 7;
-  int32 weight = 8;
-  map<string, int32> ability_scores = 9;
-  string race = 10;
+  int32 hp = 4;
+  float speed = 5;
+  int32 class = 6;
+  optional int32 subclass = 7;
+  int32 height = 8;
+  int32 weight = 9;
+  optional string race = 10;
   repeated string proficiency = 11;
   repeated string languages = 12;
   string description = 13;
-  repeated string inventory = 14;
+  repeated int32 inventory = 14; // Store Item IDs as references
   string background = 15;
   int32 initiative = 16;
-  repeated string status = 17;
-  int32 saving_throws_success = 18;
-  int32 saving_throws_fail = 19;
+  repeated int32 resistances = 17;
+  repeated int32 weakness = 18;
+  repeated int32 status = 19;
+  AbilityScores ability_scores = 20;
+  Pair saving_throws = 21;
+}
+
+message Pair {
+  int32 a = 1;
+  int32 b = 2;
 }
 
 message CreateCharacterRequest {
@@ -36,10 +55,18 @@ message CreateCharacterRequest {
 }
 
 message GetCharacterRequest {
-  string id = 1;
+  uint64 id = 1;
 }
 
 message ListCharactersRequest {}
+
+message UpdateCharacterRequest {
+  Character character = 1;
+}
+
+message DeleteCharacterRequest {
+  uint64 id = 1;
+}
 
 message CharacterResponse {
   Character character = 1;
@@ -47,4 +74,8 @@ message CharacterResponse {
 
 message ListCharactersResponse {
   repeated Character characters = 1;
+}
+
+message DeleteCharacterResponse {
+  string message = 1;
 }

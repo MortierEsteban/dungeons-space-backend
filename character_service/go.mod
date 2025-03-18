@@ -1,4 +1,4 @@
-module github.com/MortierEsteban/dungeons-space-backend/node_service
+module github.com/MortierEsteban/dungeons-space-backend/character_service
 
 go 1.24.0
 

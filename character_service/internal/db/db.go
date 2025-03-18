@@ -2,7 +2,7 @@ package database
 
 import (
 	"fmt"
-	"github.com/MortierEsteban/dungeons-space-backend/node_service/internal/models"
+	"github.com/MortierEsteban/dungeons-space-backend/character_service/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"
@@ -28,8 +28,16 @@ func DbConn() *gorm.DB {
 }
 
 func Migrations(db *gorm.DB) {
-	err := db.AutoMigrate(&models.Node{}, &models.NodeLink{})
-	err = db.SetupJoinTable(&models.Node{}, "Links", &models.NodeLink{})
+	err := db.AutoMigrate(
+		&models.Character{},
+		&models.AbilityScores{},
+		&models.Item{},
+		&models.Weapon{},
+		&models.Consumable{},
+		&models.Armor{},
+		&models.Miscellaneous{},
+	)
+
 	if err != nil {
 		fmt.Println(err)
 	} else {

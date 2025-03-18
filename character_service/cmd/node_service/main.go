@@ -1,8 +1,8 @@
 package main
 
 import (
-	database "github.com/MortierEsteban/dungeons-space-backend/node_service/internal/db"
-	handler "github.com/MortierEsteban/dungeons-space-backend/node_service/pkg/v1/handler/grpc/services"
+	database "github.com/MortierEsteban/dungeons-space-backend/character_service/internal/db"
+	handler "github.com/MortierEsteban/dungeons-space-backend/character_service/pkg/v1/handler/grpc/services"
 	"google.golang.org/grpc"
 	"gorm.io/gorm"
 	"log"
@@ -15,7 +15,7 @@ func main() {
 	db := database.DbConn()
 	database.Migrations(db)
 	// add a listener address
-	grpc := initGrpcServer(db)
+	//initGrpcServer(db)
 	//connectToKong(grpc)
 }
 
@@ -31,7 +31,7 @@ func initGrpcServer(db *gorm.DB) *grpc.Server {
 	grpcServer := grpc.NewServer()
 
 	handler.NewServer(grpcServer, db)
-	handler.NewNodeLinkServer(grpcServer, db)
+	handler.NewCharacterLinkServer(grpcServer, db)
 	println("Server started: listening via tcp on port 5001")
 	// start serving to the address
 	log.Fatal(grpcServer.Serve(lis))

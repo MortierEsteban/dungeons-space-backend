@@ -46,11 +46,12 @@ func (c *Consumable) Use(inventory *Inventory) {
 
 // Armor-specific struct
 type Armor struct {
-	Item                                  // Embedding base Item struct
-	ArmorClass          int               `json:"armor_class"`
-	ArmorType           string            `json:"armor_type"`
-	Resistances         []DamageTypeEnums `json:"resistances"`
-	StealthDisadvantage bool              `json:"stealth_disadvantage"`
+	Item                       // Embedding base Item struct
+	ArmorClass          int    `json:"armor_class"`
+	ArmorType           string `json:"armor_type"`
+	Resistances         []int  `json:"resistances"`
+	StealthDisadvantage bool   `json:"stealth_disadvantage"`
+	Weakness            []int  `json:"weakness"`
 }
 
 // Miscellaneous generic item
