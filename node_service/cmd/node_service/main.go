@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	database "github.com/MortierEsteban/dungeons-space-backend/node_service/internal/db"
 	handler "github.com/MortierEsteban/dungeons-space-backend/node_service/pkg/v1/handler/grpc/services"
 	"google.golang.org/grpc"
@@ -15,15 +16,14 @@ func main() {
 	db := database.DbConn()
 	database.Migrations(db)
 	// add a listener address
-	grpc := initGrpcServer(db)
-	//connectToKong(grpc)
+	initGrpcServer(db)
 }
 
 //func connectToKong(server *grpc.Server) {
 //}
 
 func initGrpcServer(db *gorm.DB) *grpc.Server {
-	lis, err := net.Listen("tcp", os.Getenv("SERVICE_PORT"))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", os.Getenv("SERVICE_PORT")))
 	if err != nil {
 		log.Fatalf("ERROR STARTING THE SERVER : %v", err)
 	}

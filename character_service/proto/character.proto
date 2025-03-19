@@ -57,6 +57,9 @@ message CreateCharacterRequest {
 message GetCharacterRequest {
   uint64 id = 1;
 }
+message SuccessResponse {
+  bool success = 1;
+}
 
 message ListCharactersRequest {}
 

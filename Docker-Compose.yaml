@@ -15,6 +15,7 @@ services:
   kong-database:
     container_name: kong-database
     image: postgres:latest
+    restart: always
     networks:
       - dungeon-space-network
     env_file:

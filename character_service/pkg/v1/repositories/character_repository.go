@@ -11,25 +11,10 @@ type CharacterRepository struct {
 }
 
 // NewcharacterRepository creates a new instance of CharacterRepository.
-func NewcharacterRepository(db *gorm.DB) *CharacterRepository {
+func NewCharacterRepository(db *gorm.DB) *CharacterRepository {
 	return &CharacterRepository{
 		GormRepository: interfaces.NewGormRepository[models.Character](db),
 	}
-}
-
-// GetByService retrieves characters by their service name.
-func (r *CharacterRepository) GetByService(service string) ([]models.Character, error) {
-	var characters []models.Character
-	if err := r.Db.Where("service = ?", service).Find(&characters).Error; err != nil {
-		return nil, err
-	}
-	return characters, nil
-}
-
-func (r *CharacterRepository) FindByService(service string) ([]models.Character, error) {
-	var characters []models.Character
-	err := r.Db.Find(&characters, "service = ?", service).Error
-	return characters, err
 }
 
 func (r *CharacterRepository) FindByReferencedId(id uint) ([]models.Character, error) {
