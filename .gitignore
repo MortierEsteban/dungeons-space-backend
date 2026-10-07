@@ -139,3 +139,6 @@ GitHub.sublime-settings
 
 # Obsidian (config locale)
 docs/.obsidian/workspace*.json
+
+# Rust
+target/

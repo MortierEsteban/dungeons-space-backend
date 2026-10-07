@@ -32,6 +32,7 @@ created: 2026-10-06
 - [[10 - Exigences non fonctionnelles]]
 - [[11 - Estimation et risques]]
 - [[12 - Questions ouvertes]]
+- [[13 - Core mechanics Rust]] — état du crate `dnd_core`
 - [[99 - Glossaire]]
 
 ## Conventions de ce vault
