@@ -358,5 +358,21 @@ export function decideCombat(state: CombatState, cmd: ResolvedCommand, actor: Co
     case 'remove_object':
       assertGm(actor);
       return [{ type: 'combat.object_removed', payload: { id: cmd.objectId } }];
+    case 'set_fog': {
+      assertGm(actor);
+      const { type: _t, ...patch } = cmd;
+      if (Object.keys(patch).length === 0) throw new CombatRuleError('Aucun réglage du brouillard à modifier.');
+      return [{ type: 'combat.fog_updated', payload: { patch } }];
+    }
+    case 'share_vision':
+      assertGm(actor);
+      getCombatant(state, cmd.combatantId);
+      return [{ type: 'combat.vision_shared', payload: { combatantId: cmd.combatantId, userIds: [...new Set(cmd.userIds)] } }];
+    case 'reveal_cells':
+      assertGm(actor);
+      return [{ type: 'combat.cells_revealed', payload: { cells: cmd.cells.filter((c) => inBounds(state, c)), revealed: cmd.revealed } }];
+    case 'reset_fog_memory':
+      assertGm(actor);
+      return [{ type: 'combat.fog_memory_reset', payload: {} }];
   }
 }

@@ -112,6 +112,21 @@ export interface CombatSettings {
   hideMonsterStats: boolean;
 }
 
+/** Brouillard de guerre, entièrement piloté par le MJ. */
+export interface FogSettings {
+  enabled: boolean;
+  /** Vision de groupe : chaque joueur voit aussi par les yeux de tous les PJ. */
+  shared: boolean;
+  /** Portée de vue hors de la lumière des feux et torches, en cases (0 = illimitée). */
+  range: number;
+  /** Visions partagées par le MJ : combattant → utilisateurs qui voient par ses yeux (« * » = tous). */
+  grants: Record<string, string[]>;
+  /** Cases révélées par le MJ : visibles de tous. */
+  revealed: Record<string, true>;
+}
+
+export const DEFAULT_FOG: FogSettings = { enabled: false, shared: false, range: 0, grants: {}, revealed: {} };
+
 export interface CombatState {
   id: string;
   name: string;
@@ -121,6 +136,8 @@ export interface CombatState {
   combatants: Record<string, Combatant>;
   map: BattleMap;
   settings: CombatSettings;
+  /** Absent des combats antérieurs au brouillard de guerre (= désactivé). */
+  fog?: FogSettings;
   /** Nombre d'événements appliqués (sert de version pour la synchro). */
   version: number;
 }

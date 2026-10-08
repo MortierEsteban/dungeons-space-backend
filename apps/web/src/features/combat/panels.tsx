@@ -1,6 +1,7 @@
 import {
   CONDITIONS,
   describeCombatEvent,
+  fogOf,
   initiativeOrder,
   MONSTERS,
   OBJECT_KINDS,
@@ -73,12 +74,14 @@ export function InitiativeBar({ state, isGm, canEndTurn, onSelect, send }: { sta
 
 // ───────────────────────────── Inspecteur ─────────────────────────────
 
-export function Inspector({ state, combatantId, objectId, isGm, userId, send, onClose, onAttack }: {
+export function Inspector({ state, combatantId, objectId, isGm, userId, players = [], send, onClose, onAttack }: {
   state: CombatState;
   combatantId: string | null;
   objectId: string | null;
   isGm: boolean;
   userId: string;
+  /** Joueurs de la table (pour le partage de vision). */
+  players?: Player[];
   send: Send;
   onClose(): void;
   onAttack(attackerId: string): void;
@@ -201,6 +204,7 @@ export function Inspector({ state, combatantId, objectId, isGm, userId, send, on
           />
         </details>
       )}
+      {isGm && fogOf(state).enabled && <VisionShare state={state} combatant={cc} players={players} send={send} />}
       {isGm && (
         <div className="ds-row">
           <Toggle checked={cc.hidden} onChange={(v) => send({ type: 'update_combatant', combatantId: cc.id, patch: { hidden: v } })}>
@@ -215,6 +219,102 @@ export function Inspector({ state, combatantId, objectId, isGm, userId, send, on
   );
 }
 
+// ───────────────────────────── Brouillard de guerre (MJ) ─────────────────────────────
+
+export interface Player {
+  id: string;
+  name: string;
+}
+
+/** Le MJ prête les yeux d'une créature à certains joueurs (ou à tous). */
+function VisionShare({ state, combatant, players, send }: { state: CombatState; combatant: Combatant; players: Player[]; send: Send }) {
+  const granted = fogOf(state).grants[combatant.id] ?? [];
+  const all = granted.includes('*');
+  const set = (userIds: string[]) => send({ type: 'share_vision', combatantId: combatant.id, userIds });
+  const toggle = (id: string) => set(granted.includes(id) ? granted.filter((g) => g !== id) : [...granted.filter((g) => g !== '*'), id]);
+  return (
+    <div className="ds-stack" style={{ gap: 6 }}>
+      <span className="ds-label">Partager sa vision</span>
+      <div className={s.conditions}>
+        <Chip square active={all} onClick={() => set(all ? [] : ['*'])} title="Tous les joueurs voient par ses yeux">
+          Tous
+        </Chip>
+        {players
+          .filter((p) => p.id !== combatant.ownerUserId)
+          .map((p) => (
+            <Chip key={p.id} square active={all || granted.includes(p.id)} disabled={all} onClick={() => toggle(p.id)}>
+              {p.name}
+            </Chip>
+          ))}
+      </div>
+    </div>
+  );
+}
+
+/** Réglages du brouillard : activation, vision de groupe, obscurité, pinceau et « Voir comme ». */
+export function FogPanel({ state, options, setOptions, players, viewAs, setViewAs, send }: {
+  state: CombatState;
+  options: ToolOptions;
+  setOptions(o: ToolOptions): void;
+  players: Player[];
+  viewAs: string | null;
+  setViewAs(id: string | null): void;
+  send: Send;
+}) {
+  const fog = fogOf(state);
+  const revealed = Object.keys(fog.revealed).length;
+  return (
+    <div className={s.flyout}>
+      <span className="ds-label">Brouillard de guerre</span>
+      <Toggle checked={fog.enabled} onChange={(v) => send({ type: 'set_fog', enabled: v })}>
+        Activé
+      </Toggle>
+      <Toggle checked={fog.shared} onChange={(v) => send({ type: 'set_fog', shared: v })}>
+        Vision de groupe
+      </Toggle>
+      <span className="ds-help">{fog.shared ? 'Chaque joueur voit ce que voit n’importe quel PJ.' : 'Chaque joueur ne voit que par les yeux de ses personnages. Partagez une vision depuis l’inspecteur d’une créature.'}</span>
+      <span className="ds-label">Obscurité · {fog.range ? `vue à ${num(fog.range * state.map.cellMeters)} m hors lumière` : 'lumière partout'}</span>
+      <Stepper label="Portée de vue en cases (0 = illimitée)" value={fog.range} onChange={(v) => send({ type: 'set_fog', range: v })} min={0} max={40} />
+      <span className="ds-help">Les feux et torches éclairent autour d’eux : on les voit de loin, même dans le noir.</span>
+      <span className="ds-label">Pinceau</span>
+      <div className={s.conditions}>
+        <Chip square active={options.fogBrush === 'reveal'} onClick={() => setOptions({ ...options, fogBrush: 'reveal' })}>
+          Révéler
+        </Chip>
+        <Chip square active={options.fogBrush === 'hide'} onClick={() => setOptions({ ...options, fogBrush: 'hide' })}>
+          Masquer
+        </Chip>
+      </div>
+      <span className="ds-help">Glissez sur la carte : les cases révélées sont visibles de tous.</span>
+      <div className="ds-row" style={{ flexWrap: 'wrap' }}>
+        {revealed > 0 && (
+          <Button size="sm" variant="ghost" onClick={() => send({ type: 'reveal_cells', cells: Object.keys(fog.revealed).map(toCell), revealed: false })}>
+            Tout remasquer
+          </Button>
+        )}
+        <Button size="sm" variant="ghost" onClick={() => window.confirm('Effacer la mémoire de la carte de tous les joueurs ?') && send({ type: 'reset_fog_memory' })}>
+          Oublier l’exploration
+        </Button>
+      </div>
+      <span className="ds-label">Voir comme</span>
+      <Select value={viewAs ?? ''} onChange={(e) => setViewAs(e.target.value || null)} aria-label="Voir la carte comme un joueur">
+        <option value="">MJ — tout voir</option>
+        {players.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </Select>
+      {viewAs && !fog.enabled && <span className="ds-help">Activez le brouillard pour voir ce que voit ce joueur.</span>}
+    </div>
+  );
+}
+
+const toCell = (k: string) => {
+  const [x, y] = k.split(',').map(Number) as [number, number];
+  return { x, y };
+};
+
 // ───────────────────────────── Outils du MJ ─────────────────────────────
 
 const ZONE_LABELS: Record<ZoneShape, string> = { circle: 'Sphère', square: 'Cube', cone: 'Cône', line: 'Ligne' };
@@ -227,6 +327,7 @@ export function Toolbar({ tool, setTool, isGm }: { tool: Tool; setTool(t: Tool):
     { id: 'zone', label: 'Zones', glyph: '◎' },
     { id: 'object', label: 'Objets', glyph: '▣', gm: true },
     { id: 'measure', label: 'Règle', glyph: '⟷' },
+    { id: 'fog', label: 'Brouillard', glyph: '☁', gm: true },
   ];
   return (
     <div className={s.toolbar} role="toolbar" aria-label="Outils du plateau">

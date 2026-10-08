@@ -12,7 +12,8 @@ import { useCombat, type CommandInput } from './api';
 import { Board, type BoardProps, type FloatText, type Tool, type ToolOptions } from './Board';
 import { Replay } from './Replay';
 import { FX_DURATION, hasWebGL, withCharacterModels, type AttackFx } from './scene/support';
-import { ActionBar, CombatLog, GmSetup, InitiativeBar, Inspector, Toolbar, ToolOptionsPanel, TrackerList } from './panels';
+import { ActionBar, CombatLog, FogPanel, GmSetup, InitiativeBar, Inspector, Toolbar, ToolOptionsPanel, TrackerList, type Player } from './panels';
+import { useFog } from './useFog';
 import s from './combat.module.css';
 
 const Board3D = lazy(() => import('./scene/Board3D'));
@@ -64,15 +65,23 @@ export default function BattlePage() {
     },
     [dice, three],
   );
-  const { state: rawState, log, error, send: rawSend } = useCombat(encounterId, onEvents);
+  const { state: rawState, log, history, error, send: rawSend } = useCombat(encounterId, onEvents);
   // Les modèles 3D des PJ viennent de leur fiche, tenue à jour en temps réel.
   const characterModels = useMemo(() => new Map(characters.map((c) => [c.id, c.modelUrl])), [characters]);
   const state = useMemo(() => rawState && withCharacterModels(rawState, characterModels), [rawState, characterModels]);
   const send = (cmd: CommandInput) => void rawSend(cmd);
+  // Brouillard de guerre : un joueur voit par ses propres yeux ; le MJ voit tout, sauf en « Voir comme ».
+  const [viewAs, setViewAs] = useState<string | null>(null);
+  const fog = useFog(state, history, isGm ? viewAs : (me?.id ?? null));
+  const players = useMemo<Player[]>(() => {
+    const byId = new Map<string, string>();
+    for (const c of characters) if (c.kind === 'pc' && c.ownerId) byId.set(c.ownerId, c.ownerName ?? c.name);
+    return [...byId].map(([id, name]) => ({ id, name }));
+  }, [characters]);
 
   const [view, setView] = useState<'board' | 'tracker' | 'replay'>(narrow ? 'tracker' : 'board');
   const [tool, setTool] = useState<Tool>('select');
-  const [options, setOptions] = useState<ToolOptions>({ brush: 'wall', zone: { shape: 'circle', size: 2, direction: 0, color: '#e07aa8', label: '' }, objectKind: 'chest' });
+  const [options, setOptions] = useState<ToolOptions>({ brush: 'wall', zone: { shape: 'circle', size: 2, direction: 0, color: '#e07aa8', label: '' }, objectKind: 'chest', fogBrush: 'reveal' });
   const [selected, setSelected] = useState<string | null>(null);
   const [selectedObject, setSelectedObject] = useState<string | null>(null);
   const [attacker, setAttacker] = useState<string | null>(null);
@@ -102,8 +111,10 @@ export default function BattlePage() {
     setAttacker(null);
   };
 
+  // Ce que l'utilisateur a le droit de voir : plateau, initiative, suivi, inspecteur et journal.
+  const shown = fog?.view ?? state;
   const boardProps: BoardProps = {
-    state,
+    state: shown,
     isGm,
     userId,
     tool,
@@ -115,6 +126,7 @@ export default function BattlePage() {
     targeting: !!attacker,
     onTarget,
     floats,
+    fog: fog?.cells ?? null,
     send,
   };
 
@@ -148,10 +160,10 @@ export default function BattlePage() {
         )}
       </div>
       {view === 'replay' ? (
-        <Replay encounterId={encounterId} isGm={isGm} userId={userId} three={three} characterModels={characterModels} />
+        <Replay encounterId={encounterId} isGm={isGm} userId={userId} three={three} characterModels={characterModels} fogViewer={isGm ? viewAs : userId} />
       ) : (
         <>
-      <InitiativeBar state={state} isGm={isGm} canEndTurn={!!active && active.ownerUserId === userId} onSelect={setSelected} send={send} />
+      <InitiativeBar state={shown} isGm={isGm} canEndTurn={!!active && active.ownerUserId === userId} onSelect={setSelected} send={send} />
       {error && <div className={s.errorBanner}>{error}</div>}
       {attacker && (
         <div className={s.targetBanner}>
@@ -163,13 +175,14 @@ export default function BattlePage() {
       )}
       {view === 'tracker' ? (
         <Panel>
-          <TrackerList state={state} isGm={isGm} userId={userId} send={send} onAttack={(id) => (setAttacker(id), setView('board'))} />
+          <TrackerList state={shown} isGm={isGm} userId={userId} send={send} onAttack={(id) => (setAttacker(id), setView('board'))} />
         </Panel>
       ) : (
         <div className={s.battleBody}>
           <div className={s.leftRail}>
             <Toolbar tool={tool} setTool={setTool} isGm={isGm} />
             <ToolOptionsPanel tool={tool} options={options} setOptions={setOptions} state={state} send={send} />
+            {isGm && tool === 'fog' && <FogPanel state={state} options={options} setOptions={setOptions} players={players} viewAs={viewAs} setViewAs={setViewAs} send={send} />}
           </div>
           <Panel pad={false} className={s.boardPanel}>
             {three ? (
@@ -181,11 +194,11 @@ export default function BattlePage() {
             )}
           </Panel>
           <div className={s.rightRail}>
-            <Inspector state={state} combatantId={selected} objectId={selectedObject} isGm={isGm} userId={userId} send={send} onClose={() => (setSelected(null), setSelectedObject(null))} onAttack={setAttacker} />
+            <Inspector state={shown} combatantId={selected} objectId={selectedObject} isGm={isGm} userId={userId} players={players} send={send} onClose={() => (setSelected(null), setSelectedObject(null))} onAttack={setAttacker} />
             {isGm && <GmSetup state={state} party={party} send={send} />}
             <Panel className={s.logPanel}>
               <span className="ds-label">Journal de combat</span>
-              <CombatLog log={log} state={state} />
+              <CombatLog log={log} state={shown} />
             </Panel>
           </div>
         </div>

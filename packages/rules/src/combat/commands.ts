@@ -102,6 +102,16 @@ export const combatCommandSchema = z.discriminatedUnion('type', [
     patch: z.object({ position: cell.optional(), open: z.boolean().optional(), revealed: z.boolean().optional(), label: z.string().max(60).optional() }),
   }),
   z.object({ type: z.literal('remove_object'), objectId: id }),
+  z.object({
+    type: z.literal('set_fog'),
+    enabled: z.boolean().optional(),
+    shared: z.boolean().optional(),
+    range: z.number().int().min(0).max(80).optional(),
+  }),
+  /** Le MJ fait voir un joueur (ou tous : « * ») par les yeux d'une créature ; liste vide = plus de partage. */
+  z.object({ type: z.literal('share_vision'), combatantId: id, userIds: z.array(z.string().min(1).max(64)).max(32) }),
+  z.object({ type: z.literal('reveal_cells'), cells: z.array(cell).min(1).max(2000), revealed: z.boolean() }),
+  z.object({ type: z.literal('reset_fog_memory') }),
 ]);
 export type CombatCommand = z.infer<typeof combatCommandSchema>;
 export type CombatCommandType = CombatCommand['type'];

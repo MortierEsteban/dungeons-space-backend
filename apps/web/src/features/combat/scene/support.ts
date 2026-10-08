@@ -46,3 +46,14 @@ export function withCharacterModels(state: CombatState, models: ReadonlyMap<stri
   }
   return combatants ? { ...state, combatants } : state;
 }
+
+/** État du brouillard case par case, pour le rendu : 0 jamais vue, 1 déjà explorée, 2 visible. */
+export interface FogCells {
+  cols: number;
+  rows: number;
+  cells: Uint8Array;
+}
+
+export const FOG_UNKNOWN = 0;
+export const FOG_EXPLORED = 1;
+export const FOG_VISIBLE = 2;

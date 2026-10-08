@@ -4,8 +4,9 @@
     {
       "name": "api",
       "runtimeExecutable": "C:/Program Files/nodejs/node.exe",
-      "runtimeArgs": ["node_modules/tsx/dist/cli.mjs", "watch", "--clear-screen=false", "apps/api/src/main.ts"],
-      "port": 36800
+      "runtimeArgs": ["../../node_modules/tsx/dist/cli.mjs", "watch", "--clear-screen=false", "src/main.ts"],
+      "cwd": "apps/api",
+      "port": 3000
     },
     {
       "name": "web",

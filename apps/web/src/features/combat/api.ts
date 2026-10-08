@@ -1,4 +1,4 @@
-import { applyCombatEvent, type CombatCommand, type CombatState } from '@ds/rules';
+import { applyCombatEvent, type CombatCommand, type CombatEvent, type CombatState } from '@ds/rules';
 import type { CombatEventEnvelope, CreateEncounterInput, EncounterDto, EncounterSummaryDto, ServerToClientEvents } from '@ds/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -28,6 +28,8 @@ interface CombatSync {
   encounter: EncounterDto | null;
   state: CombatState | null;
   log: CombatEventEnvelope[];
+  /** Flux complet, dans l'ordre (mémoire du brouillard de guerre). */
+  history: CombatEvent[];
   loading: boolean;
   error: string | null;
   send(cmd: CommandInput | Record<string, unknown>): Promise<CombatEventEnvelope[] | null>;
@@ -43,6 +45,7 @@ export function useCombat(encounterId: string, onEvents?: (events: CombatEventEn
   const [encounter, setEncounter] = useState<EncounterDto | null>(null);
   const [state, setState] = useState<CombatState | null>(null);
   const [log, setLog] = useState<CombatEventEnvelope[]>([]);
+  const [history, setHistory] = useState<CombatEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const lastSeq = useRef(0);
@@ -56,6 +59,7 @@ export function useCombat(encounterId: string, onEvents?: (events: CombatEventEn
     lastSeq.current = fresh[fresh.length - 1]!.seq;
     setState((s) => fresh.reduce<CombatState | null>((acc, e) => applyCombatEvent(acc, e.event), s));
     setLog((l) => [...fresh.slice().reverse(), ...l].slice(0, 200));
+    setHistory((h) => [...h, ...fresh.map((e) => e.event)]);
     listener.current?.(fresh);
   }, []);
 
@@ -69,6 +73,7 @@ export function useCombat(encounterId: string, onEvents?: (events: CombatEventEn
       setEncounter(enc);
       setState(enc.state);
       setLog(events.slice(-200).reverse());
+      setHistory(events.map((e) => e.event));
       setError(null);
     } catch (e) {
       setError(errorMessage(e));
@@ -109,5 +114,5 @@ export function useCombat(encounterId: string, onEvents?: (events: CombatEventEn
     [encounterId, apply, encounter, client],
   );
 
-  return { encounter, state, log, loading: !state && !error, error, send, sending };
+  return { encounter, state, log, history, loading: !state && !error, error, send, sending };
 }

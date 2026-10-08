@@ -70,7 +70,7 @@ tracker de combat « théâtre de l'esprit » pour le téléphone.
 |---|---|
 | Accueil | Accueil immersif (grand écran) ou classique, prochaine session |
 | Explorer | Chronique 3D par sessions, frise filtrable, Constellation (focus, liens qualifiés, suggestions), campagnes publiques |
-| Combattre | Plateau **2D ou 3D isométrique** (terrain en relief, zones, objets éclairés, mesures, portée, attaques animées), modèles 3D .glb importés par les joueurs (jeton simple par défaut), initiative, actions, PV masqués, tracker mobile, **replay** |
+| Combattre | Plateau **2D ou 3D isométrique** (terrain en relief, zones, objets éclairés, mesures, portée, attaques animées), modèles 3D .glb importés par les joueurs (jeton simple par défaut), **brouillard de guerre** par joueur piloté par le MJ, initiative, actions, PV masqués, tracker mobile, **replay** |
 | Sanctuaire | Bibliothèque SRD et Forge des créations personnalisées |
 | Personnage | Fiche complète (sorts, inventaire, harmonisation, notes privées/partagées, événements), PNJ |
 | Génération | Création guidée de PJ, PNJ et trésors |

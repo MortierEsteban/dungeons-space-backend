@@ -69,6 +69,18 @@ export function describeCombatEvent(e: CombatEvent, state: CombatState | null): 
       return e.payload.patch.revealed ? 'Un secret est révélé !' : e.payload.patch.open !== undefined ? (e.payload.patch.open ? 'Ouverture' : 'Fermeture') : 'Objet déplacé';
     case 'combat.object_removed':
       return 'Objet retiré';
+    case 'combat.fog_updated': {
+      const p = e.payload.patch;
+      if (p.enabled !== undefined) return p.enabled ? 'Le brouillard de guerre tombe' : 'Le brouillard de guerre se lève';
+      if (p.shared !== undefined) return p.shared ? 'Vision de groupe partagée' : 'Chacun ne voit plus que par ses yeux';
+      return 'Portée de vue modifiée';
+    }
+    case 'combat.vision_shared':
+      return e.payload.userIds.length ? `La vision de ${name(e.payload.combatantId)} est partagée` : `La vision de ${name(e.payload.combatantId)} n’est plus partagée`;
+    case 'combat.cells_revealed':
+      return e.payload.revealed ? 'Le MJ révèle une partie de la carte' : 'Le MJ masque une partie de la carte';
+    case 'combat.fog_memory_reset':
+      return 'Les souvenirs de la carte s’effacent';
     case 'combat.ended':
       return `Fin du combat${state ? ` : ${state.name}` : ''}`;
   }

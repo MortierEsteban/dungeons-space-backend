@@ -1,4 +1,4 @@
-import type { Cell, Combatant, CombatSettings, HpBand, MapObject, TerrainKind, Zone } from './types';
+import type { Cell, Combatant, CombatSettings, FogSettings, HpBand, MapObject, TerrainKind, Zone } from './types';
 
 /**
  * Événements de combat : suffisants pour reconstruire l'état (exigence CMB-60/62).
@@ -56,6 +56,10 @@ export type CombatEvent =
   | { type: 'combat.object_added'; payload: { object: MapObject } }
   | { type: 'combat.object_updated'; payload: { id: string; patch: Partial<Omit<MapObject, 'id' | 'kind'>> } }
   | { type: 'combat.object_removed'; payload: { id: string } }
+  | { type: 'combat.fog_updated'; payload: { patch: Partial<Pick<FogSettings, 'enabled' | 'shared' | 'range'>> } }
+  | { type: 'combat.vision_shared'; payload: { combatantId: string; userIds: string[] } }
+  | { type: 'combat.cells_revealed'; payload: { cells: Cell[]; revealed: boolean } }
+  | { type: 'combat.fog_memory_reset'; payload: Record<string, never> }
   | { type: 'combat.ended'; payload: { summary: string } };
 
 export type CombatEventType = CombatEvent['type'];

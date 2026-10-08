@@ -15,12 +15,15 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import { num } from '../../shared/format';
 import { cx } from '../../shared/ui/components';
 import type { CommandInput } from './api';
+import { FOG_EXPLORED, FOG_UNKNOWN, type FogCells } from './scene/support';
 import s from './combat.module.css';
 
-export type Tool = 'select' | 'terrain' | 'zone' | 'object' | 'measure';
+export type Tool = 'select' | 'terrain' | 'zone' | 'object' | 'measure' | 'fog';
 
 export interface ToolOptions {
   brush: TerrainKind | 'erase';
+  /** Pinceau du brouillard : révéler ou masquer des cases (MJ). */
+  fogBrush: 'reveal' | 'hide';
   zone: { shape: ZoneShape; size: number; direction: number; color: string; label: string };
   objectKind: ObjectKind;
 }
@@ -69,12 +72,29 @@ export interface BoardProps {
   targeting: boolean;
   onTarget(id: string): void;
   floats: FloatText[];
+  /** Brouillard de guerre de l'utilisateur (absent : tout est visible). */
+  fog?: FogCells | null;
   readOnly?: boolean;
   send(cmd: CommandInput): void;
 }
 
 /** Plateau de bataille : rendu DOM en couches, toutes les décisions passent par le serveur. */
-export function Board({ state, isGm, userId, tool, options, selectedId, selectedObjectId, onSelect, onSelectObject, targeting, onTarget, floats, readOnly, send }: BoardProps) {
+/** Brouillard en 2D : une image d'une case par pixel, agrandie avec lissage (bords doux). */
+function FogCanvas({ fog }: { fog: FogCells }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const g = ref.current?.getContext('2d');
+    if (!g) return;
+    const img = g.createImageData(fog.cols, fog.rows);
+    fog.cells.forEach((v, i) => {
+      img.data.set([11, 9, 18, v === FOG_UNKNOWN ? 250 : v === FOG_EXPLORED ? 150 : 0], i * 4);
+    });
+    g.putImageData(img, 0, 0);
+  }, [fog]);
+  return <canvas ref={ref} className={s.fog2d} width={fog.cols} height={fog.rows} aria-hidden />;
+}
+
+export function Board({ state, isGm, userId, tool, options, selectedId, selectedObjectId, onSelect, onSelectObject, targeting, onTarget, floats, fog, readOnly, send }: BoardProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ x: 40, y: 40, zoom: 1 });
   const [hover, setHover] = useState<Cell | null>(null);
@@ -196,7 +216,7 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
       gesture.current = { kind: 'pan', ...base };
       return;
     }
-    if (tool === 'terrain' && isGm) {
+    if ((tool === 'terrain' || tool === 'fog') && isGm) {
       gesture.current = { kind: 'paint', ...base };
       setStroke([cell]);
     } else if (tool === 'measure') {
@@ -242,7 +262,8 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
       if (from && (from.x !== ghost.cell.x || from.y !== ghost.cell.y)) send({ type: 'move', combatantId: g.id!, to: ghost.cell });
       setGhost(null);
     } else if (g.kind === 'paint' && stroke.length) {
-      send({ type: 'paint_terrain', cells: stroke, terrain: options.brush === 'erase' ? null : options.brush });
+      if (tool === 'fog') send({ type: 'reveal_cells', cells: stroke, revealed: options.fogBrush === 'reveal' });
+      else send({ type: 'paint_terrain', cells: stroke, terrain: options.brush === 'erase' ? null : options.brush });
       setStroke([]);
     } else if (g.kind === 'object' && inside(cell)) {
       const obj = state.map.objects.find((o) => o.id === g.id);
@@ -275,7 +296,7 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
             return x < cols && y < rows ? <div key={k} className={cx(s.cell, t === 'wall' && s.wall)} style={{ left: x * size, top: y * size, width: size, height: size, background: TERRAIN_META[t].bg }} /> : null;
           })}
           {stroke.map((c) => (
-            <div key={`st${cellKey(c)}`} className={s.cell} style={{ left: c.x * size, top: c.y * size, width: size, height: size, background: options.brush === 'erase' ? 'rgba(176,48,106,.25)' : TERRAIN_META[options.brush].bg, opacity: 0.7 }} />
+            <div key={`st${cellKey(c)}`} className={s.cell} style={{ left: c.x * size, top: c.y * size, width: size, height: size, background: tool === 'fog' ? (options.fogBrush === 'reveal' ? 'rgba(191,228,255,.35)' : 'rgba(11,9,18,.7)') : options.brush === 'erase' ? 'rgba(176,48,106,.25)' : TERRAIN_META[options.brush].bg, opacity: 0.7 }} />
           ))}
           {[...reach.keys()].map((k) => {
             const [x, y] = k.split(',').map(Number) as [number, number];
@@ -323,7 +344,8 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
               {OBJECT_META[options.objectKind].abbr}
             </div>
           )}
-          {tool === 'terrain' && hover && inside(hover) && !readOnly && <div className={s.hoverCell} style={{ left: hover.x * size, top: hover.y * size, width: size, height: size }} />}
+          {fog && <FogCanvas fog={fog} />}
+          {(tool === 'terrain' || tool === 'fog') && hover && inside(hover) && !readOnly && <div className={s.hoverCell} style={{ left: hover.x * size, top: hover.y * size, width: size, height: size }} />}
           {order.map((c) => {
             if (!c.position) return null;
             const pos = ghost?.id === c.id ? ghost.cell : c.position;

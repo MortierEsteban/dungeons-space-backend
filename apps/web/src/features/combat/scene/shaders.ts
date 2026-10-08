@@ -159,3 +159,32 @@ export function useAnimatedMaterial<T extends ShaderMaterial>(factory: () => T, 
 export function useDisposable(resource: { dispose(): void } | null | undefined): void {
   useEffect(() => () => resource?.dispose(), [resource]);
 }
+
+/**
+ * Brouillard de guerre : une texture d'une case par texel (filtrage linéaire = bords doux).
+ * Rouge = 0 jamais vu (nuit opaque où dérive une brume), 0,5 exploré (assombri), 1 visible.
+ */
+export function fogMaterial(): ShaderMaterial {
+  return new ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    uniforms: { uTime: { value: 0 }, uFog: { value: null } },
+    vertexShader: worldVertex,
+    fragmentShader: /* glsl */ `
+      uniform float uTime;
+      uniform sampler2D uFog;
+      varying vec3 vWorld;
+      varying vec2 vUv;
+      ${noise}
+      void main() {
+        float v = texture2D(uFog, vUv).r;
+        float mist = fbm(vWorld.xz * 0.45 + vec2(uTime * 0.04, -uTime * 0.03));
+        float unknown = 1.0 - smoothstep(0.0, 0.5, v);
+        float explored = 1.0 - smoothstep(0.5, 1.0, v);
+        float alpha = max(unknown * (0.9 + mist * 0.1), explored * 0.58);
+        vec3 col = mix(vec3(0.025, 0.02, 0.04), vec3(0.16, 0.11, 0.24), mist * unknown * 0.9);
+        gl_FragColor = vec4(col, alpha);
+      }
+    `,
+  });
+}

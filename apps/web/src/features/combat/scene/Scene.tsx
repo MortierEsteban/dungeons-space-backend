@@ -14,6 +14,7 @@ import { CellField, HoverCell, Measure, MovePath, ZoneField } from './Overlays3D
 import { GhostPiece, Piece } from './Pieces';
 import { Prop3D } from './Props3D';
 import { useDisposable } from './shaders';
+import { Fog3D } from './Fog3D';
 import { Terrain3D } from './Terrain3D';
 import { flagstoneTexture } from './textures';
 
@@ -125,7 +126,7 @@ interface SceneProps extends BoardProps {
 
 /** Tout ce qui vit dans le canevas WebGL : décor, pions, superpositions et gestes. */
 export function Scene(p: SceneProps) {
-  const { state, isGm, userId, tool, options, selectedId, selectedObjectId, onSelect, onSelectObject, targeting, onTarget, floats, readOnly, send, effects, prefs, measure, setMeasure } = p;
+  const { state, isGm, userId, tool, options, selectedId, selectedObjectId, onSelect, onSelectObject, targeting, onTarget, floats, fog, readOnly, send, effects, prefs, measure, setMeasure } = p;
   const frame = useMemo<Frame>(() => ({ cols: state.map.cols, rows: state.map.rows }), [state.map.cols, state.map.rows]);
   const camera = useThree((s) => s.camera);
   const gl = useThree((s) => s.gl);
@@ -211,7 +212,7 @@ export function Scene(p: SceneProps) {
       gesture.current = null;
       lockCamera(false);
       if (!g) return;
-      const { state: st, ghost: gh, stroke: sk, dragObject: dob, options: opt, send: sd } = latest.current;
+      const { state: st, ghost: gh, stroke: sk, dragObject: dob, options: opt, send: sd, tool: tl } = latest.current;
       if (g.kind === 'click' && Math.hypot(e.clientX - g.x, e.clientY - g.y) < 6) {
         onSelect(null);
         onSelectObject(null);
@@ -220,7 +221,8 @@ export function Scene(p: SceneProps) {
         if (from && (from.x !== gh.cell.x || from.y !== gh.cell.y)) sd({ type: 'move', combatantId: g.id!, to: gh.cell });
         setGhost(null);
       } else if (g.kind === 'paint' && sk.length) {
-        sd({ type: 'paint_terrain', cells: sk, terrain: opt.brush === 'erase' ? null : opt.brush });
+        if (tl === 'fog') sd({ type: 'reveal_cells', cells: sk, revealed: opt.fogBrush === 'reveal' });
+        else sd({ type: 'paint_terrain', cells: sk, terrain: opt.brush === 'erase' ? null : opt.brush });
         setStroke([]);
       } else if (g.kind === 'object' && dob) {
         const obj = st.map.objects.find((o) => o.id === g.id);
@@ -273,7 +275,7 @@ export function Scene(p: SceneProps) {
       if (tool === 'select') gesture.current = { kind: 'click', x: clientX, y: clientY };
       return;
     }
-    if (tool === 'terrain' && isGm) {
+    if ((tool === 'terrain' || tool === 'fog') && isGm) {
       gesture.current = { kind: 'paint', x: clientX, y: clientY };
       lockCamera(true);
       setStroke([cell]);
@@ -291,7 +293,7 @@ export function Scene(p: SceneProps) {
   const light = LIGHTING[prefs.ambiance];
   const span = Math.max(frame.cols, frame.rows) / 2 + 3;
   const sunDir = new Vector3(...light.sunPos).normalize().multiplyScalar(span * 1.6);
-  const strokeColor = options.brush === 'erase' ? '#b0306a' : options.brush === 'wall' ? '#c9a96a' : options.brush === 'water' ? '#4fb3ff' : options.brush === 'lava' ? '#f08a50' : options.brush === 'vegetation' ? '#8fbf6a' : '#e8d3a0';
+  const strokeColor = tool === 'fog' ? (options.fogBrush === 'reveal' ? '#bfe4ff' : '#4a2a4e') : options.brush === 'erase' ? '#b0306a' : options.brush === 'wall' ? '#c9a96a' : options.brush === 'water' ? '#4fb3ff' : options.brush === 'lava' ? '#f08a50' : options.brush === 'vegetation' ? '#8fbf6a' : '#e8d3a0';
   const ghostC = ghost ? state.combatants[ghost.id] : undefined;
   const center = (id: string): [number, number] | null => {
     const c = state.combatants[id];
@@ -334,13 +336,14 @@ export function Scene(p: SceneProps) {
       </mesh>
 
       <Terrain3D frame={frame} terrain={state.map.terrain} lowWalls={prefs.lowWalls} />
+      {fog && <Fog3D frame={frame} fog={fog} />}
       {stroke.length > 0 && <CellField frame={frame} cells={stroke} color={strokeColor} fill={0.45} curtain={0.25} />}
       {reach.length > 0 && <CellField frame={frame} cells={reach} color="#4fb3ff" fill={ghost ? 0.2 : 0.1} curtain={ghost ? 0.35 : 0.12} strength={0.7} />}
       {zones.map(({ zone, cells }) => (
         <ZoneField key={zone.id} frame={frame} zone={zone} cells={cells} />
       ))}
       {preview.length > 0 && <CellField frame={frame} cells={preview} color={options.zone.color} fill={0.12} curtain={0.5} strength={0.6} />}
-      {hover && !readOnly && (tool === 'terrain' || tool === 'object' || tool === 'zone') && <HoverCell frame={frame} cell={hover} color={tool === 'terrain' ? strokeColor : '#e8d3a0'} />}
+      {hover && !readOnly && (tool === 'terrain' || tool === 'fog' || tool === 'object' || tool === 'zone') && <HoverCell frame={frame} cell={hover} color={tool === 'terrain' || tool === 'fog' ? strokeColor : '#e8d3a0'} />}
       {dragObject && <HoverCell frame={frame} cell={dragObject} color="#7cc6ff" />}
 
       {state.map.objects.map((o) => (
