@@ -1,9 +1,10 @@
 import { critDice, rollD20, rollDice } from '../dice';
 import type { Rng } from '../rng';
-import type { CombatCommand, CombatantSpec } from './commands';
+import { sameDamage } from '../dnd5e/effects';
+import type { CombatCommand, CombatantSpec, ResolvedSpell } from './commands';
 import type { CombatEvent } from './events';
 import { footprint, inBounds, isWall, movementCost } from './grid';
-import { hpBand, initiativeOrder } from './reducer';
+import { applyCombatEvent, hpBand, initiativeOrder } from './reducer';
 import { cellKey, type Cell, type Combatant, type CombatSettings, type CombatState } from './types';
 
 export interface CombatActor {
@@ -102,6 +103,10 @@ export function buildCombatant(state: CombatState, spec: CombatantSpec, id: stri
     hidden: spec.hidden ?? (spec.kind !== 'pc' && state.settings.hideMonsterStats),
     attack: spec.attack,
     resources: { action: false, bonus: false, reaction: false, movementUsed: 0 },
+    portraitUrl: spec.portraitUrl,
+    modelUrl: spec.modelUrl,
+    ...(spec.saves ? { saves: spec.saves } : {}),
+    ...(spec.defenses ? { defenses: spec.defenses } : {}),
   };
 }
 
@@ -120,7 +125,21 @@ function nextActive(state: CombatState): { round: number; combatantId: string } 
   return { round: wrap ? state.round + 1 : state.round, combatantId: order[wrap ? 0 : idx + 1]!.id };
 }
 
-function hpChange(c: Combatant, mode: 'damage' | 'heal' | 'temp', amount: number, extra: { damageType?: string; source?: string } = {}): CombatEvent {
+/** Défense de la créature contre ce type de dégâts (les défenses « sous Rage » exigent l'état du même nom). */
+export function damageDefense(c: Combatant, damageType: string | undefined): 'résistance' | 'immunité' | 'vulnérabilité' | null {
+  if (!damageType || !c.defenses) return null;
+  const active = (d: { damage: string; when?: string }) => sameDamage(d.damage, damageType) && (!d.when || c.conditions.some((x) => x.name.toLowerCase() === d.when!.toLowerCase()));
+  if (c.defenses.immunities.some(active)) return 'immunité';
+  const resist = c.defenses.resistances.some(active);
+  const vuln = c.defenses.vulnerabilities.some(active);
+  if (resist && !vuln) return 'résistance';
+  if (vuln && !resist) return 'vulnérabilité';
+  return null;
+}
+
+function hpChange(c: Combatant, mode: 'damage' | 'heal' | 'temp', rawAmount: number, extra: { damageType?: string; source?: string } = {}): CombatEvent {
+  const defense = mode === 'damage' ? damageDefense(c, extra.damageType) : null;
+  const amount = defense === 'immunité' ? 0 : defense === 'résistance' ? Math.floor(rawAmount / 2) : defense === 'vulnérabilité' ? rawAmount * 2 : rawAmount;
   const hp = c.hp ?? 0;
   const max = c.maxHp ?? 1;
   let hpAfter = hp;
@@ -148,11 +167,76 @@ function hpChange(c: Combatant, mode: 'damage' | 'heal' | 'temp', amount: number
       ...(extra.damageType ? { damageType: extra.damageType } : {}),
       ...(extra.source ? { source: extra.source } : {}),
       ...(concentrating ? { concentrationDc: Math.max(10, Math.floor(amount / 2)) } : {}),
+      ...(defense ? { defense, rawAmount } : {}),
     },
   };
 }
 
-type ResolvedCommand = Exclude<CombatCommand, { type: 'add_character' } | { type: 'add_monster' }>;
+/**
+ * Résolution d'un sort : un seul jet de dégâts pour une zone (règle 5e), une attaque par rayon,
+ * un jet de sauvegarde par cible (moitié des dégâts ou rien sur une réussite), état infligé ou accordé.
+ */
+function resolveSpell(state: CombatState, cmd: ResolvedSpell, actor: CombatActor, ctx: DecideContext): CombatEvent[] {
+  const caster = getCombatant(state, cmd.casterId);
+  assertControl(actor, caster);
+  const events: CombatEvent[] = [];
+  let working = state;
+  const emit = (e: CombatEvent) => {
+    events.push(e);
+    working = applyCombatEvent(working, e);
+  };
+  const targets = cmd.targetIds.filter((id) => state.combatants[id]);
+  const shared = cmd.damage && !cmd.attack ? Math.max(0, rollDice(cmd.damage.notation, ctx.rng).total) : undefined;
+  const healed = cmd.heal ? Math.max(0, rollDice(cmd.heal.notation, ctx.rng).total) : undefined;
+  emit({
+    type: 'combat.spell_cast',
+    payload: {
+      casterId: caster.id, name: cmd.name, level: cmd.level, targetIds: targets,
+      ...(cmd.zone ? { zone: cmd.zone } : {}), ...(shared !== undefined ? { damage: shared } : {}), ...(healed !== undefined ? { heal: healed } : {}),
+    },
+  });
+  if (cmd.zone && cmd.keepZone) emit({ type: 'combat.zone_added', payload: { zone: { ...cmd.zone, id: ctx.newId() } } });
+  for (const id of targets) {
+    const target = working.combatants[id]!;
+    if (cmd.attack) {
+      const roll = rollD20(cmd.attack.bonus, ctx.rng);
+      const natural = roll.natural ?? roll.total - cmd.attack.bonus;
+      const crit = natural === 20;
+      const hit = natural !== 1 && (crit || target.ac === null || roll.total >= target.ac);
+      emit({ type: 'combat.attack_rolled', payload: { attackerId: caster.id, targetId: id, label: cmd.name, natural, bonus: cmd.attack.bonus, total: roll.total, targetAc: target.ac, hit, crit } });
+      if (hit && cmd.damage) {
+        const dmg = rollDice(crit ? critDice(cmd.damage.notation) : cmd.damage.notation, ctx.rng).total;
+        emit(hpChange(working.combatants[id]!, 'damage', Math.max(0, dmg), { damageType: cmd.damage.type, source: caster.name }));
+      }
+      if (hit && cmd.condition && !cmd.damage) emit({ type: 'combat.condition_applied', payload: { id, name: cmd.condition, rounds: null } });
+      continue;
+    }
+    if (cmd.save) {
+      const mod = target.saves?.[cmd.save.ability] ?? 0;
+      const roll = rollD20(mod, ctx.rng);
+      const natural = roll.natural ?? roll.total - mod;
+      const success = roll.total >= cmd.save.dc;
+      emit({ type: 'combat.save_rolled', payload: { id, label: cmd.name, ability: cmd.save.ability, natural, total: roll.total, dc: cmd.save.dc, success } });
+      if (shared !== undefined) {
+        const amount = success ? (cmd.save.half ? Math.floor(shared / 2) : 0) : shared;
+        if (amount > 0) emit(hpChange(working.combatants[id]!, 'damage', amount, { damageType: cmd.damage?.type, source: caster.name }));
+      }
+      if (!success && cmd.condition) emit({ type: 'combat.condition_applied', payload: { id, name: cmd.condition, rounds: null } });
+      continue;
+    }
+    if (healed !== undefined) emit(hpChange(target, 'heal', healed));
+    else if (shared !== undefined) emit(hpChange(target, 'damage', shared, { damageType: cmd.damage?.type, source: caster.name }));
+    else if (cmd.condition) emit({ type: 'combat.condition_applied', payload: { id, name: cmd.condition, rounds: null } });
+  }
+  if (cmd.concentration) emit({ type: 'combat.condition_applied', payload: { id: caster.id, name: 'Concentration', rounds: null } });
+  const self = working.combatants[caster.id]!;
+  if (cmd.cost !== 'none' && state.status === 'active' && state.activeId === caster.id && !self.resources[cmd.cost]) {
+    emit({ type: 'combat.resource_used', payload: { id: caster.id, resource: cmd.cost } });
+  }
+  return events;
+}
+
+type ResolvedCommand = Exclude<CombatCommand, { type: 'add_character' } | { type: 'add_monster' } | { type: 'cast_spell' }> | ResolvedSpell;
 
 /**
  * Décision : (état, commande, acteur) → événements. Le serveur est autoritaire :
@@ -183,6 +267,18 @@ export function decideCombat(state: CombatState, cmd: ResolvedCommand, actor: Co
       getCombatant(state, cmd.combatantId);
       return [{ type: 'combat.combatant_removed', payload: { id: cmd.combatantId } }];
     }
+    case 'set_model': {
+      const c = getCombatant(state, cmd.combatantId);
+      assertControl(actor, c);
+      return [{ type: 'combat.combatant_updated', payload: { id: c.id, patch: { modelUrl: cmd.modelUrl } } }];
+    }
+    case 'set_portrait': {
+      const c = getCombatant(state, cmd.combatantId);
+      assertControl(actor, c);
+      return [{ type: 'combat.combatant_updated', payload: { id: c.id, patch: { portraitUrl: cmd.portraitUrl } } }];
+    }
+    case 'resolve_spell':
+      return resolveSpell(state, cmd, actor, ctx);
     case 'set_initiative': {
       const c = getCombatant(state, cmd.combatantId);
       assertControl(actor, c);
@@ -351,5 +447,21 @@ export function decideCombat(state: CombatState, cmd: ResolvedCommand, actor: Co
     case 'remove_object':
       assertGm(actor);
       return [{ type: 'combat.object_removed', payload: { id: cmd.objectId } }];
+    case 'set_fog': {
+      assertGm(actor);
+      const { type: _t, ...patch } = cmd;
+      if (Object.keys(patch).length === 0) throw new CombatRuleError('Aucun réglage du brouillard à modifier.');
+      return [{ type: 'combat.fog_updated', payload: { patch } }];
+    }
+    case 'share_vision':
+      assertGm(actor);
+      getCombatant(state, cmd.combatantId);
+      return [{ type: 'combat.vision_shared', payload: { combatantId: cmd.combatantId, userIds: [...new Set(cmd.userIds)] } }];
+    case 'reveal_cells':
+      assertGm(actor);
+      return [{ type: 'combat.cells_revealed', payload: { cells: cmd.cells.filter((c) => inBounds(state, c)), revealed: cmd.revealed } }];
+    case 'reset_fog_memory':
+      assertGm(actor);
+      return [{ type: 'combat.fog_memory_reset', payload: {} }];
   }
 }

@@ -9,18 +9,22 @@ import {
   type CombatState,
   type ObjectKind,
   type TerrainKind,
+  type Zone,
   type ZoneShape,
 } from '@ds/rules';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { num } from '../../shared/format';
 import { cx } from '../../shared/ui/components';
 import type { CommandInput } from './api';
+import { FOG_EXPLORED, FOG_UNKNOWN, type FogCells } from './scene/support';
 import s from './combat.module.css';
 
-export type Tool = 'select' | 'terrain' | 'zone' | 'object' | 'measure';
+export type Tool = 'select' | 'terrain' | 'zone' | 'object' | 'measure' | 'fog';
 
 export interface ToolOptions {
   brush: TerrainKind | 'erase';
+  /** Pinceau du brouillard : révéler ou masquer des cases (MJ). */
+  fogBrush: 'reveal' | 'hide';
   zone: { shape: ZoneShape; size: number; direction: number; color: string; label: string };
   objectKind: ObjectKind;
 }
@@ -54,7 +58,21 @@ export const TERRAIN_META: Record<TerrainKind, { label: string; bg: string }> = 
 
 const CELL = 46;
 
-interface Props {
+/** Sort de zone en cours de visée : le gabarit suit le curseur, puis reste épinglé au clic. */
+export interface SpellAim {
+  zoneAt(cell: Cell): Omit<Zone, 'id'> | null;
+  pinned: Omit<Zone, 'id'> | null;
+  onAim(cell: Cell): void;
+}
+
+/** Éclat d'un sort de zone qui vient d'être lancé. */
+export interface SpellFlash {
+  id: number;
+  zone: Omit<Zone, 'id'>;
+}
+
+/** Contrat commun aux plateaux 2D et 3D. */
+export interface BoardProps {
   state: CombatState;
   isGm: boolean;
   userId: string;
@@ -68,12 +86,34 @@ interface Props {
   targeting: boolean;
   onTarget(id: string): void;
   floats: FloatText[];
+  /** Brouillard de guerre de l'utilisateur (absent : tout est visible). */
+  fog?: FogCells | null;
+  /** Visée d'un sort de zone. */
+  aim?: SpellAim | null;
+  /** Créatures retenues comme cibles d'un sort : mises en évidence. */
+  markedIds?: string[];
+  flashes?: SpellFlash[];
   readOnly?: boolean;
   send(cmd: CommandInput): void;
 }
 
 /** Plateau de bataille : rendu DOM en couches, toutes les décisions passent par le serveur. */
-export function Board({ state, isGm, userId, tool, options, selectedId, selectedObjectId, onSelect, onSelectObject, targeting, onTarget, floats, readOnly, send }: Props) {
+/** Brouillard en 2D : une image d'une case par pixel, agrandie avec lissage (bords doux). */
+function FogCanvas({ fog }: { fog: FogCells }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const g = ref.current?.getContext('2d');
+    if (!g) return;
+    const img = g.createImageData(fog.cols, fog.rows);
+    fog.cells.forEach((v, i) => {
+      img.data.set([11, 9, 18, v === FOG_UNKNOWN ? 250 : v === FOG_EXPLORED ? 150 : 0], i * 4);
+    });
+    g.putImageData(img, 0, 0);
+  }, [fog]);
+  return <canvas ref={ref} className={s.fog2d} width={fog.cols} height={fog.rows} aria-hidden />;
+}
+
+export function Board({ state, isGm, userId, tool, options, selectedId, selectedObjectId, onSelect, onSelectObject, targeting, onTarget, floats, fog, readOnly, send, aim, markedIds = [], flashes = [] }: BoardProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ x: 40, y: 40, zoom: 1 });
   const [hover, setHover] = useState<Cell | null>(null);
@@ -131,7 +171,9 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
     () => state.map.zones.map((z) => ({ zone: z, cells: zoneCells(z, cols, rows) })),
     [state.map.zones, cols, rows],
   );
-  const previewZone = tool === 'zone' && hover && inside(hover) && !readOnly ? zoneCells({ id: 'preview', ...options.zone, origin: hover }, cols, rows) : [];
+  const previewZone = !aim && tool === 'zone' && hover && inside(hover) && !readOnly ? zoneCells({ id: 'preview', ...options.zone, origin: hover }, cols, rows) : [];
+  const aimZone = aim ? (aim.pinned ?? (hover && inside(hover) ? aim.zoneAt(hover) : null)) : null;
+  const aimCells = aimZone ? zoneCells({ ...aimZone, id: 'aim' }, cols, rows) : [];
 
   const zoomAt = (factor: number, cx?: number, cy?: number) => {
     userMoved.current = true;
@@ -169,6 +211,13 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
     const target = (e.target as HTMLElement).closest<HTMLElement>('[data-token],[data-object]');
     const base = { startX: e.clientX, startY: e.clientY, viewX: view.x, viewY: view.y };
 
+    if (aim && inside(cell)) {
+      // Visée d'un sort de zone : le clic (même sur un pion) épingle le gabarit.
+      const tokenCell = target?.dataset.token ? state.combatants[target.dataset.token]?.position : null;
+      aim.onAim(tokenCell ?? cell);
+      gesture.current = { kind: 'pan', ...base };
+      return;
+    }
     if (target?.dataset.token) {
       const id = target.dataset.token;
       if (targeting) {
@@ -195,7 +244,7 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
       gesture.current = { kind: 'pan', ...base };
       return;
     }
-    if (tool === 'terrain' && isGm) {
+    if ((tool === 'terrain' || tool === 'fog') && isGm) {
       gesture.current = { kind: 'paint', ...base };
       setStroke([cell]);
     } else if (tool === 'measure') {
@@ -241,7 +290,8 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
       if (from && (from.x !== ghost.cell.x || from.y !== ghost.cell.y)) send({ type: 'move', combatantId: g.id!, to: ghost.cell });
       setGhost(null);
     } else if (g.kind === 'paint' && stroke.length) {
-      send({ type: 'paint_terrain', cells: stroke, terrain: options.brush === 'erase' ? null : options.brush });
+      if (tool === 'fog') send({ type: 'reveal_cells', cells: stroke, revealed: options.fogBrush === 'reveal' });
+      else send({ type: 'paint_terrain', cells: stroke, terrain: options.brush === 'erase' ? null : options.brush });
       setStroke([]);
     } else if (g.kind === 'object' && inside(cell)) {
       const obj = state.map.objects.find((o) => o.id === g.id);
@@ -257,7 +307,7 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
     <div className={s.boardWrap}>
       <div
         ref={viewport}
-        className={cx(s.viewport, (tool !== 'select' || targeting) && s.crosshair)}
+        className={cx(s.viewport, (tool !== 'select' || targeting || !!aim) && s.crosshair)}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -274,7 +324,7 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
             return x < cols && y < rows ? <div key={k} className={cx(s.cell, t === 'wall' && s.wall)} style={{ left: x * size, top: y * size, width: size, height: size, background: TERRAIN_META[t].bg }} /> : null;
           })}
           {stroke.map((c) => (
-            <div key={`st${cellKey(c)}`} className={s.cell} style={{ left: c.x * size, top: c.y * size, width: size, height: size, background: options.brush === 'erase' ? 'rgba(176,48,106,.25)' : TERRAIN_META[options.brush].bg, opacity: 0.7 }} />
+            <div key={`st${cellKey(c)}`} className={s.cell} style={{ left: c.x * size, top: c.y * size, width: size, height: size, background: tool === 'fog' ? (options.fogBrush === 'reveal' ? 'rgba(191,228,255,.35)' : 'rgba(11,9,18,.7)') : options.brush === 'erase' ? 'rgba(176,48,106,.25)' : TERRAIN_META[options.brush].bg, opacity: 0.7 }} />
           ))}
           {[...reach.keys()].map((k) => {
             const [x, y] = k.split(',').map(Number) as [number, number];
@@ -299,6 +349,19 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
               )}
             </div>
           ))}
+          {aimCells.map((c) => (
+            <div key={`az${cellKey(c)}`} className={cx(s.zoneCell, aim?.pinned && s.zonePinned)} style={{ left: c.x * size, top: c.y * size, width: size, height: size, background: `${aimZone!.color}${aim?.pinned ? '55' : '30'}`, borderColor: `${aimZone!.color}cc` }} />
+          ))}
+          {aimZone && (
+            <div className={s.zoneLabel} style={{ left: (aimZone.origin.x + 0.5) * size, top: (aimZone.origin.y + 0.5) * size, borderColor: aimZone.color }}>
+              {aimZone.label}
+            </div>
+          )}
+          {flashes.map((f) =>
+            zoneCells({ ...f.zone, id: 'flash' }, cols, rows).map((c) => (
+              <div key={`fl${f.id}${cellKey(c)}`} className={s.zoneFlash} style={{ left: c.x * size, top: c.y * size, width: size, height: size, background: f.zone.color }} />
+            )),
+          )}
           {previewZone.map((c) => (
             <div key={`pz${cellKey(c)}`} className={s.zoneCell} style={{ left: c.x * size, top: c.y * size, width: size, height: size, background: `${options.zone.color}22`, borderColor: `${options.zone.color}66` }} />
           ))}
@@ -322,7 +385,8 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
               {OBJECT_META[options.objectKind].abbr}
             </div>
           )}
-          {tool === 'terrain' && hover && inside(hover) && !readOnly && <div className={s.hoverCell} style={{ left: hover.x * size, top: hover.y * size, width: size, height: size }} />}
+          {fog && <FogCanvas fog={fog} />}
+          {(tool === 'terrain' || tool === 'fog') && hover && inside(hover) && !readOnly && <div className={s.hoverCell} style={{ left: hover.x * size, top: hover.y * size, width: size, height: size }} />}
           {order.map((c) => {
             if (!c.position) return null;
             const pos = ghost?.id === c.id ? ghost.cell : c.position;
@@ -334,7 +398,7 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
               <div
                 key={c.id}
                 data-token={c.id}
-                className={cx(s.token, selectedId === c.id && s.tokenSelected, active && s.tokenActive, dead && s.tokenDead, c.hidden && isGm && s.tokenHidden, targeting && s.tokenTarget, ghost?.id === c.id && s.tokenDragging)}
+                className={cx(s.token, selectedId === c.id && s.tokenSelected, active && s.tokenActive, dead && s.tokenDead, c.hidden && isGm && s.tokenHidden, targeting && s.tokenTarget, markedIds.includes(c.id) && s.tokenMarked, ghost?.id === c.id && s.tokenDragging)}
                 style={{ left: pos.x * size, top: pos.y * size, width: c.size * size, height: c.size * size, '--ring': ring } as CSSProperties}
                 title={`${c.name}${c.hp !== null ? ` · ${c.hp}/${c.maxHp} PV` : ` · ${c.hpBand}`}${c.ac !== null ? ` · CA ${c.ac}` : ''}`}
               >

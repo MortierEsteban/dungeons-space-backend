@@ -1,4 +1,4 @@
-import type { Cell, Combatant, CombatSettings, HpBand, MapObject, TerrainKind, Zone } from './types';
+import type { Cell, Combatant, CombatSettings, FogSettings, HpBand, MapObject, TerrainKind, Zone } from './types';
 
 /**
  * Événements de combat : suffisants pour reconstruire l'état (exigence CMB-60/62).
@@ -7,7 +7,7 @@ import type { Cell, Combatant, CombatSettings, HpBand, MapObject, TerrainKind, Z
 export type CombatEvent =
   | { type: 'combat.created'; payload: { id: string; name: string; cols: number; rows: number; settings: CombatSettings } }
   | { type: 'combat.combatant_added'; payload: { combatant: Combatant } }
-  | { type: 'combat.combatant_updated'; payload: { id: string; patch: Partial<Pick<Combatant, 'name' | 'short' | 'ac' | 'maxHp' | 'hp' | 'hidden' | 'side' | 'initiativeMod' | 'speed' | 'attack' | 'hpBand'>> } }
+  | { type: 'combat.combatant_updated'; payload: { id: string; patch: Partial<Pick<Combatant, 'name' | 'short' | 'ac' | 'maxHp' | 'hp' | 'hidden' | 'side' | 'initiativeMod' | 'speed' | 'attack' | 'hpBand' | 'modelUrl' | 'portraitUrl'>> } }
   | { type: 'combat.combatant_removed'; payload: { id: string } }
   | { type: 'combat.initiative_set'; payload: { id: string; value: number; natural: number | null } }
   | { type: 'combat.started'; payload: Record<string, never> }
@@ -28,6 +28,9 @@ export type CombatEvent =
         /** DD du jet de concentration à rappeler (CMB-34). */
         concentrationDc?: number;
         source?: string;
+        /** Dégâts modifiés par une défense de la cible (avant : `rawAmount`). */
+        defense?: 'résistance' | 'immunité' | 'vulnérabilité';
+        rawAmount?: number;
       };
     }
   | { type: 'combat.condition_applied'; payload: { id: string; name: string; rounds: number | null } }
@@ -46,6 +49,11 @@ export type CombatEvent =
         crit: boolean;
       };
     }
+  | {
+      type: 'combat.spell_cast';
+      payload: { casterId: string; name: string; level: number; targetIds: string[]; zone?: Omit<Zone, 'id'>; damage?: number; heal?: number };
+    }
+  | { type: 'combat.save_rolled'; payload: { id: string; label: string; ability: string; natural: number; total: number; dc: number; success: boolean } }
   | { type: 'combat.dice_rolled'; payload: { label: string; notation: string; rolls: number[]; total: number; byUserId: string; secret: boolean } }
   | { type: 'combat.resource_used'; payload: { id: string; resource: 'action' | 'bonus' | 'reaction' } }
   | { type: 'combat.map_resized'; payload: { cols: number; rows: number } }
@@ -56,6 +64,10 @@ export type CombatEvent =
   | { type: 'combat.object_added'; payload: { object: MapObject } }
   | { type: 'combat.object_updated'; payload: { id: string; patch: Partial<Omit<MapObject, 'id' | 'kind'>> } }
   | { type: 'combat.object_removed'; payload: { id: string } }
+  | { type: 'combat.fog_updated'; payload: { patch: Partial<Pick<FogSettings, 'enabled' | 'shared' | 'range'>> } }
+  | { type: 'combat.vision_shared'; payload: { combatantId: string; userIds: string[] } }
+  | { type: 'combat.cells_revealed'; payload: { cells: Cell[]; revealed: boolean } }
+  | { type: 'combat.fog_memory_reset'; payload: Record<string, never> }
   | { type: 'combat.ended'; payload: { summary: string } };
 
 export type CombatEventType = CombatEvent['type'];

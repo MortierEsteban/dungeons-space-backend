@@ -24,6 +24,7 @@ import {
   type GeneratedNpc,
   type LootTier,
 } from '@ds/rules';
+import { creationToClass } from '@ds/shared';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { errorMessage, http } from '../../shared/api/client';
@@ -34,6 +35,7 @@ import { useToast } from '../../shared/ui/toast';
 import { useCampaign } from '../campaigns/api';
 import { useCurrentCampaign } from '../campaigns/CampaignContext';
 import { useCampaignCharacters, useCreateCharacter } from '../character/api';
+import { useCreations } from '../sanctuary/api';
 import s from './generation.module.css';
 
 type Method = 'roll' | 'point_buy' | 'standard_array';
@@ -56,7 +58,17 @@ function CharacterForge() {
   const [skills, setSkills] = useState<string[]>([]);
   const [ownerId, setOwnerId] = useState('');
 
-  const classDef = getClass(cls)!;
+  // Classes homebrew de la Forge (les siennes et celles de la campagne), à côté des classes du SRD.
+  const { data: creations = [] } = useCreations();
+  const homebrew = useMemo(
+    () => creations.filter((c) => c.kind === 'Classe' && (!c.campaignId || c.campaignId === campaignId)).flatMap((c) => {
+      const def = creationToClass(c);
+      return def ? [{ ...def, id: `hb:${c.id}`, ref: c.id }] : [];
+    }),
+    [creations, campaignId],
+  );
+  const custom = homebrew.find((h) => h.id === cls);
+  const classDef = custom ?? getClass(cls) ?? CLASSES[0]!;
   const speciesDef = getSpecies(species)!;
   const values = method === 'standard_array' ? [...STANDARD_ARRAY] : pool;
   const base: AbilityScores = method === 'point_buy' ? buy : (Object.fromEntries(ABILITY_KEYS.map((k) => [k, values[assign[k]] ?? 10])) as AbilityScores);
@@ -77,7 +89,7 @@ function CharacterForge() {
     if (method === 'point_buy' && spent > POINT_BUY_BUDGET) return toast(`Budget dépassé : ${spent} / ${POINT_BUY_BUDGET} points.`, 'error');
     create.mutate(
       {
-        kind: 'pc', name: name.trim(), species: speciesDef.name, className: classDef.name, background, alignment: '', abilities: base,
+        kind: 'pc', name: name.trim(), species: speciesDef.name, className: classDef.name, ...(custom ? { classRef: custom.ref } : {}), background, alignment: '', abilities: base,
         skills, ...(portrait ? { portraitUrl: portrait } : {}), ...(ownerId ? { ownerId } : {}),
       },
       { onSuccess: (c) => (toast(`${c.name} est forgé·e !`, 'success'), navigate(`/personnage/${c.id}`)), onError: (e) => toast(errorMessage(e), 'error') },
@@ -106,7 +118,19 @@ function CharacterForge() {
                 {c.name}
               </Chip>
             ))}
+            {homebrew.map((c) => (
+              <Chip key={c.id} square color="var(--arcane-light)" active={cls === c.id} onClick={() => (setCls(c.id), setSkills([]))} title="Classe homebrew (Forge)">
+                ✦ {c.name}
+              </Chip>
+            ))}
           </div>
+          {custom && (
+            <span className="ds-help">
+              Classe homebrew : {custom.features.filter((f) => f.level <= (campaign?.settings.startLevel ?? 1)).map((f) => f.name).join(', ') || 'aucune aptitude au départ'}
+              {custom.resources?.length ? ` · ressources : ${custom.resources.map((r) => r.name).join(', ')}` : ''}
+            </span>
+          )}
+          {homebrew.length === 0 && <span className="ds-help">Créez une classe homebrew dans la Forge (Sanctuaire) ou importez-en une depuis la bibliothèque partagée.</span>}
         </div>
         <div className="ds-stack" style={{ gap: 12 }}>
           <div className="ds-row">

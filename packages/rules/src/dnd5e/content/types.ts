@@ -33,7 +33,20 @@ export interface SpellEntry {
   roll?: string;
   damageType?: string;
   save?: AbilityKey;
+  /** Gabarit : `size` en mètres (rayon d'une sphère, longueur d'un cône ou d'une ligne, côté d'un cube). */
   area?: { shape: AreaShape; size: number };
+  /** Jet d'attaque de sort contre la CA. */
+  attack?: boolean;
+  /** Le jet soigne (+ modificateur de lancement) au lieu de blesser. */
+  heal?: boolean;
+  /** Moitié des dégâts sur un jet de sauvegarde réussi. */
+  half?: boolean;
+  /** État infligé (sauvegarde ratée) ou accordé (sort bénéfique sans sauvegarde). */
+  condition?: string;
+  /** Nombre de cibles (rayons, projectiles…). */
+  targets?: number;
+  /** Dés ajoutés par niveau d'emplacement au-dessus du niveau du sort. */
+  upcast?: string;
   provenance: Provenance;
 }
 
@@ -61,6 +74,8 @@ export interface MonsterEntry {
   abilities: AbilityScores;
   attacks: MonsterAttack[];
   traits: string[];
+  /** Défenses aux dégâts (types en français). */
+  defenses?: { resistances?: string[]; immunities?: string[]; vulnerabilities?: string[] };
   summary: string;
   provenance: Provenance;
 }

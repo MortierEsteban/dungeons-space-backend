@@ -1,5 +1,15 @@
-import type { LinkDto, NodeDto } from '@ds/shared';
 import type { Vec3 } from '../../shared/graph/Graph3D';
+
+/** Ce que la disposition lit d'un nœud et d'un lien (nœuds de la Constellation ou événements de la Chronique). */
+export interface LayoutNode {
+  id: string;
+  pinned?: boolean;
+  position?: { x: number; y: number; z: number } | null;
+}
+export interface LayoutLink {
+  fromId: string;
+  toId: string;
+}
 
 /** Pseudo-aléatoire stable dérivé de l'identifiant (même disposition à chaque visite). */
 function hash(id: string, salt: number): number {
@@ -12,16 +22,17 @@ function hash(id: string, salt: number): number {
  * Disposition force-directed en 3D (répulsion entre nœuds, ressorts sur les liens, gravité centrale).
  * Les nœuds épinglés (CST-12) gardent leur position. Le nombre d'itérations décroît avec la taille.
  */
-export function forceLayout(nodes: NodeDto[], links: LinkDto[], flat = false): Map<string, Vec3> {
+export function forceLayout(nodes: readonly LayoutNode[], links: readonly LayoutLink[], flat = false): Map<string, Vec3> {
   const pos = new Map<string, Vec3>();
-  const radius = 120 + Math.sqrt(nodes.length) * 40;
+  // Vue à plat : plus d'espace entre les nœuds, les étiquettes doivent tenir côte à côte.
+  const k = flat ? 210 : 140;
+  const radius = 120 + Math.sqrt(nodes.length) * (flat ? 70 : 40);
   for (const n of nodes) {
     pos.set(n.id, n.pinned && n.position ? { ...n.position } : { x: hash(n.id, 1) * radius * 2, y: hash(n.id, 2) * radius * 2, z: flat ? 0 : hash(n.id, 3) * radius * 2 });
   }
   const ids = nodes.map((n) => n.id);
   const pinned = new Set(nodes.filter((n) => n.pinned && n.position).map((n) => n.id));
   const iterations = nodes.length > 300 ? 60 : nodes.length > 120 ? 120 : 260;
-  const k = 140;
   for (let it = 0; it < iterations; it++) {
     const cooling = 1 - it / iterations;
     const disp = new Map<string, Vec3>(ids.map((id) => [id, { x: 0, y: 0, z: 0 }]));

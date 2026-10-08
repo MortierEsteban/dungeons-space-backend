@@ -37,7 +37,7 @@ function FromSanctuary({ character, open, onClose }: { character: CharacterDto; 
                   sh.act(
                     {
                       type: 'add_item',
-                      item: { name: it.name, ref: it.id, qty: 1, weight: it.weight, container: 'Sac à dos', equipped: false, rarity: it.rarity, requiresAttunement: !!it.requiresAttunement, attuned: false, description: it.summary },
+                      item: { name: it.name, ref: it.id, qty: 1, weight: it.weight, container: 'Sac à dos', equipped: false, rarity: it.rarity, requiresAttunement: !!it.requiresAttunement, attuned: false, description: it.summary, ...(it.roll ? { roll: it.roll } : {}) },
                     },
                     `${it.name} ajouté à l’inventaire.`,
                   )

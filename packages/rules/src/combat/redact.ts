@@ -30,7 +30,7 @@ export function redactCombatEventForPlayer(event: CombatEvent, before: CombatSta
     }
     case 'combat.hp_changed':
       return hidden(event.payload.id)
-        ? { ...event, payload: { ...event.payload, amount: null, hpBefore: null, hpAfter: null, tempAfter: null } }
+        ? { ...event, payload: { ...event.payload, amount: null, hpBefore: null, hpAfter: null, tempAfter: null, rawAmount: undefined } }
         : event;
     case 'combat.attack_rolled':
       return hidden(event.payload.targetId) ? { ...event, payload: { ...event.payload, targetAc: null } } : event;

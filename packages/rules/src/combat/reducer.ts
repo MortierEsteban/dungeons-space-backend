@@ -1,5 +1,8 @@
 import type { CombatEvent } from './events';
-import { cellKey, type Combatant, type CombatState, type HpBand } from './types';
+import { cellKey, DEFAULT_FOG, type Combatant, type CombatState, type FogSettings, type HpBand } from './types';
+
+/** Réglages du brouillard (désactivé pour les combats qui n'en ont jamais eu). */
+export const fogOf = (state: CombatState): FogSettings => state.fog ?? DEFAULT_FOG;
 
 export function hpBand(hp: number, max: number): HpBand {
   if (hp <= 0) return 'À terre';
@@ -110,6 +113,8 @@ function reduce(state: CombatState, event: CombatEvent): CombatState {
       return updateCombatant(state, event.payload.id, (c) => ({ ...c, resources: { ...c.resources, [event.payload.resource]: true } }));
     case 'combat.attack_rolled':
     case 'combat.dice_rolled':
+    case 'combat.spell_cast':
+    case 'combat.save_rolled':
       return state;
     case 'combat.map_resized':
       return { ...state, map: { ...state.map, cols: event.payload.cols, rows: event.payload.rows } };
@@ -136,6 +141,23 @@ function reduce(state: CombatState, event: CombatEvent): CombatState {
       };
     case 'combat.object_removed':
       return { ...state, map: { ...state.map, objects: state.map.objects.filter((o) => o.id !== event.payload.id) } };
+    case 'combat.fog_updated':
+      return { ...state, fog: { ...fogOf(state), ...event.payload.patch } };
+    case 'combat.vision_shared': {
+      const { [event.payload.combatantId]: _old, ...grants } = fogOf(state).grants;
+      if (event.payload.userIds.length) grants[event.payload.combatantId] = event.payload.userIds;
+      return { ...state, fog: { ...fogOf(state), grants } };
+    }
+    case 'combat.cells_revealed': {
+      const revealed = { ...fogOf(state).revealed };
+      for (const cell of event.payload.cells) {
+        if (event.payload.revealed) revealed[cellKey(cell)] = true;
+        else delete revealed[cellKey(cell)];
+      }
+      return { ...state, fog: { ...fogOf(state), revealed } };
+    }
+    case 'combat.fog_memory_reset':
+      return state;
     case 'combat.ended':
       return { ...state, status: 'ended', activeId: null };
   }

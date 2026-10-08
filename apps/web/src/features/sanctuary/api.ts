@@ -1,4 +1,4 @@
-import type { CharacterDto, CompendiumEntry, CreationDto, CreationInput, RulesetDto } from '@ds/shared';
+import type { CharacterDto, CompendiumEntry, CreationDto, CreationInput, CreationKind, RulesetDto, SharedCreationDto } from '@ds/shared';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { http, qk, toQuery } from '../../shared/api/client';
 
@@ -34,4 +34,21 @@ export function useCreationMutations() {
       },
     }),
   };
+}
+
+/** Bibliothèque partagée : créations publiées par toutes les tables. */
+export function useSharedCreations(q: string, kind?: CreationKind) {
+  return useQuery({
+    queryKey: [...qk.creations, 'shared', q, kind ?? 'all'],
+    queryFn: async () => (await http.get<{ creations: SharedCreationDto[] }>(`/creations/shared${toQuery({ q, kind })}`)).creations,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useImportCreations() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { ids: string[]; campaignId: string | null }) => (await http.post<{ creations: CreationDto[] }>('/creations/import', input)).creations,
+    onSuccess: () => void client.invalidateQueries({ queryKey: qk.creations }),
+  });
 }

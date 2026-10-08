@@ -1,6 +1,12 @@
 import type { z } from 'zod';
 import type { ConditionDef } from './dnd5e/conditions';
 
+export interface CombatDefenses {
+  resistances: { damage: string; when?: string }[];
+  immunities: { damage: string; when?: string }[];
+  vulnerabilities: { damage: string; when?: string }[];
+}
+
 /** Ce qu'un ruleset doit fournir au noyau agnostique (campagnes, chronique, combat, constellation). */
 export interface Ruleset<TSheet = unknown, TCreate = unknown, TDerived = unknown> {
   id: string;
@@ -23,6 +29,10 @@ export interface Ruleset<TSheet = unknown, TCreate = unknown, TDerived = unknown
     initiativeMod: number;
     speed: number;
     attack: { name: string; bonus: number; damage: string; damageType: string } | null;
+    /** Modificateurs de jets de sauvegarde, par caractéristique. */
+    saves?: Record<string, number>;
+    /** Résistances, immunités et vulnérabilités aux dégâts (`when` : sous cet état seulement). */
+    defenses?: CombatDefenses;
   };
 }
 

@@ -133,3 +133,13 @@
   .hpControls { grid-template-columns: 1fr 1fr; }
   .hpControls > :nth-child(2) { grid-column: 1 / -1; grid-row: 1; }
 }
+.effectRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px; background: rgba(14,10,20,.55); border: 1px solid var(--gold-a25); border-radius: 3px; }
+.effectRow > select { width: auto; }
+.addEffect { align-self: flex-start; padding: 4px 10px; background: none; border: 1px dashed var(--gold-a50); border-radius: 3px; color: var(--gold-light); font-family: var(--font-title); font-size: 11px; letter-spacing: .08em; }
+.addEffect:hover { border-color: var(--arcane-light); color: var(--arcane-pale); }
+.effectTags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.catalogTag { font-size: 11px; font-style: italic; color: var(--arcane-light); }
+.resources { display: flex; flex-direction: column; gap: 10px; }
+.resource { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.resourcePip { width: 14px; height: 14px; transform: rotate(45deg); border: 1px solid var(--gold); background: transparent; flex: none; }
+.resourcePipOn { background: var(--gold-light); box-shadow: 0 0 8px rgba(201,169,106,.6); }
