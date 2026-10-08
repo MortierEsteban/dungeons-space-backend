@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { OBJECT_KINDS, TERRAIN_KINDS, ZONE_SHAPES } from './types';
 
+/** Seuls les modèles téléversés sur l'instance sont acceptés (jamais d'URL externe arbitraire). */
+export const modelUrlSchema = z.string().regex(/^\/uploads\/[A-Za-z0-9-]+\.glb$/, 'Modèle 3D invalide (fichier .glb téléversé attendu).');
+
 const cell = z.object({ x: z.number().int().min(0).max(199), y: z.number().int().min(0).max(199) });
 const id = z.string().min(1).max(64);
 const quickAttack = z.object({
@@ -28,6 +31,8 @@ export const combatantSpecSchema = z.object({
   ownerUserId: z.string().nullable().default(null),
   hidden: z.boolean().optional(),
   attack: quickAttack.nullable().default(null),
+  portraitUrl: z.string().max(2000).nullable().default(null),
+  modelUrl: modelUrlSchema.nullable().default(null),
 });
 export type CombatantSpec = z.infer<typeof combatantSpecSchema>;
 
@@ -52,6 +57,8 @@ export const combatCommandSchema = z.discriminatedUnion('type', [
     }),
   }),
   z.object({ type: z.literal('remove_combatant'), combatantId: id }),
+  /** Apparence 3D : le propriétaire (ou le MJ) remplace le jeton par un modèle, ou revient au jeton (null). */
+  z.object({ type: z.literal('set_model'), combatantId: id, modelUrl: modelUrlSchema.nullable() }),
   z.object({ type: z.literal('set_initiative'), combatantId: id, value: z.number().int().min(-10).max(50) }),
   z.object({ type: z.literal('roll_initiative'), combatantIds: z.array(id).optional() }),
   z.object({ type: z.literal('start') }),

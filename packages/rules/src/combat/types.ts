@@ -57,6 +57,10 @@ export interface Combatant {
   hidden: boolean;
   attack: QuickAttack | null;
   resources: TurnResources;
+  /** Portrait affiché sur le jeton (facultatif ; absent des combats antérieurs). */
+  portraitUrl?: string | null;
+  /** Modèle 3D (glTF binaire) importé par le joueur ou le MJ ; absent = jeton simple. */
+  modelUrl?: string | null;
 }
 
 export const TERRAIN_KINDS = ['wall', 'difficult', 'water', 'lava', 'vegetation'] as const;

@@ -7,6 +7,7 @@ import { useDice } from '../../shared/dice/DiceProvider';
 import { useLocalPref } from '../../shared/hooks';
 import { Bar, Button, Chip, cx, Empty, Loading, Panel, Portrait, Stat, Stepper, Tabs } from '../../shared/ui/components';
 import { ImageDrop } from '../../shared/ui/ImageDrop';
+import { ModelDrop } from '../combat/ModelDrop';
 import { useCurrentCampaign } from '../campaigns/CampaignContext';
 import { useCampaignCharacters, useCharacter, useMyCharacters } from './api';
 import { CharacterEvents } from './CharacterEvents';
@@ -18,7 +19,7 @@ import { SpellsTab } from './SpellsTab';
 import { useSheet } from './useSheet';
 import s from './character.module.css';
 
-type Tab = 'apercu' | 'sorts' | 'inv' | 'notes' | 'events';
+type Tab = 'apercu' | 'sorts' | 'inv' | 'notes' | 'events' | 'apparence';
 
 function HpPanel({ character }: { character: CharacterDto }) {
   const sh = useSheet(character);
@@ -123,6 +124,7 @@ function PcSheet({ character }: { character: CharacterDto }) {
           { value: 'inv', label: 'Inventaire', count: sheet.inventory.length },
           { value: 'notes', label: 'Notes' },
           { value: 'events', label: 'Événements' },
+          { value: 'apparence', label: 'Apparence 3D' },
         ]}
       />
       {tab === 'apercu' && <SheetOverview character={character} onRoll={roll} />}
@@ -130,6 +132,16 @@ function PcSheet({ character }: { character: CharacterDto }) {
       {tab === 'inv' && <InventoryTab character={character} />}
       {tab === 'notes' && <NotesTab character={character} />}
       {tab === 'events' && <CharacterEvents character={character} />}
+      {tab === 'apparence' && (
+        <Panel className="ds-stack">
+          <span className="ds-label">Apparence sur le plateau de combat</span>
+          <p className="ds-help" style={{ margin: 0 }}>
+            Importez la figurine de votre héros au format .glb (glTF binaire, textures embarquées) : elle remplacera le jeton sur le plateau 3D, s’orientera
+            dans le sens de la marche et jouera ses animations « idle », « walk » et « death » si elle en possède. Sans modèle, un jeton à vos couleurs est utilisé.
+          </p>
+          <ModelDrop value={character.modelUrl} onChange={sh.setModel} name={character.name} disabled={!sh.canEdit} />
+        </Panel>
+      )}
     </>
   );
 }

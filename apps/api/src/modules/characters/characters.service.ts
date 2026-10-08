@@ -77,6 +77,7 @@ export class CharactersService {
       ownerId: row.ownerId,
       ownerName,
       portraitUrl: row.portraitUrl,
+      modelUrl: row.modelUrl,
       subtitle: sheet ? `${sheet.species} · ${sheet.className} ${sheet.level}` : [npc?.species, npc?.job].filter(Boolean).join(' · '),
       level: sheet?.level ?? null,
       hp: sheet ? { current: sheet.hp.current, max: sheet.hp.max } : null,
@@ -216,6 +217,7 @@ export class CharactersService {
     const values: Partial<typeof characters.$inferInsert> = { updatedAt: new Date() };
     if (patch.name) values.name = patch.name;
     if (patch.portraitUrl !== undefined) values.portraitUrl = patch.portraitUrl;
+    if (patch.modelUrl !== undefined) values.modelUrl = patch.modelUrl;
     if (patch.visibleToPlayers !== undefined && viewer.role === 'gm') values.visibleToPlayers = patch.visibleToPlayers;
     if (patch.npc) {
       if (row.kind !== 'npc') throw badRequest('Seul un PNJ possède ces champs.');

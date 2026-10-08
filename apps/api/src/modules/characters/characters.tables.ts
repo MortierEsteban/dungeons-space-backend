@@ -20,6 +20,8 @@ export const characters = pgTable(
     npc: jsonb('npc').$type<NpcData>(),
     visibleToPlayers: boolean('visible_to_players').notNull().default(true),
     portraitUrl: text('portrait_url'),
+    /** Modèle 3D (.glb téléversé) affiché sur le plateau de combat à la place du jeton. */
+    modelUrl: text('model_url'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

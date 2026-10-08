@@ -18,6 +18,7 @@ export function describeCombatEvent(e: CombatEvent, state: CombatState | null): 
     case 'combat.combatant_added':
       return `${e.payload.combatant.name} rejoint le combat`;
     case 'combat.combatant_updated':
+      if (Object.keys(e.payload.patch).join() === 'modelUrl') return `${name(e.payload.id)} change d’apparence`;
       return `${name(e.payload.id)} est modifié`;
     case 'combat.combatant_removed':
       return `${name(e.payload.id)} quitte le combat`;

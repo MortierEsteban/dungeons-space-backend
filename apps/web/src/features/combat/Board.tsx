@@ -54,7 +54,8 @@ export const TERRAIN_META: Record<TerrainKind, { label: string; bg: string }> = 
 
 const CELL = 46;
 
-interface Props {
+/** Contrat commun aux plateaux 2D et 3D. */
+export interface BoardProps {
   state: CombatState;
   isGm: boolean;
   userId: string;
@@ -73,7 +74,7 @@ interface Props {
 }
 
 /** Plateau de bataille : rendu DOM en couches, toutes les décisions passent par le serveur. */
-export function Board({ state, isGm, userId, tool, options, selectedId, selectedObjectId, onSelect, onSelectObject, targeting, onTarget, floats, readOnly, send }: Props) {
+export function Board({ state, isGm, userId, tool, options, selectedId, selectedObjectId, onSelect, onSelectObject, targeting, onTarget, floats, readOnly, send }: BoardProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ x: 40, y: 40, zoom: 1 });
   const [hover, setHover] = useState<Cell | null>(null);

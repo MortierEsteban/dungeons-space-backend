@@ -1,10 +1,13 @@
 import { replayCombat, type CombatEvent, type CombatState } from '@ds/rules';
 import type { CombatEventEnvelope } from '@ds/shared';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { http } from '../../shared/api/client';
 import { Button, Loading, Panel, Select } from '../../shared/ui/components';
-import { Board, type ToolOptions } from './Board';
+import { Board, type BoardProps, type ToolOptions } from './Board';
+import { FX_DURATION, type AttackFx } from './scene/support';
+
+const Board3D = lazy(() => import('./scene/Board3D'));
 import { CombatLog, InitiativeBar } from './panels';
 import s from './combat.module.css';
 
@@ -20,7 +23,7 @@ const NO_OPTIONS: ToolOptions = { brush: 'wall', zone: { shape: 'circle', size: 
  * Lecteur de replay « façon Chess.com » (CMB-61/62/63) : l'état à l'instant N est
  * reconstruit en rejouant les N premiers événements avec le réducteur partagé.
  */
-export function Replay({ encounterId, isGm, userId }: { encounterId: string; isGm: boolean; userId: string }) {
+export function Replay({ encounterId, isGm, userId, three = false }: { encounterId: string; isGm: boolean; userId: string; three?: boolean }) {
   const { data: stream, isLoading } = useQuery({
     queryKey: ['encounter', encounterId, 'stream'],
     queryFn: async () => (await http.get<{ events: CombatEventEnvelope[] }>(`/encounters/${encounterId}/events`)).events,
@@ -56,8 +59,37 @@ export function Replay({ encounterId, isGm, userId }: { encounterId: string; isG
   }, [playing, index, events.length]);
 
   const state: CombatState | null = useMemo(() => replayCombat(events, index), [events, index]);
+
+  // En avançant pas à pas, les attaques rejouées retrouvent leur projectile.
+  const [effects, setEffects] = useState<AttackFx[]>([]);
+  const prevIndex = useRef(index);
+  useEffect(() => {
+    const e = events[index - 1];
+    if (index === prevIndex.current + 1 && e?.type === 'combat.attack_rolled') {
+      const fx: AttackFx = { id: index + Math.random(), attackerId: e.payload.attackerId, targetId: e.payload.targetId, hit: e.payload.hit, crit: e.payload.crit };
+      setEffects((xs) => [...xs, fx]);
+      setTimeout(() => setEffects((xs) => xs.filter((x) => x.id !== fx.id)), FX_DURATION + 100);
+    }
+    prevIndex.current = index;
+  }, [index, events]);
   if (isLoading || !stream) return <Loading />;
   if (!state) return <Panel>Aucun événement à rejouer.</Panel>;
+
+  const boardProps: Omit<BoardProps, 'state'> = {
+    isGm,
+    userId,
+    tool: 'select',
+    options: NO_OPTIONS,
+    selectedId: null,
+    selectedObjectId: null,
+    onSelect: () => undefined,
+    onSelectObject: () => undefined,
+    targeting: false,
+    onTarget: () => undefined,
+    floats: [],
+    readOnly: true,
+    send: () => undefined,
+  };
 
   const turns = marks.filter((m) => m.kind === 'turn');
   const jump = (dir: 1 | -1) => {
@@ -70,22 +102,13 @@ export function Replay({ encounterId, isGm, userId }: { encounterId: string; isG
       <InitiativeBar state={state} isGm={false} canEndTurn={false} onSelect={() => undefined} send={() => undefined} />
       <div className={s.replayBody}>
         <Panel pad={false} className={s.boardPanel}>
-          <Board
-            state={state}
-            isGm={isGm}
-            userId={userId}
-            tool="select"
-            options={NO_OPTIONS}
-            selectedId={null}
-            selectedObjectId={null}
-            onSelect={() => undefined}
-            onSelectObject={() => undefined}
-            targeting={false}
-            onTarget={() => undefined}
-            floats={[]}
-            readOnly
-            send={() => undefined}
-          />
+          {three ? (
+            <Suspense fallback={<Loading />}>
+              <Board3D {...boardProps} state={state} effects={effects} />
+            </Suspense>
+          ) : (
+            <Board {...boardProps} state={state} />
+          )}
         </Panel>
         <Panel className={s.logPanel}>
           <span className="ds-label">Jusqu’à cet instant</span>

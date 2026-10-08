@@ -1,7 +1,7 @@
 import type { CombatEventEnvelope } from '@ds/shared';
-import { useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { useMediaQuery } from '../../shared/hooks';
+import { useLocalPref, useMediaQuery } from '../../shared/hooks';
 import { useDice } from '../../shared/dice/DiceProvider';
 import { Button, Empty, Loading, Panel, Segmented } from '../../shared/ui/components';
 import { useToast } from '../../shared/ui/toast';
@@ -9,10 +9,14 @@ import { useMe } from '../auth/api';
 import { useCurrentCampaign } from '../campaigns/CampaignContext';
 import { useCampaignCharacters } from '../character/api';
 import { useCombat, type CommandInput } from './api';
-import { Board, type FloatText, type Tool, type ToolOptions } from './Board';
+import { Board, type BoardProps, type FloatText, type Tool, type ToolOptions } from './Board';
 import { Replay } from './Replay';
+import { FX_DURATION, hasWebGL, type AttackFx } from './scene/support';
 import { ActionBar, CombatLog, GmSetup, InitiativeBar, Inspector, Toolbar, ToolOptionsPanel, TrackerList } from './panels';
 import s from './combat.module.css';
+
+const Board3D = lazy(() => import('./scene/Board3D'));
+const WEBGL = typeof document !== 'undefined' && hasWebGL();
 
 export default function BattlePage() {
   const { encounterId = '' } = useParams();
@@ -24,6 +28,9 @@ export default function BattlePage() {
   const navigate = useNavigate();
   const narrow = useMediaQuery('(max-width: 767px)');
   const [floats, setFloats] = useState<FloatText[]>([]);
+  const [effects, setEffects] = useState<AttackFx[]>([]);
+  const [dim, setDim] = useLocalPref<'2d' | '3d'>('battleDim', WEBGL ? '3d' : '2d');
+  const three = WEBGL && dim === '3d';
 
   // Chiffres flottants sur les pions et affichage des jets d'attaque.
   const onEvents = useCallback(
@@ -36,13 +43,26 @@ export default function BattlePage() {
             text: e.payload.amount === null ? e.payload.bandAfter : `${e.payload.mode === 'damage' ? '−' : '+'}${e.payload.amount}`,
             color: e.payload.mode === 'damage' ? '#f2b3cf' : '#7cc6ff',
           };
-          setFloats((xs) => [...xs, f]);
-          setTimeout(() => setFloats((xs) => xs.filter((x) => x.id !== f.id)), 1400);
+          // En 3D, le chiffre attend que le projectile ait touché.
+          const delay = three && events.some((x) => x.event.type === 'combat.attack_rolled') ? 420 : 0;
+          setTimeout(() => setFloats((xs) => [...xs, f]), delay);
+          setTimeout(() => setFloats((xs) => xs.filter((x) => x.id !== f.id)), 1400 + delay);
+        }
+        if (e.type === 'combat.attack_rolled') {
+          // Projectile et impact sur le plateau 3D ; « Raté » flotte au-dessus de la cible.
+          const fx: AttackFx = { id: Date.now() + Math.random(), attackerId: e.payload.attackerId, targetId: e.payload.targetId, hit: e.payload.hit, crit: e.payload.crit };
+          setEffects((xs) => [...xs, fx]);
+          setTimeout(() => setEffects((xs) => xs.filter((x) => x.id !== fx.id)), FX_DURATION + 100);
+          if (!e.payload.hit) {
+            const miss: FloatText = { id: fx.id + 0.5, combatantId: e.payload.targetId, text: 'Raté', color: '#bfe4ff' };
+            setTimeout(() => setFloats((xs) => [...xs, miss]), 380);
+            setTimeout(() => setFloats((xs) => xs.filter((x) => x.id !== miss.id)), 1800);
+          }
         }
         if (e.type === 'combat.attack_rolled') dice.show(e.payload.label, `1d20${e.payload.bonus >= 0 ? '+' : ''}${e.payload.bonus}`, e.payload.total, e.payload.natural);
       }
     },
-    [dice],
+    [dice, three],
   );
   const { state, log, error, send: rawSend } = useCombat(encounterId, onEvents);
   const send = (cmd: CommandInput) => void rawSend(cmd);
@@ -79,6 +99,22 @@ export default function BattlePage() {
     setAttacker(null);
   };
 
+  const boardProps: BoardProps = {
+    state,
+    isGm,
+    userId,
+    tool,
+    options,
+    selectedId: selected,
+    selectedObjectId: selectedObject,
+    onSelect: setSelected,
+    onSelectObject: setSelectedObject,
+    targeting: !!attacker,
+    onTarget,
+    floats,
+    send,
+  };
+
   return (
     <div className={s.battle}>
       <div className={s.battleHead}>
@@ -96,9 +132,20 @@ export default function BattlePage() {
           ]}
           onChange={setView}
         />
+        {view !== 'tracker' && WEBGL && (
+          <Segmented
+            label="Rendu du plateau"
+            value={dim}
+            options={[
+              { value: '2d', label: '2D' },
+              { value: '3d', label: '3D' },
+            ]}
+            onChange={setDim}
+          />
+        )}
       </div>
       {view === 'replay' ? (
-        <Replay encounterId={encounterId} isGm={isGm} userId={userId} />
+        <Replay encounterId={encounterId} isGm={isGm} userId={userId} three={three} />
       ) : (
         <>
       <InitiativeBar state={state} isGm={isGm} canEndTurn={!!active && active.ownerUserId === userId} onSelect={setSelected} send={send} />
@@ -122,21 +169,13 @@ export default function BattlePage() {
             <ToolOptionsPanel tool={tool} options={options} setOptions={setOptions} state={state} send={send} />
           </div>
           <Panel pad={false} className={s.boardPanel}>
-            <Board
-              state={state}
-              isGm={isGm}
-              userId={userId}
-              tool={tool}
-              options={options}
-              selectedId={selected}
-              selectedObjectId={selectedObject}
-              onSelect={setSelected}
-              onSelectObject={setSelectedObject}
-              targeting={!!attacker}
-              onTarget={onTarget}
-              floats={floats}
-              send={send}
-            />
+            {three ? (
+              <Suspense fallback={<Loading label="Le plateau prend du relief…" />}>
+                <Board3D {...boardProps} effects={effects} />
+              </Suspense>
+            ) : (
+              <Board {...boardProps} />
+            )}
           </Panel>
           <div className={s.rightRail}>
             <Inspector state={state} combatantId={selected} objectId={selectedObject} isGm={isGm} userId={userId} send={send} onClose={() => (setSelected(null), setSelectedObject(null))} onAttack={setAttacker} />

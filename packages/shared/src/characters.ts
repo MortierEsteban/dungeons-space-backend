@@ -1,4 +1,4 @@
-import { ABILITY_KEYS, inventoryItemSchema, knownSpellSchema, SKILL_KEYS, type DerivedSheet, type Dnd5eSheet } from '@ds/rules';
+import { ABILITY_KEYS, inventoryItemSchema, knownSpellSchema, modelUrlSchema, SKILL_KEYS, type DerivedSheet, type Dnd5eSheet } from '@ds/rules';
 import { z } from 'zod';
 
 const abilityScores = z.object(Object.fromEntries(ABILITY_KEYS.map((k) => [k, z.number().int().min(3).max(20)])) as Record<(typeof ABILITY_KEYS)[number], z.ZodNumber>);
@@ -46,6 +46,8 @@ export type CreateCharacterInput = z.input<typeof createCharacterSchema>;
 export const updateCharacterSchema = z.object({
   name: z.string().trim().min(1).max(60).optional(),
   portraitUrl: z.string().max(2000).nullable().optional(),
+  /** Modèle 3D importé par le joueur (ou le MJ pour un PNJ). */
+  modelUrl: modelUrlSchema.nullable().optional(),
   visibleToPlayers: z.boolean().optional(),
   npc: npcDataSchema.partial().optional(),
   /** Fiche complète (validée par le schéma du ruleset). */
@@ -82,6 +84,7 @@ export interface CharacterSummaryDto {
   ownerId: string | null;
   ownerName: string | null;
   portraitUrl: string | null;
+  modelUrl: string | null;
   /** « Elfe · Rôdeur 5 » pour un PJ, « Naine · Forgeronne » pour un PNJ. */
   subtitle: string;
   level: number | null;

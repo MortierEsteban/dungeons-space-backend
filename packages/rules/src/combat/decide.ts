@@ -102,6 +102,8 @@ export function buildCombatant(state: CombatState, spec: CombatantSpec, id: stri
     hidden: spec.hidden ?? (spec.kind !== 'pc' && state.settings.hideMonsterStats),
     attack: spec.attack,
     resources: { action: false, bonus: false, reaction: false, movementUsed: 0 },
+    portraitUrl: spec.portraitUrl,
+    modelUrl: spec.modelUrl,
   };
 }
 
@@ -182,6 +184,11 @@ export function decideCombat(state: CombatState, cmd: ResolvedCommand, actor: Co
       assertGm(actor);
       getCombatant(state, cmd.combatantId);
       return [{ type: 'combat.combatant_removed', payload: { id: cmd.combatantId } }];
+    }
+    case 'set_model': {
+      const c = getCombatant(state, cmd.combatantId);
+      assertControl(actor, c);
+      return [{ type: 'combat.combatant_updated', payload: { id: c.id, patch: { modelUrl: cmd.modelUrl } } }];
     }
     case 'set_initiative': {
       const c = getCombatant(state, cmd.combatantId);

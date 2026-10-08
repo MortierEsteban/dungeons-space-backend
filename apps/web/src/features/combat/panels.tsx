@@ -14,8 +14,10 @@ import type { CharacterSummaryDto, CombatEventEnvelope } from '@ds/shared';
 import { useMemo, useState } from 'react';
 import { num } from '../../shared/format';
 import { Bar, Button, Chip, cx, IconButton, Input, Select, Stepper, Toggle } from '../../shared/ui/components';
+import { http } from '../../shared/api/client';
 import { ImageDrop } from '../../shared/ui/ImageDrop';
 import type { CommandInput } from './api';
+import { ModelDrop } from './ModelDrop';
 import { conditionColor, OBJECT_META, TERRAIN_META, type Tool, type ToolOptions } from './Board';
 import s from './combat.module.css';
 
@@ -174,6 +176,21 @@ export function Inspector({ state, combatantId, objectId, isGm, userId, send, on
           })}
         </div>
       </div>
+      {mine && (
+        <details className={s.appearance}>
+          <summary className="ds-label">Apparence 3D {cc.modelUrl ? '· modèle importé' : '· jeton'}</summary>
+          <ModelDrop
+            value={cc.modelUrl ?? null}
+            name={cc.name}
+            preview={false}
+            onChange={(url) => {
+              send({ type: 'set_model', combatantId: cc.id, modelUrl: url });
+              // Le modèle d'un PJ est aussi mémorisé sur sa fiche pour les combats suivants.
+              if (cc.characterId) void http.patch(`/characters/${cc.characterId}`, { modelUrl: url }).catch(() => undefined);
+            }}
+          />
+        </details>
+      )}
       {isGm && (
         <div className="ds-row">
           <Toggle checked={cc.hidden} onChange={(v) => send({ type: 'update_combatant', combatantId: cc.id, patch: { hidden: v } })}>
@@ -327,6 +344,17 @@ export function ToolOptionsPanel({ tool, options, setOptions, state, send }: { t
 
 // ───────────────────────────── Créatures & carte (MJ) ─────────────────────────────
 
+/** Carte importée : on garde les colonnes et on cale les lignes sur le format de l'image. */
+function fitGridToImage(state: CombatState, send: Send) {
+  if (!state.map.background) return;
+  const img = new Image();
+  img.onload = () => {
+    const rows = Math.max(4, Math.min(80, Math.round((state.map.cols * img.naturalHeight) / img.naturalWidth)));
+    if (rows !== state.map.rows) send({ type: 'resize_map', cols: state.map.cols, rows });
+  };
+  img.src = state.map.background;
+}
+
 export function GmSetup({ state, party, send }: { state: CombatState; party: CharacterSummaryDto[]; send: Send }) {
   const [q, setQ] = useState('');
   const [count, setCount] = useState(1);
@@ -371,6 +399,11 @@ export function GmSetup({ state, party, send }: { state: CombatState; party: Cha
       )}
       <span className="ds-label">Carte</span>
       <ImageDrop value={state.map.background} onChange={(url) => send({ type: 'set_background', url })} label="Carte de bataille (vue de dessus)" height={110} />
+      {state.map.background && (
+        <Button size="sm" variant="ghost" onClick={() => fitGridToImage(state, send)} title="Garde le nombre de colonnes et ajuste les lignes aux proportions de l’image (plus de recadrage)">
+          Adapter la grille à l’image
+        </Button>
+      )}
       <div className="ds-row">
         <span className="ds-help ds-grow">
           {state.map.cols} × {state.map.rows} cases

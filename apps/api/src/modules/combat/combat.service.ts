@@ -220,6 +220,7 @@ export class CombatService {
       const spec: CombatantSpec = {
         name: c.name, kind: 'pc', side: 'ally', ...profile, size: 1, position: command.position ?? null,
         characterId: c.id, monsterId: null, ownerUserId: c.ownerId, hidden: false,
+        portraitUrl: c.portraitUrl, modelUrl: c.modelUrl,
       };
       return [{ type: 'add_combatant', spec }];
     }
@@ -235,7 +236,7 @@ export class CombatService {
           name: command.count > 1 || already > 0 ? `${m.name} ${already + i + 1}` : m.name,
           kind: 'monster' as const, side: 'enemy' as const, hp: m.hp, maxHp: m.hp, ac: m.ac, initiativeMod: dexMod,
           speed: m.speed, size: SIZE_CELLS[m.size], position: i === 0 ? (command.position ?? null) : null,
-          characterId: null, monsterId: m.id, ownerUserId: null, attack,
+          characterId: null, monsterId: m.id, ownerUserId: null, attack, portraitUrl: null, modelUrl: null,
         },
       }));
     }

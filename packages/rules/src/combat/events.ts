@@ -7,7 +7,7 @@ import type { Cell, Combatant, CombatSettings, HpBand, MapObject, TerrainKind, Z
 export type CombatEvent =
   | { type: 'combat.created'; payload: { id: string; name: string; cols: number; rows: number; settings: CombatSettings } }
   | { type: 'combat.combatant_added'; payload: { combatant: Combatant } }
-  | { type: 'combat.combatant_updated'; payload: { id: string; patch: Partial<Pick<Combatant, 'name' | 'short' | 'ac' | 'maxHp' | 'hp' | 'hidden' | 'side' | 'initiativeMod' | 'speed' | 'attack' | 'hpBand'>> } }
+  | { type: 'combat.combatant_updated'; payload: { id: string; patch: Partial<Pick<Combatant, 'name' | 'short' | 'ac' | 'maxHp' | 'hp' | 'hidden' | 'side' | 'initiativeMod' | 'speed' | 'attack' | 'hpBand' | 'modelUrl'>> } }
   | { type: 'combat.combatant_removed'; payload: { id: string } }
   | { type: 'combat.initiative_set'; payload: { id: string; value: number; natural: number | null } }
   | { type: 'combat.started'; payload: Record<string, never> }

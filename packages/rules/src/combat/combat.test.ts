@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ScriptedRng, SeededRng } from '../rng';
-import type { CombatantSpec } from './commands';
+import { combatCommandSchema, type CombatantSpec } from './commands';
 import { CombatRuleError, createCombatEvent, decideCombat, tokenLabel, type CombatActor } from './decide';
 import type { CombatEvent } from './events';
 import { gridDistance, reachableCells, zoneCells } from './grid';
@@ -15,6 +15,7 @@ function spec(over: Partial<CombatantSpec>): CombatantSpec {
   return {
     name: 'Elowen', kind: 'pc', side: 'ally', hp: 38, maxHp: 44, ac: 16, initiativeMod: 4, speed: 9, size: 1,
     position: null, characterId: null, monsterId: null, ownerUserId: null, attack: { name: 'Arc long', bonus: 7, damage: '1d8+4', damageType: 'perforant' },
+    portraitUrl: null, modelUrl: null,
     ...over,
   };
 }
@@ -99,6 +100,26 @@ describe('déroulé d’un combat', () => {
     expect(() => t.run({ type: 'paint_terrain', cells: [{ x: 0, y: 0 }], terrain: 'wall' }, PLAYER)).toThrow(/Maître du Jeu/);
     t.run({ type: 'move', combatantId: 'id1', to: { x: 3, y: 3 } }, PLAYER);
     expect(t.state.combatants.id1!.position).toEqual({ x: 3, y: 3 });
+  });
+
+  it('laisse chaque joueur choisir le modèle 3D de son personnage', () => {
+    const t = setup();
+    t.run({ type: 'add_combatant', spec: spec({ ownerUserId: 'p1' }) });
+    t.run({ type: 'add_combatant', spec: spec({ name: 'Brakk', ownerUserId: 'p2' }) });
+    expect(t.state.combatants.id1!.modelUrl).toBeNull();
+    t.run({ type: 'set_model', combatantId: 'id1', modelUrl: '/uploads/abc-123.glb' }, PLAYER);
+    expect(t.state.combatants.id1!.modelUrl).toBe('/uploads/abc-123.glb');
+    expect(() => t.run({ type: 'set_model', combatantId: 'id2', modelUrl: '/uploads/abc-123.glb' }, PLAYER)).toThrow(/ne contrôlez pas/);
+    t.run({ type: 'set_model', combatantId: 'id1', modelUrl: null }, PLAYER);
+    expect(t.state.combatants.id1!.modelUrl).toBeNull();
+  });
+
+  it('n’accepte que des modèles téléversés sur l’instance', () => {
+    const parse = (modelUrl: string) => combatCommandSchema.safeParse({ type: 'set_model', combatantId: 'id1', modelUrl }).success;
+    expect(parse('/uploads/0b9f2c1e-4d.glb')).toBe(true);
+    expect(parse('https://evil.example/x.glb')).toBe(false);
+    expect(parse('/uploads/../secret.glb')).toBe(false);
+    expect(parse('/uploads/carte.png')).toBe(false);
   });
 
   it('rappelle le jet de concentration', () => {
