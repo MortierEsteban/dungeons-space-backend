@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="image-slot.js"></script>
+<style>html,body{margin:0;background:#0b0912;height:100%}*{box-sizing:border-box}a{color:#e8d3a0}a:hover{color:#7cc6ff}
+@keyframes dsFloat{0%{opacity:0;transform:translate(-50%,-20%) scale(.7)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-220%) scale(1)}}
+@keyframes dsTurn{0%,100%{box-shadow:0 0 0 2px #0b0912,0 0 0 4px #7cc6ff,0 0 14px #4fb3ff}50%{box-shadow:0 0 0 2px #0b0912,0 0 0 4px #bfe4ff,0 0 26px #4fb3ff}}
+</style>
+</helmet>
+<div data-screen-label="Combattre" style="position:relative;height:100%;background:#0b0912;font-family:'Spectral',serif;color:#e9e2d4;overflow:hidden;user-select:none">
+  <div ref="{{ vpRef }}" onPointerDown="{{ onVpDown }}" onPointerMove="{{ onVpMove }}" onWheel="{{ onWheel }}" onContextMenu="{{ noCtx }}" style="position:absolute;inset:0;cursor:{{ vpCursor }};touch-action:none;background:radial-gradient(ellipse at 50% 40%,#1c1224,#0b0912 75%)">
+    <div style="position:absolute;left:0;top:0;width:{{ boardW }}px;height:{{ boardH }}px;transform:{{ boardTf }};transform-origin:0 0;background:#16101c;box-shadow:0 0 0 1px rgba(201,169,106,.45),0 0 0 6px #0e0a14,0 0 0 7px rgba(201,169,106,.2),0 30px 80px rgba(0,0,0,.7)">
+      <div style="position:absolute;inset:0;pointer-events:{{ mapPE }};outline:{{ mapOutline }}"><image-slot id="combat-map" shape="rect" placeholder="Déposez une carte de bataille (vue de dessus)"></image-slot></div>
+      <sc-for list="{{ terrain }}" as="c" hint-placeholder-count="0">
+        <div style="position:absolute;left:{{ c.left }}px;top:{{ c.top }}px;width:{{ c.size }}px;height:{{ c.size }}px;background:{{ c.bg }};box-shadow:{{ c.bd }};pointer-events:none"></div>
+      </sc-for>
+      <div style="position:absolute;inset:0;pointer-events:none;background-image:{{ gridBg }};background-size:{{ gridSize }}"></div>
+      <sc-for list="{{ reach }}" as="c" hint-placeholder-count="0">
+        <div style="position:absolute;left:{{ c.left }}px;top:{{ c.top }}px;width:{{ c.size }}px;height:{{ c.size }}px;background:rgba(79,179,255,{{ c.a }});box-shadow:inset 0 0 0 1px rgba(124,198,255,.18);pointer-events:none"></div>
+      </sc-for>
+      <sc-for list="{{ lights }}" as="l" hint-placeholder-count="0">
+        <div style="position:absolute;left:{{ l.left }}px;top:{{ l.top }}px;width:{{ l.size }}px;height:{{ l.size }}px;border-radius:50%;background:{{ l.bg }};mix-blend-mode:screen;pointer-events:none"></div>
+      </sc-for>
+      <sc-for list="{{ zones }}" as="z" hint-placeholder-count="0">
+        <div style="position:absolute;left:{{ z.left }}px;top:{{ z.top }}px;width:{{ z.w }}px;height:{{ z.h }}px;border-radius:{{ z.rad }};clip-path:{{ z.clip }};transform:rotate({{ z.rot }}deg);transform-origin:{{ z.origin }};background:{{ z.bg }};border:{{ z.bd }};opacity:{{ z.o }};pointer-events:none"></div>
+      </sc-for>
+      <sc-for list="{{ zoneLabels }}" as="z" hint-placeholder-count="0">
+        <div style="position:absolute;left:{{ z.x }}px;top:{{ z.y }}px;transform:translate(-50%,-50%);font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;color:#f3e6c4;text-shadow:0 1px 3px #000;white-space:nowrap;pointer-events:none">{{ z.label }}</div>
+      </sc-for>
+      <sc-for list="{{ objects }}" as="o" hint-placeholder-count="0">
+        <div onPointerDown="{{ o.down }}" title="{{ o.label }}" style="position:absolute;left:{{ o.left }}px;top:{{ o.top }}px;width:{{ o.size }}px;height:{{ o.size }}px;padding:12%;cursor:{{ o.cursor }};opacity:{{ o.o }}">
+          <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:{{ o.bg }};border:1px {{ o.bstyle }} {{ o.bcol }};border-radius:4px;box-shadow:{{ o.shadow }};font-family:'Cinzel',serif;font-size:10px;letter-spacing:.06em;color:#e8d3a0">{{ o.ab }}</div>
+        </div>
+      </sc-for>
+      <sc-if value="{{ hoverCell.show }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:{{ hoverCell.left }}px;top:{{ hoverCell.top }}px;width:{{ hoverCell.size }}px;height:{{ hoverCell.size }}px;box-shadow:inset 0 0 0 2px {{ hoverCell.col }};background:{{ hoverCell.bg }};pointer-events:none"></div>
+      </sc-if>
+      <sc-if value="{{ measure.show }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:{{ measure.x }}px;top:{{ measure.y }}px;width:{{ measure.len }}px;height:2px;margin-top:-1px;background:#e8d3a0;box-shadow:0 0 8px #c9a96a;transform:rotate({{ measure.a }}rad);transform-origin:0 50%;pointer-events:none"></div>
+        <div style="position:absolute;left:{{ measure.lx }}px;top:{{ measure.ly }}px;transform:translate(-50%,-140%);padding:4px 10px;background:#0e0a14;border:1px solid #c9a96a;border-radius:3px;font-family:'Cinzel',serif;font-size:12px;color:#f3e6c4;white-space:nowrap;pointer-events:none">{{ measure.label }}</div>
+      </sc-if>
+      <sc-for list="{{ tokens }}" as="t" hint-placeholder-count="0">
+        <div onPointerDown="{{ t.down }}" onPointerEnter="{{ t.enter }}" onPointerLeave="{{ t.leave }}" style="position:absolute;left:{{ t.left }}px;top:{{ t.top }}px;width:{{ t.size }}px;height:{{ t.size }}px;padding:7%;cursor:{{ t.cursor }};z-index:{{ t.z }};opacity:{{ t.o }};filter:{{ t.filter }};transition:{{ t.trans }}">
+          <div style="position:relative;width:100%;height:100%;border-radius:50%;background:{{ t.bg }};border:2px {{ t.bstyle }} {{ t.ring }};box-shadow:{{ t.shadow }};animation:{{ t.anim }};display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-weight:600;font-size:{{ t.fs }}px;color:#f3e6c4">
+            {{ t.short }}
+            <div style="position:absolute;left:8%;right:8%;bottom:-9px;height:4px;background:#0e0a14;border:1px solid rgba(0,0,0,.6);border-radius:2px;overflow:hidden"><div style="height:100%;width:{{ t.hpW }};background:{{ t.hpCol }};transition:width .3s"></div></div>
+            <div style="position:absolute;top:-6px;right:-6px;display:flex;gap:2px">
+              <sc-for list="{{ t.pips }}" as="p" hint-placeholder-count="0"><div title="{{ p.t }}" style="width:9px;height:9px;transform:rotate(45deg);background:{{ p.c }};border:1px solid #0b0912"></div></sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+      {{ floatsEl }}
+    </div>
+  </div>
+
+  <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:8px 12px;background:rgba(17,12,23,.92);border:1px solid rgba(201,169,106,.45);border-radius:8px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.15),0 10px 30px rgba(0,0,0,.5);max-width:calc(100% - 40px);backdrop-filter:blur(6px)">
+    <div style="display:flex;flex-direction:column;align-items:center;padding:0 6px"><span style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:.2em;color:#a79c8a">ROUND</span><span style="font-family:'Cinzel',serif;font-size:22px;color:#e8d3a0;line-height:1">{{ round }}</span></div>
+    <div style="width:1px;align-self:stretch;background:rgba(201,169,106,.3)"></div>
+    <div style="display:flex;gap:8px;overflow-x:auto;padding:4px 2px">
+      <sc-for list="{{ initBar }}" as="c" hint-placeholder-count="6">
+        <button onClick="{{ c.on }}" title="{{ c.name }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:58px;padding:4px 2px;background:none;border:none;cursor:pointer;color:#e9e2d4;opacity:{{ c.o }};filter:{{ c.filter }}">
+          <div style="position:relative;width:{{ c.sz }}px;height:{{ c.sz }}px;border-radius:50%;background:{{ c.bg }};border:2px solid {{ c.ring }};box-shadow:{{ c.glow }};display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-weight:600;font-size:12px;transition:all .25s">{{ c.short }}<span style="position:absolute;bottom:-5px;right:-7px;min-width:18px;padding:0 3px;background:#0e0a14;border:1px solid rgba(201,169,106,.5);border-radius:3px;font-size:9px;color:#7cc6ff;text-align:center">{{ c.init }}</span></div>
+          <span style="font-size:11px;white-space:nowrap;color:{{ c.nameCol }};max-width:70px;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span>
+          <div style="width:44px;height:3px;background:#0e0a14;border-radius:2px;overflow:hidden"><div style="height:100%;width:{{ c.hpW }};background:{{ c.hpCol }}"></div></div>
+        </button>
+      </sc-for>
+    </div>
+    <sc-if value="{{ isMJ }}" hint-placeholder-val="{{ true }}">
+      <div style="width:1px;align-self:stretch;background:rgba(201,169,106,.3)"></div>
+      <button onClick="{{ nextTurn }}" style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.16em;color:#f3e6c4;background:linear-gradient(180deg,#4a2a4e,#211426);border:1px solid #c9a96a;border-radius:4px;padding:10px 14px;cursor:pointer;white-space:nowrap" style-hover="box-shadow:0 0 18px rgba(79,179,255,.4)">TOUR SUIVANT</button>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ targetBanner.show }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:118px;left:50%;transform:translateX(-50%);padding:9px 16px;background:rgba(58,20,40,.92);border:1px solid #e07aa8;border-radius:4px;box-shadow:0 0 22px rgba(176,48,106,.45);font-size:14px;white-space:nowrap;display:flex;gap:12px;align-items:center">
+      <span>Choisissez une cible · <b style="font-family:'Cinzel',serif;font-weight:500;color:#f2b3cf">{{ targetBanner.name }}</b> · portée {{ targetBanner.range }}</span>
+      <button onClick="{{ cancelTarget }}" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;color:#f3e6c4;background:transparent;border:1px solid rgba(242,179,207,.6);border-radius:3px;padding:5px 9px;cursor:pointer">ANNULER · ÉCHAP</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ toast.show }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:118px;left:50%;transform:translateX(-50%);margin-top:{{ toast.mt }}px;padding:9px 16px;background:rgba(17,12,23,.95);border:1px solid #c9a96a;border-radius:4px;font-size:14px;white-space:nowrap;pointer-events:none">{{ toast.text }}</div>
+  </sc-if>
+
+  <sc-if value="{{ isMJ }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;left:16px;top:120px;display:flex;flex-direction:column;gap:4px;padding:6px;max-height:calc(100% - 180px);overflow-y:auto;scrollbar-width:none;background:rgba(17,12,23,.94);border:1px solid rgba(201,169,106,.45);border-radius:8px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.15),0 10px 30px rgba(0,0,0,.5)">
+      <sc-for list="{{ tools }}" as="b" hint-placeholder-count="7">
+        <button onClick="{{ b.on }}" title="{{ b.title }}" style="position:relative;width:58px;height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:5px;border:1px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.col }};cursor:pointer;box-shadow:{{ b.glow }}" style-hover="border-color:rgba(201,169,106,.6)">
+          <span style="font-size:18px;line-height:1">{{ b.glyph }}</span>
+          <span style="font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:.08em">{{ b.label }}</span>
+          <span style="position:absolute;top:3px;right:5px;font-size:9px;color:#7d7368">{{ b.key }}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ fly.on }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;left:92px;top:120px;width:270px;max-height:calc(100% - 180px);overflow:auto;display:flex;flex-direction:column;gap:14px;padding:16px;background:rgba(22,15,28,.97);border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.18),0 10px 30px rgba(0,0,0,.5)">
+        <div style="font-family:'Cinzel',serif;font-size:14px;color:#e8d3a0">{{ fly.title }}</div>
+        <sc-if value="{{ fly.terrain }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <sc-for list="{{ brushes }}" as="b" hint-placeholder-count="6">
+              <button onClick="{{ b.on }}" style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:4px;border:1px solid {{ b.bd }};background:{{ b.bgSel }};color:{{ b.col }};cursor:pointer;font-size:13px;font-family:'Spectral',serif"><span style="width:18px;height:18px;border-radius:2px;background:{{ b.sw }};border:1px solid rgba(201,169,106,.3);flex:none"></span>{{ b.label }}</button>
+            </sc-for>
+          </div>
+          <div style="font-size:12px;color:#a79c8a;font-style:italic">Cliquez-glissez sur la carte pour peindre. Les murs bloquent les déplacements.</div>
+          <button onClick="{{ clearTerrain }}" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;color:#f2b3cf;background:transparent;border:1px solid rgba(176,48,106,.6);border-radius:3px;padding:8px;cursor:pointer">EFFACER TOUT LE TERRAIN</button>
+        </sc-if>
+        <sc-if value="{{ fly.zone }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+            <sc-for list="{{ shapes }}" as="b" hint-placeholder-count="4">
+              <button onClick="{{ b.on }}" style="padding:8px 2px;border-radius:4px;border:1px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.col }};cursor:pointer;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.06em">{{ b.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;color:#a79c8a">RAYON</span>
+            <button onClick="{{ zMinus }}" style="width:28px;height:28px;border-radius:3px;border:1px solid rgba(201,169,106,.45);background:#0e0a14;color:#e8d3a0;cursor:pointer">−</button>
+            <span style="min-width:86px;text-align:center;font-size:14px">{{ zLabel }}</span>
+            <button onClick="{{ zPlus }}" style="width:28px;height:28px;border-radius:3px;border:1px solid rgba(201,169,106,.45);background:#0e0a14;color:#e8d3a0;cursor:pointer">+</button>
+          </div>
+          <sc-if value="{{ zHasDir }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;color:#a79c8a">ORIENTATION</span>
+              <button onClick="{{ zRotL }}" style="width:28px;height:28px;border-radius:3px;border:1px solid rgba(201,169,106,.45);background:#0e0a14;color:#e8d3a0;cursor:pointer">↺</button>
+              <span style="min-width:44px;text-align:center;font-size:14px">{{ zDirLabel }}</span>
+              <button onClick="{{ zRotR }}" style="width:28px;height:28px;border-radius:3px;border:1px solid rgba(201,169,106,.45);background:#0e0a14;color:#e8d3a0;cursor:pointer">↻</button>
+            </div>
+          </sc-if>
+          <div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;color:#a79c8a">TEINTE</span>
+            <sc-for list="{{ zCols }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.on }}" style="width:24px;height:24px;border-radius:50%;background:{{ c.c }};border:2px solid {{ c.bd }};cursor:pointer"></button></sc-for>
+          </div>
+          <input value="{{ zName }}" onChange="{{ onZName }}" placeholder="Nom de la zone (ex. Boule de feu)" style="padding:8px 10px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:13px;outline:none;font-family:'Spectral',serif">
+          <div style="font-size:12px;color:#a79c8a;font-style:italic">Cliquez sur la carte pour poser la zone. R pour pivoter.</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <sc-for list="{{ zoneList }}" as="z" hint-placeholder-count="0">
+              <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#0e0a14;border:1px solid rgba(201,169,106,.2);border-radius:3px;font-size:13px"><span style="width:10px;height:10px;border-radius:50%;background:{{ z.c }}"></span><span style="flex:1">{{ z.label }}</span><button onClick="{{ z.remove }}" style="background:none;border:none;color:#a79c8a;cursor:pointer" style-hover="color:#e07aa8">×</button></div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ fly.objet }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <sc-for list="{{ objKinds }}" as="b" hint-placeholder-count="8">
+              <button onClick="{{ b.on }}" style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:4px;border:1px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.col }};cursor:pointer;font-size:13px;font-family:'Spectral',serif"><span style="width:22px;height:22px;flex:none;display:flex;align-items:center;justify-content:center;border:1px solid #c9a96a;border-radius:3px;background:#241a2c;font-family:'Cinzel',serif;font-size:8px;color:#e8d3a0">{{ b.ab }}</span>{{ b.label }}</button>
+            </sc-for>
+          </div>
+          <div style="font-size:12px;color:#a79c8a;font-style:italic">Cliquez sur la carte pour placer. Les pièges sont cachés aux joueurs jusqu'à révélation.</div>
+        </sc-if>
+        <sc-if value="{{ fly.grille }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;color:#a79c8a">MOTIF</span>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"><sc-for list="{{ gridTypes }}" as="b" hint-placeholder-count="3"><button onClick="{{ b.on }}" style="padding:7px 2px;border-radius:3px;border:1px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.col }};cursor:pointer;font-family:'Cinzel',serif;font-size:10px">{{ b.label }}</button></sc-for></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;color:#a79c8a">OPACITÉ · {{ gridOpPct }}</span><input type="range" min="0" max="100" value="{{ gridOpVal }}" onChange="{{ onGridOp }}" style="accent-color:#c9a96a"></div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;color:#a79c8a">COULEUR</span><sc-for list="{{ gridCols }}" as="c" hint-placeholder-count="3"><button onClick="{{ c.on }}" style="width:24px;height:24px;border-radius:50%;background:{{ c.c }};border:2px solid {{ c.bd }};cursor:pointer"></button></sc-for></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;color:#a79c8a">TAILLE DES CASES</span>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"><sc-for list="{{ cellSizes }}" as="b" hint-placeholder-count="3"><button onClick="{{ b.on }}" style="padding:7px 2px;border-radius:3px;border:1px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.col }};cursor:pointer;font-size:12px">{{ b.label }}</button></sc-for></div>
+          </div>
+          <sc-for list="{{ dims }}" as="d" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:10px"><span style="flex:1;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;color:#a79c8a">{{ d.label }}</span>
+              <button onClick="{{ d.minus }}" style="width:28px;height:28px;border-radius:3px;border:1px solid rgba(201,169,106,.45);background:#0e0a14;color:#e8d3a0;cursor:pointer">−</button><span style="min-width:30px;text-align:center">{{ d.v }}</span><button onClick="{{ d.plus }}" style="width:28px;height:28px;border-radius:3px;border:1px solid rgba(201,169,106,.45);background:#0e0a14;color:#e8d3a0;cursor:pointer">+</button></div>
+          </sc-for>
+          <button onClick="{{ toggleMapEdit }}" style="padding:9px;border-radius:3px;border:1px solid {{ mapBtn.bd }};background:{{ mapBtn.bg }};color:{{ mapBtn.col }};cursor:pointer;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em">{{ mapBtn.label }}</button>
+        </sc-if>
+        <sc-if value="{{ fly.creature }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <sc-for list="{{ bestiary }}" as="b" hint-placeholder-count="5">
+              <button onClick="{{ b.on }}" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:4px;border:1px solid rgba(176,48,106,.45);background:rgba(58,20,40,.35);color:#e9e2d4;cursor:pointer;text-align:left" style-hover="border-color:#e07aa8"><span style="flex:1;font-family:'Cinzel',serif;font-size:13px">{{ b.name }}</span><span style="font-size:12px;color:#a79c8a">FP {{ b.cr }} · {{ b.hp }} PV</span></button>
+            </sc-for>
+          </div>
+          <button onClick="{{ rollAllInit }}" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;color:#e8d3a0;background:transparent;border:1px solid rgba(201,169,106,.5);border-radius:3px;padding:9px;cursor:pointer">RELANCER L'INITIATIVE</button>
+        </sc-if>
+      </div>
+    </sc-if>
+  </sc-if>
+
+  <sc-if value="{{ insp.show }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;right:16px;top:112px;width:290px;max-height:calc(100% - 380px);min-height:140px;overflow:auto;display:flex;flex-direction:column;gap:12px;padding:16px;background:rgba(22,15,28,.96);border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.18),0 10px 30px rgba(0,0,0,.5)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:40px;height:40px;flex:none;border-radius:50%;background:{{ insp.bg }};border:2px solid {{ insp.ring }};display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-weight:600;font-size:13px">{{ insp.short }}</div>
+        <div style="flex:1;min-width:0"><div style="font-family:'Cinzel',serif;font-size:16px;color:#f3e6c4">{{ insp.name }}</div><div style="font-size:12px;color:#a79c8a">{{ insp.sub }}</div></div>
+        <button onClick="{{ deselect }}" style="background:none;border:none;color:#a79c8a;font-size:18px;cursor:pointer">×</button>
+      </div>
+      <sc-if value="{{ insp.isTok }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;align-items:baseline;gap:6px"><span style="flex:1;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">POINTS DE VIE</span><span style="font-family:'Cinzel',serif;font-size:22px">{{ insp.hpText }}</span></div>
+        <div style="height:6px;background:#0e0a14;border:1px solid rgba(201,169,106,.3);border-radius:3px;overflow:hidden"><div style="height:100%;width:{{ insp.hpW }};background:{{ insp.hpCol }};transition:width .3s"></div></div>
+        <sc-if value="{{ isMJ }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:1fr 56px 1fr;gap:6px">
+            <button onClick="{{ insp.dmg }}" style="padding:8px;border:1px solid rgba(176,48,106,.7);background:rgba(176,48,106,.15);color:#f2b3cf;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;border-radius:3px;cursor:pointer">DÉGÂTS</button>
+            <input value="{{ amt }}" onChange="{{ onAmt }}" style="text-align:center;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:15px;outline:none;font-family:'Spectral',serif">
+            <button onClick="{{ insp.heal }}" style="padding:8px;border:1px solid rgba(79,179,255,.6);background:rgba(79,179,255,.12);color:#b8e0ff;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;border-radius:3px;cursor:pointer">SOINS</button>
+          </div>
+        </sc-if>
+        <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">ÉTATS</span>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          <sc-for list="{{ insp.statuses }}" as="p" hint-placeholder-count="0">
+            <button onClick="{{ p.on }}" style="display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;border:1px solid {{ p.bd }};background:{{ p.bg }};color:{{ p.col }};font-size:11.5px;cursor:{{ p.cursor }};font-family:'Spectral',serif"><span style="width:6px;height:6px;transform:rotate(45deg);background:{{ p.c }}"></span>{{ p.t }}</button>
+          </sc-for>
+        </div>
+        <sc-if value="{{ isMJ }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button onClick="{{ insp.toggleHidden }}" style="flex:1;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;color:#e8d3a0;background:transparent;border:1px solid rgba(201,169,106,.45);border-radius:3px;padding:8px;cursor:pointer">{{ insp.hiddenLabel }}</button>
+            <button onClick="{{ insp.remove }}" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;color:#f2b3cf;background:transparent;border:1px solid rgba(176,48,106,.6);border-radius:3px;padding:8px 10px;cursor:pointer">RETIRER</button>
+          </div>
+        </sc-if>
+      </sc-if>
+      <sc-if value="{{ insp.isObj }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <sc-if value="{{ insp.hasToggle }}" hint-placeholder-val="{{ false }}"><button onClick="{{ insp.toggle }}" style="flex:1;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;color:#bfe4ff;background:rgba(79,179,255,.1);border:1px solid rgba(79,179,255,.55);border-radius:3px;padding:8px;cursor:pointer">{{ insp.toggleLabel }}</button></sc-if>
+          <button onClick="{{ insp.remove }}" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;color:#f2b3cf;background:transparent;border:1px solid rgba(176,48,106,.6);border-radius:3px;padding:8px 10px;cursor:pointer">SUPPRIMER</button>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <div style="position:absolute;right:16px;bottom:{{ logBottom }}px;width:290px;display:flex;flex-direction:column;background:rgba(17,12,23,.94);border:1px solid rgba(201,169,106,.4);border-radius:6px;overflow:hidden">
+    <button onClick="{{ toggleLog }}" style="display:flex;align-items:center;padding:9px 12px;background:none;border:none;border-bottom:1px solid rgba(201,169,106,.2);color:#a79c8a;cursor:pointer;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.2em"><span style="flex:1;text-align:left">JOURNAL DE COMBAT</span><span>{{ logChevron }}</span></button>
+    <sc-if value="{{ logOpen }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;max-height:170px;overflow:auto;padding:4px 12px 8px">
+        <sc-for list="{{ log }}" as="l" hint-placeholder-count="2">
+          <div style="padding:6px 0;border-bottom:1px solid rgba(201,169,106,.1);font-size:12.5px;line-height:1.4;color:{{ l.c }}">{{ l.t }}</div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="position:absolute;left:16px;bottom:{{ ctrlBottom }}px;display:flex;gap:4px">
+    <button onClick="{{ toggleMeasure }}" style="padding:7px 10px;border-radius:3px;border:1px solid {{ measBtn.bd }};background:{{ measBtn.bg }};color:{{ measBtn.col }};font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;cursor:pointer">⟷ RÈGLE</button>
+    <button onClick="{{ fit }}" style="padding:7px 10px;border-radius:3px;border:1px solid rgba(201,169,106,.4);background:rgba(17,12,23,.92);color:#e8d3a0;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;cursor:pointer">RECENTRER</button>
+    <button onClick="{{ zoomOut }}" style="width:30px;border-radius:3px;border:1px solid rgba(201,169,106,.4);background:rgba(17,12,23,.92);color:#e8d3a0;cursor:pointer">−</button>
+    <button onClick="{{ zoomIn }}" style="width:30px;border-radius:3px;border:1px solid rgba(201,169,106,.4);background:rgba(17,12,23,.92);color:#e8d3a0;cursor:pointer">+</button>
+  </div>
+
+  <sc-if value="{{ isJoueur }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:16px;right:16px;bottom:14px;height:138px;display:flex;align-items:stretch;gap:10px;padding:10px 12px;background:linear-gradient(180deg,rgba(38,26,46,.97),rgba(17,12,23,.98));border:1px solid rgba(201,169,106,.55);border-radius:10px;box-shadow:inset 0 0 0 4px #0e0a14,inset 0 0 0 5px rgba(201,169,106,.2),0 14px 40px rgba(0,0,0,.6)">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:80px;flex:none">
+        <div style="width:48px;height:48px;border-radius:50%;border:2px solid #4fb3ff;overflow:hidden;box-shadow:0 0 14px rgba(79,179,255,.4)"><image-slot id="tok-portrait-elowen" shape="circle" placeholder="EL"></image-slot></div>
+        <div style="font-family:'Cinzel',serif;font-size:12px;color:#f3e6c4">{{ me.name }}</div>
+        <div style="width:100%;height:6px;background:#0e0a14;border:1px solid rgba(201,169,106,.3);border-radius:3px;overflow:hidden"><div style="height:100%;width:{{ me.hpW }};background:{{ me.hpCol }};transition:width .3s"></div></div>
+        <div style="font-size:12px;color:#d8cbb0">{{ me.hp }} / {{ me.max }} PV · CA {{ me.ac }}</div>
+      </div>
+      <div style="width:1px;background:rgba(201,169,106,.25)"></div>
+      <div style="display:flex;flex-direction:column;gap:6px;width:128px;flex:none;justify-content:center">
+        <sc-for list="{{ resources }}" as="r" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:8px;opacity:{{ r.o }}"><span style="width:12px;height:12px;background:{{ r.c }};clip-path:{{ r.clip }};border-radius:{{ r.rad }};box-shadow:0 0 8px {{ r.c }}"></span><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em">{{ r.label }}</span></div>
+        </sc-for>
+        <div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;justify-content:space-between;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em"><span>MOUVEMENT</span><span style="color:#7cc6ff">{{ moveText }}</span></div><div style="height:5px;background:#0e0a14;border-radius:3px;overflow:hidden"><div style="height:100%;width:{{ moveW }};background:#4fb3ff;transition:width .3s"></div></div></div>
+      </div>
+      <div style="width:1px;background:rgba(201,169,106,.25)"></div>
+      <div style="position:relative;flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;flex:none">
+          <sc-for list="{{ hbTabs }}" as="t" hint-placeholder-count="5">
+            <button onClick="{{ t.on }}" style="flex:none;white-space:nowrap;padding:5px 10px;border-radius:3px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.col }};font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;cursor:pointer">{{ t.label }}</button>
+          </sc-for>
+          <div style="flex:1"></div>
+          <sc-for list="{{ slotView }}" as="sv" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:4px;margin-left:8px;flex:none"><span style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:.12em;color:#a79c8a">NIV {{ sv.lvl }}</span><sc-for list="{{ sv.pips }}" as="p" hint-placeholder-count="2"><span style="width:9px;height:9px;transform:rotate(45deg);border:1px solid #7cc6ff;background:{{ p.bg }}"></span></sc-for></div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:6px;overflow-x:auto;min-width:0;flex:1;align-items:flex-start;padding:2px 0 4px">
+          <sc-for list="{{ hotbar }}" as="a" hint-placeholder-count="8">
+            <button onClick="{{ a.on }}" onPointerEnter="{{ a.enter }}" onPointerLeave="{{ a.leave }}" style="position:relative;flex:none;width:72px;height:72px;padding:19px 5px 6px;border-radius:6px;border:1px solid {{ a.bd }};background:{{ a.bg }};color:#f3e6c4;cursor:{{ a.cursor }};opacity:{{ a.o }};font-family:'Cinzel',serif;font-size:10px;line-height:1.25;letter-spacing:.02em;text-align:center;box-shadow:{{ a.glow }};transition:transform .15s" style-hover="transform:translateY(-3px)">
+              <span style="position:absolute;top:6px;left:6px;width:10px;height:10px;background:{{ a.mk }};clip-path:{{ a.clip }};border-radius:{{ a.rad }}"></span>
+              <span style="position:absolute;top:4px;right:6px;font-size:9px;color:#7cc6ff">{{ a.lvl }}</span>
+              {{ a.name }}
+            </button>
+          </sc-for>
+        </div>
+        <sc-if value="{{ tip.show }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;bottom:calc(100% + 18px);left:{{ tip.left }}px;width:280px;display:flex;flex-direction:column;gap:6px;padding:14px;background:linear-gradient(180deg,rgba(44,28,52,.99),rgba(17,12,23,.99));border:1px solid #c9a96a;border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.25),0 12px 30px rgba(0,0,0,.6);pointer-events:none;z-index:5">
+            <div style="font-family:'Cinzel',serif;font-size:16px;color:#e8d3a0">{{ tip.name }}</div>
+            <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:#a79c8a"><span style="width:9px;height:9px;background:{{ tip.mk }};clip-path:{{ tip.clip }};border-radius:{{ tip.rad }}"></span>{{ tip.meta }}</div>
+            <sc-if value="{{ tip.hasRoll }}" hint-placeholder-val="{{ false }}"><div style="font-family:'Cinzel',serif;font-size:14px;color:#f3e6c4">{{ tip.roll }}</div></sc-if>
+            <div style="font-size:13px;line-height:1.5;color:#d8cbb0">{{ tip.desc }}</div>
+            <sc-if value="{{ tip.hasWhy }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#e07aa8;font-style:italic">{{ tip.why }}</div></sc-if>
+          </div>
+        </sc-if>
+      </div>
+      <div style="width:1px;background:rgba(201,169,106,.25)"></div>
+      <div style="display:flex;align-items:center;justify-content:center;width:84px;flex:none">
+        <button onClick="{{ endTurn }}" style="width:78px;height:78px;border-radius:50%;border:1px solid #c9a96a;background:{{ endBtn.bg }};color:#f3e6c4;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.12em;line-height:1.3;cursor:{{ endBtn.cursor }};opacity:{{ endBtn.o }};box-shadow:inset 0 0 0 3px #120c18,inset 0 0 0 4px rgba(201,169,106,.35),{{ endBtn.glow }}">FIN DU TOUR</button>
+      </div>
+      <sc-if value="{{ waiting.show }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;border-radius:10px;background:rgba(11,9,18,.72);display:flex;align-items:center;justify-content:center;gap:12px;backdrop-filter:blur(2px)">
+          <span style="width:10px;height:10px;transform:rotate(45deg);background:#e07aa8;box-shadow:0 0 10px #e07aa8"></span>
+          <span style="font-family:'Cinzel',serif;font-size:14px;letter-spacing:.14em;color:#e8d3a0">{{ waiting.text }}</span>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;mj&quot;,&quot;joueur&quot;],&quot;default&quot;:&quot;mj&quot;,&quot;tsType&quot;:&quot;'mj'|'joueur'&quot;}}">
+const R=n=>1+Math.floor(Math.random()*n);
+const roll=(n,f)=>{let t=0;for(let i=0;i<n;i++)t+=R(f);return t;};
+const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;};
+const BLUE='#4fb3ff',MAG='#b0306a',GOLD='#c9a96a';
+const STATUS=[['À terre','#a79c8a'],['Aveuglé','#a79c8a'],['Charmé','#e07aa8'],['Effrayé','#e07aa8'],['Empoisonné','#8fbf6a'],['Entravé','#c9a96a'],['Étourdi','#e8d3a0'],['Invisible','#bfe4ff'],['Concentration','#7cc6ff'],['Marqué','#e07aa8'],['Béni','#e8d3a0'],['Esquive','#7cc6ff'],['Désengagé','#7cc6ff'],["Peau d'écorce",'#8fbf6a']];
+const SC=Object.fromEntries(STATUS);
+const TER={mur:{label:'Mur',bg:'#2b2331',bd:'inset 0 0 0 1px rgba(201,169,106,.3)',block:true},difficile:{label:'Difficile',bg:'repeating-linear-gradient(45deg,rgba(201,169,106,.32) 0 3px,transparent 3px 9px)'},eau:{label:'Eau',bg:'rgba(79,179,255,.26)'},lave:{label:'Lave',bg:'radial-gradient(circle,rgba(240,120,70,.7),rgba(176,48,106,.5))'},vegetation:{label:'Végétation',bg:'rgba(120,160,90,.32)'}};
+const OBJ={coffre:{label:'Coffre',ab:'CF'},tonneau:{label:'Tonneau',ab:'TN'},porte:{label:'Porte',ab:'PT',toggle:['Ouvrir','Fermer']},feu:{label:'Feu de camp',ab:'FE',light:3,lc:'rgba(240,150,80,.32)'},lumiere:{label:'Torche',ab:'TO',light:4,lc:'rgba(255,214,140,.22)'},piege:{label:'Piège',ab:'PG',secret:true,toggle:['Révéler','Cacher']},autel:{label:'Autel',ab:'AU'},statue:{label:'Statue',ab:'ST'}};
+const BEST=[{name:'Gobelin',cr:'1/4',hp:7,ac:15,ini:2,atk:4,dmg:[1,6,2]},{name:'Squelette',cr:'1/4',hp:13,ac:13,ini:2,atk:4,dmg:[1,6,2]},{name:'Loup',cr:'1/4',hp:11,ac:13,ini:2,atk:4,dmg:[2,4,2]},{name:'Ogre',cr:'2',hp:59,ac:11,ini:-1,atk:6,dmg:[2,8,4],size:2},{name:'Hibours',cr:'3',hp:59,ac:13,ini:1,atk:7,dmg:[2,8,5],size:2}];
+const ABIL=[
+ {id:'arc',name:'Arc long',cat:'Actions',cost:'action',target:'ennemi',range:30,atk:7,dmg:[1,8,4],desc:'Attaque à distance avec une arme. Portée 45 m.'},
+ {id:'epee',name:'Épée courte',cat:'Actions',cost:'action',target:'ennemi',range:1,atk:7,dmg:[1,6,4],desc:'Attaque au corps à corps. Finesse, légère.'},
+ {id:'foncer',name:'Foncer',cat:'Actions',cost:'action',target:'soi',desc:'Gagnez un mouvement supplémentaire égal à votre vitesse.'},
+ {id:'deseng',name:'Se désengager',cat:'Actions',cost:'action',target:'soi',status:'Désengagé',desc:"Vos déplacements ne provoquent pas d'attaque d'opportunité ce tour-ci."},
+ {id:'esquive',name:'Esquiver',cat:'Actions',cost:'action',target:'soi',status:'Esquive',desc:'Les attaques contre vous ont un désavantage jusqu’à votre prochain tour.'},
+ {id:'cacher',name:'Se cacher',cat:'Actions',cost:'action',target:'soi',check:7,desc:'Test de Discrétion (Dextérité) d20 + 7.'},
+ {id:'off',name:'Attaque secondaire',cat:'Bonus',cost:'bonus',target:'ennemi',range:1,atk:7,dmg:[1,6,0],needs:true,desc:"Combat à deux armes. Nécessite d'avoir attaqué avec votre action."},
+ {id:'marque',name:'Marque du chasseur',cat:'Sorts',cost:'bonus',slot:1,target:'ennemi',range:60,mark:true,desc:'La cible subit +1d6 dégâts de vos attaques d’arme. Concentration.'},
+ {id:'potion',name:'Potion de soins',cat:'Objets',cost:'bonus',target:'soi',heal:[2,4,2],potion:true,desc:'Buvez la potion : récupérez 2d4 + 2 PV.'},
+ {id:'soins',name:'Soins',cat:'Sorts',cost:'action',slot:1,target:'allie',range:1,heal:[1,8,3],desc:'Une créature touchée récupère 1d8 + 3 PV.'},
+ {id:'foulee',name:'Grande foulée',cat:'Sorts',cost:'action',slot:1,target:'soi',move:2,desc:'Votre vitesse augmente de 3 m.'},
+ {id:'ecorce',name:"Peau d'écorce",cat:'Sorts',cost:'action',slot:2,target:'soi',status:"Peau d'écorce",desc:'Votre CA ne peut être inférieure à 16. Concentration.'},
+ {id:'opp',name:"Attaque d'opportunité",cat:'Réaction',cost:'reaction',target:'passif',desc:'Se déclenche automatiquement quand un ennemi quitte votre allonge.'}
+];
+const MK={action:{c:'#e8d3a0',clip:'none',rad:'50%',label:'ACTION'},bonus:{c:'#7cc6ff',clip:'polygon(50% 0,100% 100%,0 100%)',rad:'0',label:'ACTION BONUS'},reaction:{c:'#e07aa8',clip:'polygon(50% 0,100% 50%,50% 100%,0 50%)',rad:'0',label:'RÉACTION'}};
+const T0={};const put=(x,y,t)=>T0[x+','+y]=t;
+for(let y=0;y<15;y++)if(y<5||y>9)put(10,y,'mur');
+for(let x=10;x<24;x++){put(x,0,'mur');put(x,14,'mur');}
+for(let x=12;x<15;x++)for(let y=10;y<13;y++)put(x,y,'difficile');
+for(let x=19;x<23;x++)for(let y=1;y<4;y++)put(x,y,'eau');
+const C0=[
+ {id:'c1',name:'Elowen',short:'EL',kind:'pj',own:true,hp:38,max:44,ac:16,init:19,x:4,y:8,size:1,st:[],spd:6},
+ {id:'c2',name:'Brakk',short:'BR',kind:'pj',hp:52,max:52,ac:18,init:14,x:6,y:6,size:1,st:[]},
+ {id:'c3',name:'Sœur Ilda',short:'IL',kind:'pj',hp:22,max:31,ac:14,init:11,x:3,y:6,size:1,st:['Béni']},
+ {id:'c4',name:'Gobelin A',short:'G1',kind:'mon',hp:7,max:7,ac:15,init:16,x:13,y:6,size:1,st:[],atk:4,dmg:[1,6,2]},
+ {id:'c5',name:'Gobelin B',short:'G2',kind:'mon',hp:7,max:7,ac:15,init:9,x:15,y:9,size:1,st:[],atk:4,dmg:[1,6,2]},
+ {id:'c6',name:'Hibours',short:'HB',kind:'mon',hp:59,max:59,ac:13,init:12,x:18,y:6,size:2,st:[],atk:7,dmg:[2,8,5]}
+];
+const chip=on=>on?{bg:'rgba(201,169,106,.18)',bd:'#c9a96a',col:'#f3e6c4'}:{bg:'transparent',bd:'rgba(201,169,106,.28)',col:'#a79c8a'};
+const DIRS=['E','SE','S','SO','O','NO','N','NE'];
+class Component extends DCLogic {
+  state={cols:24,rows:15,cell:46,gridType:'carre',gridOp:.32,gridCol:'#c9a96a',mapEdit:false,
+    pan:{x:120,y:110},zoom:1,tool:'select',brush:'mur',zShape:'cercle',zR:2,zDir:0,zCol:'#e07aa8',zName:'',objKind:'coffre',
+    terrain:T0,zones:[{id:'z1',shape:'cercle',x:16,y:3,r:1,dir:0,col:'#7cc6ff',label:"Toile d'araignée"}],
+    objects:[{id:'o1',kind:'coffre',x:21,y:11},{id:'o2',kind:'tonneau',x:8,y:3},{id:'o3',kind:'feu',x:5,y:11},{id:'o4',kind:'piege',x:12,y:7,on:false},{id:'o5',kind:'lumiere',x:11,y:2},{id:'o6',kind:'porte',x:10,y:7,on:true}],
+    comb:C0,turn:0,round:1,sel:null,selObj:null,amt:5,
+    res:{action:1,bonus:1,reaction:1,move:6},moveMax:6,attacked:false,slots:{1:{max:4,used:2},2:{max:2,used:1}},potions:2,
+    hbTab:'Tout',targeting:null,hoverAb:null,hoverTok:null,
+    log:[{id:0,t:'Le combat commence — Round 1. Elowen ouvre le bal.',c:'#c9a96a'}],logOpen:(this.props.role??'mj')==='mj',floats:[],hc:null,measure:null,drag:null,ghost:null,toast:null};
+  vpRef=React.createRef();
+  isMJ(){return (this.props.role??'mj')==='mj';}
+  order(st){const s=st||this.state;return [...s.comb].sort((a,b)=>b.init-a.init||a.id.localeCompare(b.id));}
+  active(st){const o=this.order(st);return o[(st||this.state).turn%o.length];}
+  me(){return this.state.comb.find(c=>c.own);}
+  ownTurn(){const a=this.active();return !this.isMJ()&&a&&a.own;}
+  componentDidMount(){
+    this._mv=e=>this.winMove(e);this._up=e=>this.winUp(e);this._key=e=>this.onKey(e);
+    window.addEventListener('pointermove',this._mv);window.addEventListener('pointerup',this._up);window.addEventListener('keydown',this._key);
+    setTimeout(()=>this.fit(),60);
+  }
+  componentDidUpdate(prev){if((prev.role??'mj')!==(this.props.role??'mj')){clearTimeout(this._sim);setTimeout(()=>this.fit(),30);if(!this.isMJ())this.maybeSim();this.setState({targeting:null,tool:'select'});}}
+  componentWillUnmount(){clearTimeout(this._sim);clearTimeout(this._toastT);window.removeEventListener('pointermove',this._mv);window.removeEventListener('pointerup',this._up);window.removeEventListener('keydown',this._key);}
+  fit(){const el=this.vpRef.current;if(!el)return;const r=el.getBoundingClientRect(),s=this.state,bw=s.cols*s.cell,bh=s.rows*s.cell;
+    const top=110,bot=this.isMJ()?30:190,left=this.isMJ()?100:30,right=this.isMJ()?320:330;
+    const z=Math.max(.35,Math.min(1.5,(r.width-left-right)/bw,(r.height-top-bot)/bh));
+    this.setState({zoom:z,pan:{x:left+(r.width-left-right-bw*z)/2,y:top+(r.height-top-bot-bh*z)/2}});}
+  cellAt(e){const r=this.vpRef.current.getBoundingClientRect(),s=this.state,cs=s.cell*s.zoom;return{x:Math.floor((e.clientX-r.left-s.pan.x)/cs),y:Math.floor((e.clientY-r.top-s.pan.y)/cs)};}
+  inb(c){return c&&c.x>=0&&c.y>=0&&c.x<this.state.cols&&c.y<this.state.rows;}
+  log(t,c){this.setState(s=>({log:[{id:Date.now()+Math.random(),t,c:c||'#d8cbb0'},...s.log].slice(0,50)}));}
+  toast(t){clearTimeout(this._toastT);this.setState({toast:t});this._toastT=setTimeout(()=>this.setState({toast:null}),1800);}
+  float(tok,text,col,big){const cs=this.state.cell;const f={id:Date.now()+Math.random(),x:(tok.x+tok.size/2)*cs,y:(tok.y+tok.size/2)*cs,text,col,big};
+    this.setState(s=>({floats:[...s.floats,f]}));setTimeout(()=>this.setState(s=>({floats:s.floats.filter(x=>x.id!==f.id)})),1400);}
+  hp(id,d){this.setState(s=>({comb:s.comb.map(c=>c.id===id?{...c,hp:Math.max(0,Math.min(c.max,c.hp+d))}:c)}));}
+  setSt(id,name,force){this.setState(s=>({comb:s.comb.map(c=>{if(c.id!==id)return c;const has=c.st.includes(name);const want=force===undefined?!has:force;return{...c,st:want?(has?c.st:[...c.st,name]):c.st.filter(x=>x!==name)};})}));}
+  dist(a,b){const dx=Math.max(b.x-a.x,0,a.x-(b.x+b.size-1)),dy=Math.max(b.y-a.y,0,a.y-(b.y+b.size-1));return Math.max(dx,dy);}
+  blocked(c,ignoreId){const s=this.state;if(!this.inb(c))return true;const t=s.terrain[c.x+','+c.y];if(t&&TER[t].block)return true;
+    return s.comb.some(o=>o.id!==ignoreId&&o.hp>0&&c.x>=o.x&&c.x<o.x+o.size&&c.y>=o.y&&c.y<o.y+o.size);}
+  attack(att,tgt,atk,dmg,label,extra){
+    const d=R(20),tot=d+atk,crit=d===20,fum=d===1,hit=crit||(!fum&&tot>=tgt.ac);
+    if(hit){let dm=roll(crit?dmg[0]*2:dmg[0],dmg[1])+dmg[2]+(extra?roll(crit?2:1,6):0);this.hp(tgt.id,-dm);this.float(tgt,'−'+dm,crit?'#7cc6ff':'#f2b3cf',crit);
+      this.log(`${att.name} → ${tgt.name} · ${label} : ${d} + ${atk} = ${tot} contre CA ${tgt.ac} — ${crit?'CRITIQUE ! ':'touché, '}${dm} dégâts${extra?' (marque incluse)':''}.`,crit?'#7cc6ff':'#e9e2d4');
+      if(tgt.hp-dm<=0)setTimeout(()=>this.log(`${tgt.name} ${tgt.kind==='mon'?'est vaincu':'tombe à terre'}.`,'#e07aa8'),50);}
+    else{this.float(tgt,fum?'Échec critique':'Raté','#a79c8a');this.log(`${att.name} → ${tgt.name} · ${label} : ${d} + ${atk} = ${tot} contre CA ${tgt.ac} — ${fum?'échec critique':'raté'}.`,'#a79c8a');}
+  }
+  canUse(ab){const s=this.state;if(ab.target==='passif')return[false,'Réaction automatique.'];if(!this.ownTurn())return[false,"Ce n'est pas votre tour."];
+    if(s.res[ab.cost]<=0)return[false,MK[ab.cost].label.toLowerCase()+' déjà utilisée.'];if(ab.slot&&s.slots[ab.slot].used>=s.slots[ab.slot].max)return[false,`Plus d'emplacement de niveau ${ab.slot}.`];
+    if(ab.needs&&!s.attacked)return[false,"Attaquez d'abord avec votre action."];if(ab.potion&&s.potions<=0)return[false,'Plus de potion.'];return[true,''];}
+  pay(ab){this.setState(s=>({res:{...s.res,[ab.cost]:s.res[ab.cost]-1},slots:ab.slot?{...s.slots,[ab.slot]:{...s.slots[ab.slot],used:s.slots[ab.slot].used+1}}:s.slots,potions:ab.potion?s.potions-1:s.potions,attacked:s.attacked||(ab.cost==='action'&&!!ab.atk)}));}
+  useAb(ab){const[ok,why]=this.canUse(ab);if(!ok){this.toast(why);return;}
+    if(ab.target==='ennemi'||ab.target==='allie'){this.setState({targeting:ab.id,sel:null});return;}
+    const me=this.me();this.pay(ab);
+    if(ab.id==='foncer'){this.setState(s=>({res:{...s.res,move:s.res.move+me.spd},moveMax:s.moveMax+me.spd}));this.log(`${me.name} fonce : +${me.spd*1.5} m de mouvement.`);}
+    if(ab.move){this.setState(s=>({res:{...s.res,move:s.res.move+ab.move},moveMax:s.moveMax+ab.move}));this.log(`${me.name} lance ${ab.name}.`,'#7cc6ff');}
+    if(ab.status){this.setSt(me.id,ab.status,true);this.log(`${me.name} : ${ab.name}.`,'#7cc6ff');this.float(me,ab.name,'#bfe4ff');}
+    if(ab.check){const d=R(20);this.float(me,String(d+ab.check),'#e8d3a0',true);this.log(`${me.name} tente de se cacher : ${d} + ${ab.check} = ${d+ab.check}.`);}
+    if(ab.heal){const h=roll(ab.heal[0],ab.heal[1])+ab.heal[2];this.hp(me.id,h);this.float(me,'+'+h,'#7cc6ff',true);this.log(`${me.name} boit une potion : +${h} PV.`,'#7cc6ff');}
+  }
+  tryTarget(t){const s=this.state,ab=ABIL.find(a=>a.id===s.targeting),me=this.me();if(!ab)return;
+    const okSide=ab.target==='ennemi'?t.kind==='mon':t.kind==='pj';
+    if(!okSide||t.hp<=0){this.toast('Cible invalide.');return;}
+    if(this.dist(me,t)>ab.range){this.toast(`Hors de portée (${ab.range*1.5} m).`);return;}
+    this.pay(ab);this.setState({targeting:null});
+    if(ab.atk)this.attack(me,t,ab.atk,ab.dmg,ab.name,t.st.includes('Marqué'));
+    if(ab.mark){this.setSt(t.id,'Marqué',true);this.setSt(me.id,'Concentration',true);this.float(t,'Marqué','#e07aa8');this.log(`${me.name} marque ${t.name} (Marque du chasseur).`,'#7cc6ff');}
+    if(ab.heal){const h=roll(ab.heal[0],ab.heal[1])+ab.heal[2];this.hp(t.id,h);this.float(t,'+'+h,'#7cc6ff',true);this.log(`${me.name} soigne ${t.name} : +${h} PV.`,'#7cc6ff');}
+  }
+  nextTurn(){
+    this.setState(s=>{const o=this.order(s);let n=s.turn+1,round=s.round;if(n>=o.length){n=0;round++;}
+      const a=o[n];const fresh=a.own?{res:{action:1,bonus:1,reaction:1,move:a.spd},moveMax:a.spd,attacked:false,comb:s.comb.map(c=>c.id===a.id?{...c,st:c.st.filter(x=>x!=='Esquive'&&x!=='Désengagé')}:c)}:{};
+      return{turn:n,round,targeting:null,...fresh,log:[{id:Date.now(),t:(n===0?`— Round ${round} — `:'')+`Tour de ${a.name}.`,c:'#c9a96a'},...s.log].slice(0,50)};},()=>{if(!this.isMJ())this.maybeSim();});
+  }
+  maybeSim(){clearTimeout(this._sim);const a=this.active();if(!a||a.own)return;this._sim=setTimeout(()=>this.simTurn(),1100);}
+  simTurn(){const a=this.active();if(!a||this.isMJ())return;
+    if(a.hp<=0){this.nextTurn();return;}
+    if(a.kind==='mon'){const pcs=this.state.comb.filter(c=>c.kind==='pj'&&c.hp>0);if(pcs.length){const t=pcs.sort((p,q)=>this.dist(a,p)-this.dist(a,q))[0];this.attack(a,t,a.atk||4,a.dmg||[1,6,2],'attaque');}}
+    else this.log(`${a.name} agit puis termine son tour.`,'#a79c8a');
+    setTimeout(()=>this.nextTurn(),700);
+  }
+  paint(c){if(!this.inb(c))return;const k=c.x+','+c.y,s=this.state;if(s.brush==='gomme'?!s.terrain[k]:s.terrain[k]===s.brush)return;
+    this.setState(st=>{const t={...st.terrain};if(st.brush==='gomme')delete t[k];else t[k]=st.brush;return{terrain:t};});}
+  onKey(e){const tag=(e.target&&e.target.tagName)||'';if(/INPUT|TEXTAREA|SELECT/.test(tag))return;const k=e.key.toLowerCase();
+    if(k==='escape'){this.setState({targeting:null,sel:null,selObj:null,measure:null,tool:'select'});return;}
+    if(this.isMJ()){const map={v:'select',t:'terrain',z:'zone',o:'objet',m:'mesure',g:'grille',c:'creature'};if(map[k])this.setState(s=>({tool:s.tool===map[k]&&k!=='v'?'select':map[k]}));
+      if(k==='r')this.setState(s=>({zDir:(s.zDir+1)%8}));
+      if((k==='delete'||k==='backspace')&&this.state.selObj)this.setState(s=>({objects:s.objects.filter(o=>o.id!==s.selObj),selObj:null}));}
+    else if(k==='m')this.setState(s=>({tool:s.tool==='mesure'?'select':'mesure'}));
+  }
+  winMove(e){const s=this.state;
+    if(this._pan){this.setState({pan:{x:this._pan.px+e.clientX-this._pan.x,y:this._pan.py+e.clientY-this._pan.y}});return;}
+    if(this._tok){const c=this.cellAt(e);if(!s.ghost||c.x!==s.ghost.x||c.y!==s.ghost.y)this.setState({ghost:c});return;}
+    if(this._obj){const c=this.cellAt(e);if(this.inb(c))this.setState(st=>({objects:st.objects.map(o=>o.id===this._obj?{...o,x:c.x,y:c.y}:o)}));return;}
+    if(this._paint){this.paint(this.cellAt(e));return;}
+    if(this._meas){const c=this.cellAt(e);this.setState(st=>({measure:{...st.measure,b:c}}));}
+  }
+  winUp(){const s=this.state;
+    if(this._tok){const t=s.comb.find(c=>c.id===this._tok),g=s.ghost;
+      if(t&&g&&(g.x!==t.x||g.y!==t.y)){
+        if(this.isMJ()){if(this.inb(g))this.setState(st=>({comb:st.comb.map(c=>c.id===t.id?{...c,x:Math.min(g.x,st.cols-t.size),y:Math.min(g.y,st.rows-t.size)}:c)}));}
+        else{const cost=Math.max(Math.abs(g.x-t.x),Math.abs(g.y-t.y));
+          if(this.blocked(g,t.id))this.toast('Case bloquée.');
+          else if(cost>s.res.move)this.toast(`Trop loin : ${cost*1.5} m (reste ${s.res.move*1.5} m).`);
+          else{this.setState(st=>({comb:st.comb.map(c=>c.id===t.id?{...c,x:g.x,y:g.y}:c),res:{...st.res,move:st.res.move-cost}}));}}}
+      this._tok=null;this.setState({drag:null,ghost:null});}
+    this._pan=null;this._obj=null;this._paint=false;this._meas=false;
+  }
+  renderVals(){
+    const s=this.state,isMJ=this.isMJ(),cs=s.cell,order=this.order(),act=this.active(),me=this.me(),own=this.ownTurn();
+    const setTool=t=>()=>this.setState(st=>({tool:st.tool===t&&t!=='select'?'select':t,measure:null}));
+    const tgtAb=s.targeting&&ABIL.find(a=>a.id===s.targeting);
+    const cellsFor=(c)=>({left:c.x*cs,top:c.y*cs,size:cs});
+    const terrain=Object.entries(s.terrain).map(([k,t])=>{const[x,y]=k.split(',').map(Number);return x<s.cols&&y<s.rows?{...cellsFor({x,y}),bg:TER[t].bg,bd:TER[t].bd||'none'}:null;}).filter(Boolean);
+    const gc=rgba(s.gridCol,s.gridOp);
+    const gridBg=s.gridType==='carre'?`linear-gradient(${gc} 1px,transparent 1px),linear-gradient(90deg,${gc} 1px,transparent 1px)`:s.gridType==='points'?`radial-gradient(circle at 1px 1px,${rgba(s.gridCol,Math.min(1,s.gridOp*2.2))} 1.6px,transparent 2.2px)`:'none';
+    let reach=[];
+    if(own&&me&&!s.targeting){const m=s.res.move;for(let dx=-m;dx<=m;dx++)for(let dy=-m;dy<=m;dy++){const c={x:me.x+dx,y:me.y+dy};if((dx||dy)&&!this.blocked(c,me.id))reach.push({...cellsFor(c),a:s.drag?.16:.07});}}
+    const zoneEl=(z,o)=>{const cx=(z.x+.5)*cs,cy=(z.y+.5)*cs,bg=rgba(z.col,.24),bd=`1.5px solid ${rgba(z.col,.85)}`;
+      if(z.shape==='cercle'){const Rr=(z.r+.5)*cs;return{left:cx-Rr,top:cy-Rr,w:2*Rr,h:2*Rr,rad:'50%',clip:'none',rot:0,origin:'50% 50%',bg,bd,o};}
+      if(z.shape==='carre')return{left:(z.x-z.r)*cs,top:(z.y-z.r)*cs,w:(2*z.r+1)*cs,h:(2*z.r+1)*cs,rad:'3px',clip:'none',rot:0,origin:'50% 50%',bg,bd,o};
+      if(z.shape==='cone'){const L=(z.r+.5)*cs;return{left:cx-L,top:cy-L,w:2*L,h:2*L,rad:'0',clip:'polygon(50% 50%,100% 22%,100% 78%)',rot:z.dir*45,origin:'50% 50%',bg:rgba(z.col,.32),bd:'none',o};}
+      return{left:cx,top:cy-cs/2,w:(z.r+.5)*cs,h:cs,rad:'2px',clip:'none',rot:z.dir*45,origin:'0 50%',bg,bd,o};};
+    const zones=s.zones.map(z=>zoneEl(z,1));
+    if(isMJ&&s.tool==='zone'&&this.inb(s.hc))zones.push(zoneEl({shape:s.zShape,x:s.hc.x,y:s.hc.y,r:s.zR,dir:s.zDir,col:s.zCol},.55));
+    const zoneLabels=s.zones.filter(z=>z.label).map(z=>({x:(z.x+.5)*cs,y:(z.y+.5)*cs,label:z.label}));
+    const visObj=s.objects.filter(o=>isMJ||!OBJ[o.kind].secret||o.on);
+    const lights=visObj.filter(o=>OBJ[o.kind].light).map(o=>{const Rr=(OBJ[o.kind].light+.5)*cs;return{left:(o.x+.5)*cs-Rr,top:(o.y+.5)*cs-Rr,size:2*Rr,bg:`radial-gradient(circle,${OBJ[o.kind].lc},transparent 70%)`};});
+    const objects=visObj.map(o=>{const d=OBJ[o.kind],sel=s.selObj===o.id,hid=d.secret&&!o.on;
+      return{...cellsFor(o),label:d.label+(o.kind==='porte'?(o.on?' (fermée)':' (ouverte)'):''),ab:d.ab,o:hid?.55:1,bg:o.kind==='porte'&&!o.on?'transparent':'#241a2c',bstyle:hid||(o.kind==='porte'&&!o.on)?'dashed':'solid',bcol:sel?'#7cc6ff':d.secret?'#e07aa8':'#c9a96a',shadow:sel?'0 0 12px rgba(79,179,255,.7)':'0 2px 6px rgba(0,0,0,.5)',cursor:isMJ?'pointer':'default',
+        down:e=>{if(!isMJ)return;e.stopPropagation();this.setState({selObj:o.id,sel:null});if(s.tool==='select')this._obj=o.id;}};});
+    if(isMJ&&s.tool==='objet'&&this.inb(s.hc))objects.push({...cellsFor(s.hc),label:'',ab:OBJ[s.objKind].ab,o:.5,bg:'#241a2c',bstyle:'dashed',bcol:'#c9a96a',shadow:'none',cursor:'copy',down:null});
+    const hoverCell=this.inb(s.hc)&&(isMJ&&s.tool==='terrain')?{show:true,...cellsFor(s.hc),col:'#e8d3a0',bg:s.brush==='gomme'?'rgba(176,48,106,.2)':TER[s.brush].bg}:(own&&s.drag&&s.ghost&&this.inb(s.ghost))?{show:true,...cellsFor(s.ghost),col:Math.max(Math.abs(s.ghost.x-me.x),Math.abs(s.ghost.y-me.y))<=s.res.move&&!this.blocked(s.ghost,me.id)?'#7cc6ff':'#e07aa8',bg:'transparent'}:{show:false};
+    let measure={show:false};
+    if(s.measure&&s.measure.b){const a=s.measure.a,b=s.measure.b,x1=(a.x+.5)*cs,y1=(a.y+.5)*cs,x2=(b.x+.5)*cs,y2=(b.y+.5)*cs,d=Math.max(Math.abs(a.x-b.x),Math.abs(a.y-b.y));
+      measure={show:true,x:x1,y:y1,len:Math.hypot(x2-x1,y2-y1),a:Math.atan2(y2-y1,x2-x1),lx:x2,ly:y2,label:`${(d*1.5).toLocaleString('fr-FR')} m · ${d} case${d>1?'s':''}`};}
+    const valid=t=>{if(!tgtAb)return false;const ok=tgtAb.target==='ennemi'?t.kind==='mon':t.kind==='pj';return ok&&t.hp>0&&this.dist(me,t)<=tgtAb.range;};
+    const tokens=s.comb.filter(t=>isMJ||!t.hidden).map(t=>{const p=s.drag===t.id&&s.ghost?s.ghost:t,isAct=act&&act.id===t.id,sel=s.sel===t.id,dead=t.hp<=0,v=valid(t);
+      const ring=t.kind==='pj'?BLUE:MAG,pct=t.hp/t.max;
+      return{left:p.x*cs,top:p.y*cs,size:t.size*cs,short:t.short,fs:Math.round(cs*t.size*.27),z:s.drag===t.id?50:sel?20:10,o:t.hidden?.5:1,filter:dead?'grayscale(1) brightness(.6)':'none',trans:s.drag===t.id?'none':'left .2s, top .2s',
+        bg:t.kind==='pj'?'#1d2f4a':'#3a1428',ring:v?'#f2b3cf':ring,bstyle:t.hidden?'dashed':'solid',
+        shadow:v?'0 0 0 3px rgba(242,179,207,.5),0 0 22px #e07aa8':sel?'0 0 0 2px #0b0912,0 0 0 4px #e8d3a0,0 0 14px rgba(201,169,106,.6)':`0 0 0 2px #0b0912,0 0 12px ${ring}88`,
+        anim:isAct&&!v?'dsTurn 1.6s ease-in-out infinite':'none',
+        hpW:(isMJ||t.kind==='pj'?pct*100:Math.ceil(pct*4)*25)+'%',hpCol:pct<.34?'#e07aa8':t.kind==='pj'?BLUE:GOLD,
+        pips:t.st.slice(0,4).map(x=>({t:x,c:SC[x]||'#c9a96a'})),
+        cursor:tgtAb?(v?'crosshair':'not-allowed'):(isMJ&&s.tool==='select')||(t.own&&own)?'grab':'pointer',
+        enter:()=>this.setState({hoverTok:t.id}),leave:()=>this.setState(st=>st.hoverTok===t.id?{hoverTok:null}:null),
+        down:e=>{if(e.button!==0)return;e.stopPropagation();if(tgtAb){this.tryTarget(t);return;}
+          this.setState({sel:t.id,selObj:null});if((isMJ&&s.tool==='select')||(t.own&&own)){this._tok=t.id;this.setState({drag:t.id,ghost:{x:t.x,y:t.y}});}}};});
+    const E=React.createElement;
+    const floatsEl=E('div',{style:{position:'absolute',inset:0,pointerEvents:'none',zIndex:60}},s.floats.map(f=>E('div',{key:f.id,style:{position:'absolute',left:f.x,top:f.y,fontFamily:"'Cinzel',serif",fontSize:f.big?30:20,fontWeight:700,color:f.col,whiteSpace:'nowrap',textShadow:'0 2px 0 #0b0912,0 0 14px rgba(0,0,0,.9)',animation:'dsFloat 1.4s ease-out forwards'}},f.text)));
+    const hpState=c=>{const p=c.hp/c.max;return c.hp===0?'Vaincu':p>.75?'Indemne':p>.5?'Blessé':p>.25?'Sanglant':'Agonisant';};
+    const initBar=order.filter(c=>isMJ||!c.hidden).map(c=>{const a=act&&c.id===act.id,p=c.hp/c.max;return{name:c.name,short:c.short,init:c.init,sz:a?46:36,bg:c.kind==='pj'?'#1d2f4a':'#3a1428',ring:c.kind==='pj'?BLUE:MAG,glow:a?'0 0 0 2px #0b0912,0 0 0 4px #7cc6ff,0 0 18px #4fb3ff':'none',
+      nameCol:a?'#bfe4ff':'#d8cbb0',o:c.hidden?.55:1,filter:c.hp<=0?'grayscale(1)':'none',hpW:(isMJ||c.kind==='pj'?p*100:Math.ceil(p*4)*25)+'%',hpCol:p<.34?'#e07aa8':c.kind==='pj'?BLUE:GOLD,on:()=>this.setState({sel:c.id,selObj:null})};});
+    const tools=[['select','Sélection','V','◇'],['terrain','Terrain','T','▦'],['zone','Zones','Z','◎'],['objet','Objets','O','▣'],['mesure','Règle','M','⟷'],['grille','Grille','G','▤'],['creature','Créatures','C','✚']].map(([id,label,key,glyph])=>{const on=s.tool===id;return{label,key,glyph,title:`${label} (${key})`,on:setTool(id),bd:on?'#c9a96a':'transparent',bg:on?'rgba(201,169,106,.16)':'transparent',col:on?'#f3e6c4':'#a79c8a',glow:on?'0 0 14px rgba(79,179,255,.25)':'none'};});
+    const flyTitles={terrain:'Pinceau de terrain',zone:"Zones d'effet",objet:'Objets & décor',grille:'Grille & carte',creature:'Ajouter une créature'};
+    const selTok=s.comb.find(c=>c.id===s.sel),selObj=s.objects.find(o=>o.id===s.selObj);
+    let insp={show:false,statuses:[]};
+    if(selTok){const p=selTok.hp/selTok.max,showHp=isMJ||selTok.kind==='pj';
+      insp={show:true,isTok:true,isObj:false,name:selTok.name,short:selTok.short,bg:selTok.kind==='pj'?'#1d2f4a':'#3a1428',ring:selTok.kind==='pj'?BLUE:MAG,
+        sub:`${selTok.kind==='pj'?'Personnage':'Créature'} · CA ${showHp?selTok.ac:'?'} · Init ${selTok.init}`,hpText:showHp?`${selTok.hp} / ${selTok.max}`:hpState(selTok),hpW:(showHp?p*100:Math.ceil(p*4)*25)+'%',hpCol:p<.34?MAG:selTok.kind==='pj'?BLUE:GOLD,
+        dmg:()=>{const n=+s.amt||0;this.hp(selTok.id,-n);this.float(selTok,'−'+n,'#f2b3cf');this.log(`${selTok.name} subit ${n} dégâts.`,'#f2b3cf');},
+        heal:()=>{const n=+s.amt||0;this.hp(selTok.id,n);this.float(selTok,'+'+n,'#7cc6ff');this.log(`${selTok.name} récupère ${n} PV.`,'#7cc6ff');},
+        statuses:(isMJ?STATUS:STATUS.filter(([n])=>selTok.st.includes(n))).map(([n,c])=>{const on=selTok.st.includes(n);return{t:n,c,bd:on?c:'rgba(201,169,106,.25)',bg:on?rgba(c.length===7?c:'#c9a96a',.16):'transparent',col:on?'#f3e6c4':'#7d7368',cursor:isMJ?'pointer':'default',on:()=>{if(!isMJ)return;this.setSt(selTok.id,n);this.log(`${selTok.name} : ${on?'fin de':''} ${n}.`.replace('  ',' '),'#c9a96a');}};}),
+        hiddenLabel:selTok.hidden?'RÉVÉLER AUX JOUEURS':'CACHER AUX JOUEURS',
+        toggleHidden:()=>this.setState(st=>({comb:st.comb.map(c=>c.id===selTok.id?{...c,hidden:!c.hidden}:c)})),
+        remove:()=>this.setState(st=>{const o=this.order(st),cur=o[st.turn%o.length];const comb=st.comb.filter(c=>c.id!==selTok.id);const no=[...comb].sort((a,b)=>b.init-a.init||a.id.localeCompare(b.id));let turn=Math.max(0,no.findIndex(c=>c.id===(cur.id===selTok.id?(o[(st.turn+1)%o.length]||{}).id:cur.id)));return{comb,sel:null,turn};})};}
+    else if(selObj&&isMJ){const d=OBJ[selObj.kind];insp={show:true,isTok:false,isObj:true,name:d.label,short:d.ab,bg:'#241a2c',ring:GOLD,sub:`Objet · case ${String.fromCharCode(65+selObj.x)}${selObj.y+1}`,statuses:[],
+      hasToggle:!!d.toggle,toggleLabel:d.toggle?(selObj.on?d.toggle[1]:d.toggle[0]).toUpperCase():'',toggle:()=>this.setState(st=>({objects:st.objects.map(o=>o.id===selObj.id?{...o,on:!o.on}:o)})),
+      remove:()=>this.setState(st=>({objects:st.objects.filter(o=>o.id!==selObj.id),selObj:null}))};}
+    const myAbs=ABIL.filter(a=>s.hbTab==='Tout'?true:s.hbTab==='Bonus'?a.cost==='bonus':s.hbTab==='Réaction'?a.cost==='reaction':a.cat===s.hbTab);
+    const hotbar=myAbs.map((a,i)=>{const[ok]=this.canUse(a),m=MK[a.cost],tg=s.targeting===a.id;return{name:a.name,lvl:a.slot?'N'+a.slot:a.potion?'×'+s.potions:'',mk:m.c,clip:m.clip,rad:m.rad,
+      bd:tg?'#e07aa8':ok?'rgba(201,169,106,.55)':'rgba(201,169,106,.2)',bg:tg?'rgba(176,48,106,.25)':a.cat==='Sorts'?'linear-gradient(180deg,#1d2f4a,#120c18)':'linear-gradient(180deg,#2e1d36,#120c18)',
+      o:ok||tg?1:.38,cursor:ok?'pointer':'not-allowed',glow:tg?'0 0 16px rgba(224,122,168,.6)':'none',
+      on:()=>{if(tg){this.setState({targeting:null});return;}this.useAb(a);},enter:()=>this.setState({hoverAb:a.id,tipX:i}),leave:()=>this.setState(st=>st.hoverAb===a.id?{hoverAb:null}:null)};});
+    const ha=ABIL.find(a=>a.id===s.hoverAb);let tip={show:false};
+    if(ha&&!isMJ){const[ok,why]=this.canUse(ha),m=MK[ha.cost];const idx=myAbs.findIndex(a=>a.id===ha.id);
+      tip={show:true,left:Math.max(0,idx*82-100),name:ha.name,mk:m.c,clip:m.clip,rad:m.rad,meta:`${m.label.charAt(0)+m.label.slice(1).toLowerCase()}${ha.range?` · portée ${(ha.range*1.5).toLocaleString('fr-FR')} m`:''}${ha.slot?` · sort niv. ${ha.slot}`:''}`,
+        hasRoll:!!(ha.atk||ha.heal),roll:ha.atk?`d20 + ${ha.atk} pour toucher · ${ha.dmg[0]}d${ha.dmg[1]}${ha.dmg[2]?' + '+ha.dmg[2]:''} dégâts`:ha.heal?`${ha.heal[0]}d${ha.heal[1]} + ${ha.heal[2]} PV`:'',desc:ha.desc,hasWhy:!ok,why};}
+    const wt=act&&!act.own;
+    return{
+      vpRef:this.vpRef,isMJ,isJoueur:!isMJ,boardW:s.cols*cs,boardH:s.rows*cs,boardTf:`translate(${s.pan.x}px,${s.pan.y}px) scale(${s.zoom})`,
+      vpCursor:tgtAb?'crosshair':isMJ&&s.tool==='terrain'?'cell':isMJ&&(s.tool==='zone'||s.tool==='objet')?'copy':s.tool==='mesure'?'crosshair':this._pan?'grabbing':'grab',
+      noCtx:e=>e.preventDefault(),
+      onVpDown:e=>{if(e.button===1||e.button===2){this._pan={x:e.clientX,y:e.clientY,px:s.pan.x,py:s.pan.y};return;}
+        const c=this.cellAt(e);
+        if(s.targeting){this.setState({targeting:null});return;}
+        if(isMJ&&s.tool==='terrain'){this._paint=true;this.paint(c);return;}
+        if(isMJ&&s.tool==='zone'&&this.inb(c)){const n=s.zones.length+1;this.setState(st=>({zones:[...st.zones,{id:'z'+Date.now(),shape:st.zShape,x:c.x,y:c.y,r:st.zR,dir:st.zDir,col:st.zCol,label:st.zName.trim()||`Zone ${n}`}]}));return;}
+        if(isMJ&&s.tool==='objet'&&this.inb(c)){this.setState(st=>({objects:[...st.objects,{id:'o'+Date.now(),kind:st.objKind,x:c.x,y:c.y,on:OBJ[st.objKind].secret?false:undefined}]}));return;}
+        if(s.tool==='mesure'){this._meas=true;this.setState({measure:{a:c,b:c}});return;}
+        this.setState({sel:null,selObj:null});this._pan={x:e.clientX,y:e.clientY,px:s.pan.x,py:s.pan.y};},
+      onVpMove:e=>{if(!this.vpRef.current)return;const c=this.cellAt(e);if(!s.hc||c.x!==s.hc.x||c.y!==s.hc.y)this.setState({hc:c});},
+      onWheel:e=>{const r=this.vpRef.current.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top,z=s.zoom,nz=Math.max(.35,Math.min(2.4,z*(e.deltaY>0?.9:1.1)));this.setState({zoom:nz,pan:{x:mx-(mx-s.pan.x)*nz/z,y:my-(my-s.pan.y)*nz/z}});},
+      mapPE:s.mapEdit?'auto':'none',mapOutline:s.mapEdit?'2px dashed #7cc6ff':'none',
+      terrain,gridBg,gridSize:`${cs}px ${cs}px`,reach,lights,zones,zoneLabels,objects,hoverCell,measure,tokens,floatsEl,
+      round:s.round,initBar,nextTurn:()=>this.nextTurn(),
+      targetBanner:tgtAb?{show:true,name:tgtAb.name,range:`${(tgtAb.range*1.5).toLocaleString('fr-FR')} m`}:{show:false},cancelTarget:()=>this.setState({targeting:null}),
+      toast:s.toast?{show:true,text:s.toast,mt:tgtAb?46:0}:{show:false},
+      tools,fly:{on:isMJ&&!!flyTitles[s.tool],title:flyTitles[s.tool]||'',terrain:s.tool==='terrain',zone:s.tool==='zone',objet:s.tool==='objet',grille:s.tool==='grille',creature:s.tool==='creature'},
+      brushes:[...Object.entries(TER).map(([k,t])=>[k,t.label,t.bg]),['gomme','Gomme','transparent']].map(([k,label,sw])=>{const c=chip(s.brush===k);return{label,sw,on:()=>this.setState({brush:k}),bd:c.bd,bgSel:c.bg,col:c.col};}),
+      clearTerrain:()=>this.setState({terrain:{}}),
+      shapes:[['cercle','Cercle'],['cone','Cône'],['carre','Carré'],['ligne','Ligne']].map(([k,label])=>({label,on:()=>this.setState({zShape:k}),...chip(s.zShape===k)})),
+      zLabel:`${s.zR} c · ${(s.zR*1.5).toLocaleString('fr-FR')} m`,zMinus:()=>this.setState({zR:Math.max(1,s.zR-1)}),zPlus:()=>this.setState({zR:Math.min(20,s.zR+1)}),
+      zHasDir:s.zShape==='cone'||s.zShape==='ligne',zDirLabel:DIRS[s.zDir],zRotL:()=>this.setState({zDir:(s.zDir+7)%8}),zRotR:()=>this.setState({zDir:(s.zDir+1)%8}),
+      zCols:['#e07aa8','#7cc6ff','#e8d3a0'].map(c=>({c,bd:s.zCol===c?'#f3e6c4':'transparent',on:()=>this.setState({zCol:c})})),
+      zName:s.zName,onZName:e=>this.setState({zName:e.target.value}),
+      zoneList:s.zones.map(z=>({label:`${z.label} · ${z.r*1.5} m`,c:z.col,remove:()=>this.setState(st=>({zones:st.zones.filter(x=>x.id!==z.id)}))})),
+      objKinds:Object.entries(OBJ).map(([k,o])=>({label:o.label,ab:o.ab,on:()=>this.setState({objKind:k}),...chip(s.objKind===k)})),
+      gridTypes:[['carre','Carré'],['points','Points'],['aucune','Aucune']].map(([k,label])=>({label,on:()=>this.setState({gridType:k}),...chip(s.gridType===k)})),
+      gridOpPct:Math.round(s.gridOp*100)+' %',gridOpVal:Math.round(s.gridOp*100),onGridOp:e=>this.setState({gridOp:+e.target.value/100}),
+      gridCols:['#c9a96a','#e9e2d4','#7cc6ff'].map(c=>({c,bd:s.gridCol===c?'#f3e6c4':'transparent',on:()=>this.setState({gridCol:c})})),
+      cellSizes:[36,46,60].map(n=>({label:n+' px',on:()=>this.setState({cell:n},()=>this.fit()),...chip(s.cell===n)})),
+      dims:[{label:'COLONNES',v:s.cols,minus:()=>this.setState({cols:Math.max(8,s.cols-1)}),plus:()=>this.setState({cols:Math.min(60,s.cols+1)})},{label:'RANGÉES',v:s.rows,minus:()=>this.setState({rows:Math.max(6,s.rows-1)}),plus:()=>this.setState({rows:Math.min(40,s.rows+1)})}],
+      mapBtn:s.mapEdit?{label:'TERMINER — VERROUILLER LA CARTE',bd:'#4fb3ff',bg:'rgba(79,179,255,.14)',col:'#bfe4ff'}:{label:'CHANGER LA CARTE DE FOND',bd:'rgba(201,169,106,.45)',bg:'transparent',col:'#e8d3a0'},
+      toggleMapEdit:()=>this.setState({mapEdit:!s.mapEdit}),
+      bestiary:BEST.map(b=>({...b,on:()=>{const n=s.comb.filter(c=>c.name.startsWith(b.name)).length+1;const id='m'+Date.now();let pos={x:s.cols-4,y:Math.floor(s.rows/2)};for(let i=0;i<40&&this.blocked(pos);i++)pos={x:s.cols-3-R(8),y:1+R(s.rows-3)};
+        this.setState(st=>({comb:[...st.comb,{id,name:`${b.name} ${n}`,short:b.name.slice(0,1)+n,kind:'mon',hp:b.hp,max:b.hp,ac:b.ac,init:R(20)+b.ini,x:pos.x,y:pos.y,size:b.size||1,st:[],atk:b.atk,dmg:b.dmg,hidden:true}],sel:id}));this.log(`${b.name} ${n} rejoint le combat (caché aux joueurs).`,'#e07aa8');}})),
+      rollAllInit:()=>{this.setState(st=>({comb:st.comb.map(c=>({...c,init:R(20)+(c.kind==='pj'?3:1)})),turn:0,round:1}));this.log("L'initiative est relancée.",'#c9a96a');},
+      insp,amt:s.amt,onAmt:e=>this.setState({amt:e.target.value.replace(/\D/g,'')}),deselect:()=>this.setState({sel:null,selObj:null}),
+      log:s.log,logOpen:s.logOpen,logChevron:s.logOpen?'−':'+',toggleLog:()=>this.setState({logOpen:!s.logOpen}),logBottom:isMJ?16:166,
+      ctrlBottom:isMJ?16:166,
+      measBtn:s.tool==='mesure'?{bd:'#c9a96a',bg:'rgba(201,169,106,.18)',col:'#f3e6c4'}:{bd:'rgba(201,169,106,.4)',bg:'rgba(17,12,23,.92)',col:'#e8d3a0'},
+      toggleMeasure:()=>this.setState({tool:s.tool==='mesure'?'select':'mesure',measure:null}),
+      fit:()=>this.fit(),zoomIn:()=>this.setState({zoom:Math.min(2.4,s.zoom*1.15)}),zoomOut:()=>this.setState({zoom:Math.max(.35,s.zoom/1.15)}),
+      me:me?{name:me.name,hp:me.hp,max:me.max,ac:me.st.includes("Peau d'écorce")?Math.max(16,me.ac):me.ac,hpW:(me.hp/me.max*100)+'%',hpCol:me.hp/me.max<.34?MAG:BLUE}:{},
+      resources:['action','bonus','reaction'].map(k=>({label:MK[k].label,c:MK[k].c,clip:MK[k].clip,rad:MK[k].rad,o:s.res[k]>0?1:.28})),
+      moveText:`${(s.res.move*1.5).toLocaleString('fr-FR')} m`,moveW:Math.min(100,s.res.move/Math.max(1,s.moveMax)*100)+'%',
+      hbTabs:['Tout','Actions','Bonus','Sorts','Objets'].map(t=>({label:t.toUpperCase(),on:()=>this.setState({hbTab:t}),...chip(s.hbTab===t)})),
+      slotView:Object.entries(s.slots).map(([lvl,v])=>({lvl,pips:Array.from({length:v.max},(_,i)=>({bg:i<v.max-v.used?'#4fb3ff':'transparent'}))})),
+      hotbar,tip,
+      endTurn:()=>{if(own)this.nextTurn();},endBtn:own?{bg:'linear-gradient(180deg,#4a2a4e,#211426)',cursor:'pointer',o:1,glow:'0 0 22px rgba(79,179,255,.35)'}:{bg:'#1a1220',cursor:'not-allowed',o:.5,glow:'none'},
+      waiting:wt?{show:true,text:`Tour de ${act.name}…`}:{show:false}
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -13,12 +13,12 @@ status: draft
 
 ## Constat
 
-| Source | Statut | Conséquence |
-|---|---|---|
-| Règles de base D&D 5e | Mécaniques non protégeables par le droit d'auteur, mais **texte, illustrations, noms propres (ex. Beholder, Mind Flayer)** le sont | Ne pas copier le texte des livres |
-| **SRD 5.1** et **SRD 5.2** (Wizards of the Coast) | Publiés sous licence **Creative Commons CC-BY-4.0** : réutilisation commerciale ou non permise, **avec attribution** | ✅ Base légale propre pour le MVP |
-| Sites tiers (D&D Beyond, etc.) | Conditions d'utilisation interdisant en général le scraping ; contenu payant/protégé | ❌ Risque juridique + technique (anti-bot, DOM instable) + inutile pour le portfolio public |
-| Contenu non-SRD (Xanathar, Tasha, monstres non-SRD…) | Protégé | ❌ Ne pas redistribuer |
+| Source                                               | Statut                                                                                                                             | Conséquence                                                                                |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Règles de base D&D 5e                                | Mécaniques non protégeables par le droit d'auteur, mais **texte, illustrations, noms propres (ex. Beholder, Mind Flayer)** le sont | Ne pas copier le texte des livres                                                          |
+| **SRD 5.1** et **SRD 5.2** (Wizards of the Coast)    | Publiés sous licence **Creative Commons CC-BY-4.0** : réutilisation commerciale ou non permise, **avec attribution**               | ✅ Base légale propre pour le MVP                                                           |
+| Sites tiers (D&D Beyond, etc.)                       | Conditions d'utilisation interdisant en général le scraping ; contenu payant/protégé                                               | ❌ Risque juridique + technique (anti-bot, DOM instable) + inutile pour le portfolio public |
+| Contenu non-SRD (Xanathar, Tasha, monstres non-SRD…) | Protégé                                                                                                                            | ❌ Ne pas redistribuer                                                                      |
 
 > [!note]
 > Ce document est un cadrage produit, pas un avis juridique. Vérifier le texte exact des licences et de l'attribution requise avant publication.

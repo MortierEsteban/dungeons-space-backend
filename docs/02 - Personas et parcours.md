@@ -28,15 +28,15 @@ status: draft
 
 ## Rôles et droits
 
-| Capacité | MJ | Joueur | Spectateur |
-|---|:-:|:-:|:-:|
-| Créer/configurer la campagne | ✅ | ❌ | ❌ |
-| Voir tous les événements | ✅ | filtrés (`playerVisible`) | filtrés |
-| Éditer sa fiche | ✅ (toutes) | ✅ (la sienne) | ❌ |
-| Contrôler un combat (PNJ, ordre, statuts) | ✅ | ❌ | ❌ |
-| Déplacer son pion / lancer ses actions | ✅ | ✅ | ❌ |
-| Constellation | ✅ édition | 👁️ vue filtrée *(Could)* | ❌ |
-| Notes privées | ✅ | ✅ | ❌ |
+| Capacité                                  |     MJ     |          Joueur           | Spectateur |
+| ----------------------------------------- | :--------: | :-----------------------: | :--------: |
+| Créer/configurer la campagne              |     ✅      |             ❌             |     ❌      |
+| Voir tous les événements                  |     ✅      | filtrés (`playerVisible`) |  filtrés   |
+| Éditer sa fiche                           | ✅ (toutes) |       ✅ (la sienne)       |     ❌      |
+| Contrôler un combat (PNJ, ordre, statuts) |     ✅      |             ❌             |     ❌      |
+| Déplacer son pion / lancer ses actions    |     ✅      |             ✅             |     ❌      |
+| Constellation                             | ✅ édition  | 👁️ vue filtrée *(Could)* |     ❌      |
+| Notes privées                             |     ✅      |             ✅             |     ❌      |
 
 > [!question] Décision
 > Un utilisateur peut-il être MJ dans une campagne et joueur dans une autre ? **Recommandation : oui**, le rôle est porté par l'appartenance à la campagne, pas par le compte.

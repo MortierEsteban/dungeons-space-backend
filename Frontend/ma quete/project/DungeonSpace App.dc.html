@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cinzel+Decorative:wght@400;700&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="image-slot.js"></script>
+<style>
+html,body{margin:0;background:#0b0912;color:#e9e2d4}
+*{box-sizing:border-box}
+a{color:#e8d3a0;text-decoration:none}a:hover{color:#7cc6ff}
+input,select,textarea{font-family:'Spectral',serif}
+::placeholder{color:#7d7368}
+@keyframes dsFly{from{transform:translate(0,0)}to{transform:translate(var(--dx),var(--dy))}}
+@keyframes dsBlink{0%,100%{opacity:0}40%,60%{opacity:1}}
+@keyframes dsPulse{0%,100%{opacity:.35;transform:translate(-50%,-50%) scale(.9)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}}
+@keyframes dsDrift{from{transform:translateX(-6%)}to{transform:translateX(6%)}}
+@keyframes dsBreath{0%,100%{transform:scale(1.03)}50%{transform:scale(1.07)}}
+@keyframes dsIn{from{opacity:0;filter:blur(8px)}to{opacity:1;filter:blur(0)}}
+</style>
+</helmet>
+<div style="display:grid;grid-template-columns:104px minmax(0,1fr);height:100vh;background:radial-gradient(ellipse at 50% -10%,#2a1530 0%,#0b0912 60%);font-family:'Spectral',serif;color:#e9e2d4;overflow:hidden">
+
+  <nav style="display:flex;flex-direction:column;align-items:center;padding:22px 0 18px;gap:6px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;min-height:0;border-right:1px solid rgba(201,169,106,.22);background:linear-gradient(180deg,rgba(14,10,20,.9),rgba(11,9,18,.98));position:relative;z-index:5">
+    <img src="assets/ui/logo-star.png" alt="DungeonSpace" style="width:84px;height:auto;margin-bottom:14px;flex:none">
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="8">
+      <sc-if value="{{ n.sep }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:6px;width:60%;margin:6px 0"><div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(201,169,106,.5))"></div><div style="width:5px;height:5px;transform:rotate(45deg);background:#c9a96a"></div><div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(201,169,106,.5),transparent)"></div></div></sc-if>
+      <sc-if value="{{ n.item }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ n.go }}" style="position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;flex:none;padding:8px 0;background:none;border:none;cursor:pointer;color:{{ n.color }};font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;transition:transform .25s" style-hover="transform:scale(1.06)">
+          <div style="position:absolute;left:0;top:18%;bottom:18%;width:2px;background:{{ n.bar }};box-shadow:0 0 8px {{ n.bar }}"></div>
+          <img src="{{ n.src }}" alt="" style="width:38px;height:38px;object-fit:contain;-webkit-mask-image:{{ n.mask }};mask-image:{{ n.mask }};filter:{{ n.filter }};transition:filter .25s">
+          <span>{{ n.label }}</span>
+        </button>
+      </sc-if>
+    </sc-for>
+    <div style="flex:1"></div>
+    <button onClick="{{ goLogin }}" style="background:none;border:1px solid rgba(201,169,106,.3);color:#a79c8a;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;padding:8px 10px;border-radius:3px;cursor:pointer" style-hover="color:#f3e6c4;border-color:#c9a96a">QUITTER</button>
+  </nav>
+
+  <main style="position:relative;overflow:auto;min-width:0">
+    <sc-if value="{{ showTopbar }}" hint-placeholder-val="{{ true }}">
+      <header style="position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:20px;padding:14px 32px;background:linear-gradient(180deg,rgba(11,9,18,.96),rgba(11,9,18,.82));border-bottom:1px solid rgba(201,169,106,.2);backdrop-filter:blur(6px)">
+        <div style="font-family:'Cinzel Decorative',serif;font-size:20px;color:#e8d3a0;letter-spacing:.04em;white-space:nowrap">DungeonSpace</div>
+        <div style="width:6px;height:6px;transform:rotate(45deg);background:#c9a96a"></div>
+        <div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:#a79c8a;white-space:nowrap">{{ screenTitle }}</div>
+        <div style="flex:1"></div>
+        <div style="font-size:13px;color:#a79c8a;font-style:italic;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Campagne : Les Cendres de Valombre</div>
+        <div style="display:flex;flex:none;white-space:nowrap;border:1px solid rgba(201,169,106,.45);border-radius:3px;overflow:hidden">
+          <button onClick="{{ setJoueur }}" style="padding:7px 14px;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.14em;background:{{ roleJ.bg }};color:{{ roleJ.col }}">JOUEUR</button>
+          <button onClick="{{ setMJ }}" style="padding:7px 14px;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.14em;background:{{ roleM.bg }};color:{{ roleM.col }}">MAÎTRE DU JEU</button>
+        </div>
+        <div style="width:34px;height:34px;flex:none;border-radius:50%;border:1px solid #c9a96a;background:#1d2f4a;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:12px;color:#f3e6c4">EL</div>
+      </header>
+    </sc-if>
+
+    <!-- CONNEXION -->
+    <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Connexion" style="position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px">
+        <div style="position:absolute;inset:0"><image-slot id="bg-login" shape="rect" placeholder="Illustration plein écran : clairière nocturne, runes bleues"></image-slot></div>
+        <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(11,9,18,.35),rgba(11,9,18,.92) 75%)"></div>
+        <div style="position:relative;width:100%;max-width:440px;padding:40px 38px 32px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.22),0 20px 60px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+            <div style="width:18px;height:18px;transform:rotate(45deg);border:1px solid #c9a96a;display:flex;align-items:center;justify-content:center"><div style="width:6px;height:6px;background:#4fb3ff;box-shadow:0 0 8px #4fb3ff"></div></div>
+            <div style="font-family:'Cinzel Decorative',serif;font-size:34px;color:#e8d3a0;margin-top:8px">DungeonSpace</div>
+            <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.42em;color:#a79c8a">EXPLORE · BATTLE · CREATE</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid rgba(201,169,106,.25)">
+            <button onClick="{{ setAuthLogin }}" style="background:none;border:none;border-bottom:2px solid {{ authL.bd }};padding:10px;color:{{ authL.col }};font-family:'Cinzel',serif;font-size:13px;letter-spacing:.14em;cursor:pointer">CONNEXION</button>
+            <button onClick="{{ setAuthSignup }}" style="background:none;border:none;border-bottom:2px solid {{ authS.bd }};padding:10px;color:{{ authS.col }};font-family:'Cinzel',serif;font-size:13px;letter-spacing:.14em;cursor:pointer">INSCRIPTION</button>
+          </div>
+          <sc-if value="{{ isSignup }}" hint-placeholder-val="{{ false }}">
+            <label style="display:flex;flex-direction:column;gap:6px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#a79c8a">NOM D'AVENTURIER<input placeholder="Elowen" style="padding:11px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:15px;outline:none"></label>
+          </sc-if>
+          <label style="display:flex;flex-direction:column;gap:6px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#a79c8a">COURRIEL<input placeholder="vous@royaume.fr" style="padding:11px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:15px;outline:none"></label>
+          <label style="display:flex;flex-direction:column;gap:6px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#a79c8a">MOT DE PASSE<input type="password" placeholder="••••••••" style="padding:11px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:15px;outline:none"></label>
+          <sc-if value="{{ isSignup }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#a79c8a">JE VIENS SURTOUT POUR</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <button onClick="{{ setJoueur }}" style="padding:12px;border:1px solid {{ roleJ.bd }};background:{{ roleJ.bg }};color:{{ roleJ.col }};font-family:'Cinzel',serif;font-size:12px;letter-spacing:.12em;border-radius:3px;cursor:pointer">JOUER</button>
+                <button onClick="{{ setMJ }}" style="padding:12px;border:1px solid {{ roleM.bd }};background:{{ roleM.bg }};color:{{ roleM.col }};font-family:'Cinzel',serif;font-size:12px;letter-spacing:.12em;border-radius:3px;cursor:pointer">MENER</button>
+              </div>
+            </div>
+          </sc-if>
+          <button onClick="{{ goHome }}" style="margin-top:6px;font-family:'Cinzel',serif;font-size:14px;letter-spacing:.2em;color:#f3e6c4;background:linear-gradient(180deg,#4a2a4e,#211426);border:1px solid #c9a96a;border-radius:4px;padding:14px;cursor:pointer;box-shadow:inset 0 0 0 2px #120c18,inset 0 0 0 3px rgba(201,169,106,.3)" style-hover="box-shadow:inset 0 0 0 2px #120c18,inset 0 0 0 3px rgba(201,169,106,.3),0 0 24px rgba(79,179,255,.35)">{{ authCta }}</button>
+          <div style="text-align:center;font-size:13px;color:#a79c8a;font-style:italic">Mot de passe oublié ? <a href="#">Invoquer un rappel</a></div>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- ACCUEIL IMMERSIF -->
+    <sc-if value="{{ isHomeImm }}" hint-placeholder-val="{{ true }}">
+      <section data-screen-label="Accueil" onMouseMove="{{ onParallax }}" style="position:fixed;inset:0;z-index:10;background:#0b0912;overflow:hidden;display:flex;align-items:center;justify-content:center">
+        <img src="assets/accueil-dungeonspace.png" alt="" style="position:absolute;inset:-40px;width:calc(100% + 80px);height:calc(100% + 80px);object-fit:cover;filter:blur(30px) brightness(.45);pointer-events:none">
+        <div style="position:relative;width:min(100vw,150vh);aspect-ratio:3/2;overflow:hidden;container-type:inline-size;animation:dsIn 1.6s ease-out both">
+          <div style="position:absolute;inset:0;transform:{{ parallaxBg }};transition:transform .4s ease-out;pointer-events:none">
+            {{ homeImage }}
+            <div style="position:absolute;left:1.6%;top:18%;width:8.4%;height:62%;background:linear-gradient(90deg,rgba(8,6,12,.97) 0%,rgba(8,6,12,.95) 72%,rgba(8,6,12,0) 100%);-webkit-mask-image:linear-gradient(180deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(180deg,transparent,#000 8%,#000 92%,transparent);pointer-events:none"></div>
+            <sc-for list="{{ homeSide }}" as="b" hint-placeholder-count="5">
+              <button onClick="{{ b.go }}" aria-label="{{ b.label }}" style="pointer-events:auto;position:absolute;left:1.9%;top:{{ b.t }};width:6.8%;height:10%;padding:0;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9%;color:{{ b.color }};font-family:'Cinzel',serif;font-size:0.74cqw;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;transition:transform .3s cubic-bezier(.2,.8,.2,1), color .3s" style-hover="transform:scale(1.12);color:#bfe4ff">
+                <img src="{{ b.src }}" alt="" style="height:48%;width:auto;filter:{{ b.filter }};transition:filter .3s">
+                <span>{{ b.label }}</span>
+              </button>
+            </sc-for>
+            <sc-for list="{{ homeTiles }}" as="t" hint-placeholder-count="3">
+              <div style="position:absolute;left:{{ t.l }};top:{{ t.t }};width:{{ t.w }};height:{{ t.h }};perspective:900px">
+                <div style="position:absolute;inset:4%;border-radius:12px;background:#07050b;filter:blur(10px);opacity:{{ t.sock }};transition:opacity .3s;pointer-events:none"></div>
+                <button onClick="{{ t.go }}" onMouseMove="{{ t.move }}" onMouseLeave="{{ t.leave }}" aria-label="{{ t.label }}" style="pointer-events:auto;position:absolute;inset:0;padding:0;border:none;background:none;cursor:pointer;transform-style:preserve-3d;transform:{{ t.tf }};transition:{{ t.trans }};filter:{{ t.filter }}">
+                  <img src="{{ t.src }}" alt="" style="width:100%;height:100%;display:block">
+                  <div style="position:absolute;inset:0;background:{{ t.sheen }};mix-blend-mode:screen;pointer-events:none;-webkit-mask-image:{{ t.maskUrl }};mask-image:{{ t.maskUrl }};-webkit-mask-size:100% 100%;mask-size:100% 100%"></div>
+                </button>
+              </div>
+            </sc-for>
+            
+          
+          
+          
+          
+          
+          
+          
+          <button onClick="{{ goClassic }}" aria-label="Paramètres — accueil classique" title="Paramètres — accueil classique" style="pointer-events:auto;position:absolute;left:95.44%;top:82.62%;width:2.08%;height:3.13%;background:transparent;border:1px solid transparent;border-radius:50%;cursor:pointer;transition:box-shadow .25s, border-color .25s, background .25s" style-hover="border-color:rgba(124,198,255,.7);background:rgba(79,179,255,.08);box-shadow:0 0 28px rgba(79,179,255,.55), inset 0 0 22px rgba(79,179,255,.25)"></button>
+          <button onClick="{{ goLogin }}" aria-label="Déconnexion" title="Déconnexion" style="pointer-events:auto;position:absolute;left:95.44%;top:86.52%;width:2.08%;height:3.13%;background:transparent;border:1px solid transparent;border-radius:50%;cursor:pointer;transition:box-shadow .25s, border-color .25s, background .25s" style-hover="border-color:rgba(124,198,255,.7);background:rgba(79,179,255,.08);box-shadow:0 0 28px rgba(79,179,255,.55), inset 0 0 22px rgba(79,179,255,.25)"></button>
+          <button onClick="{{ goHome }}" aria-label="À propos" title="À propos" style="pointer-events:auto;position:absolute;left:41.67%;top:95.12%;width:4.95%;height:2.54%;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;transition:box-shadow .25s, border-color .25s, background .25s" style-hover="border-color:rgba(124,198,255,.7);background:rgba(79,179,255,.08);box-shadow:0 0 28px rgba(79,179,255,.55), inset 0 0 22px rgba(79,179,255,.25)"></button>
+          <button onClick="{{ goCompendium }}" aria-label="Règles" title="Règles" style="pointer-events:auto;position:absolute;left:47.92%;top:95.12%;width:3.91%;height:2.54%;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;transition:box-shadow .25s, border-color .25s, background .25s" style-hover="border-color:rgba(124,198,255,.7);background:rgba(79,179,255,.08);box-shadow:0 0 28px rgba(79,179,255,.55), inset 0 0 22px rgba(79,179,255,.25)"></button>
+          <button onClick="{{ goHome }}" aria-label="Contact" title="Contact" style="pointer-events:auto;position:absolute;left:53.13%;top:95.12%;width:4.95%;height:2.54%;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;transition:box-shadow .25s, border-color .25s, background .25s" style-hover="border-color:rgba(124,198,255,.7);background:rgba(79,179,255,.08);box-shadow:0 0 28px rgba(79,179,255,.55), inset 0 0 22px rgba(79,179,255,.25)"></button>
+          </div>
+          <div style="position:absolute;inset:0;transform:{{ parallaxFx }};transition:transform .4s ease-out;pointer-events:none">
+            {{ homeAmbient }}
+          </div>
+          <div style="position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 120px 40px rgba(11,9,18,.75)"></div>
+          
+          <button onClick="{{ goTable }}" style="position:absolute;left:50%;bottom:9%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:10px 18px;background:rgba(17,12,23,.72);border:1px solid rgba(201,169,106,.45);border-radius:4px;color:#e9e2d4;cursor:pointer;backdrop-filter:blur(4px);white-space:nowrap;opacity:.85;transition:opacity .25s, box-shadow .25s" style-hover="opacity:1;box-shadow:0 0 24px rgba(79,179,255,.4)">
+            <div style="width:8px;height:8px;border-radius:50%;background:#4fb3ff;box-shadow:0 0 10px #4fb3ff"></div>
+            <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.2em;color:#d8cbb0">VENDREDI 21H · LA CRYPTE DES MURMURES</span>
+            <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.16em;color:#7cc6ff">REJOINDRE →</span>
+          </button>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- ACCUEIL CLASSIQUE -->
+    <sc-if value="{{ isHomeClassic }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Accueil" style="position:relative;min-height:calc(100vh - 63px);display:flex;flex-direction:column;align-items:center;padding:70px 32px 40px;overflow:hidden">
+        <div style="position:absolute;inset:0"><image-slot id="bg-home" shape="rect" placeholder="Illustration plein écran : forêt enchantée violette, cheval astral, pierres runiques"></image-slot></div>
+        <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(11,9,18,.55),rgba(11,9,18,.2) 40%,rgba(11,9,18,.85))"></div>
+        <div style="position:absolute;inset:16px;pointer-events:none;border:1px solid rgba(201,169,106,.35);border-radius:10px;box-shadow:inset 0 0 0 4px rgba(11,9,18,.4),inset 0 0 0 5px rgba(201,169,106,.15)"></div>
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none">
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:90px;height:1px;background:linear-gradient(90deg,transparent,#c9a96a)"></div><div style="width:22px;height:22px;transform:rotate(45deg);border:1px solid #c9a96a;display:flex;align-items:center;justify-content:center;box-shadow:0 0 22px rgba(79,179,255,.6)"><div style="width:8px;height:8px;background:#7cc6ff;box-shadow:0 0 12px #4fb3ff"></div></div><div style="width:90px;height:1px;background:linear-gradient(90deg,#c9a96a,transparent)"></div></div>
+          <h1 style="margin:14px 0 0;font-family:'Cinzel Decorative',serif;font-weight:400;font-size:clamp(44px,7vw,92px);line-height:1;color:#e8d3a0;text-shadow:0 2px 0 #5a4526,0 0 40px rgba(201,169,106,.25)">DungeonSpace</h1>
+          <div style="font-family:'Cinzel',serif;font-size:14px;letter-spacing:.5em;color:#d8cbb0">EXPLORE · BATTLE · CREATE</div>
+        </div>
+        <div style="position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,240px));justify-content:center;gap:28px;width:100%;margin-top:70px">
+          <sc-for list="{{ homeCards }}" as="c" hint-placeholder-count="3">
+            <button onClick="{{ c.go }}" style="position:relative;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:linear-gradient(180deg,rgba(52,32,56,.9),rgba(24,15,30,.94));border:1px solid rgba(201,169,106,.6);border-radius:10px;box-shadow:inset 0 0 0 4px #120c18,inset 0 0 0 5px rgba(201,169,106,.3),0 12px 40px rgba(0,0,0,.5);cursor:pointer;color:#f3e6c4;transition:transform .2s, box-shadow .2s" style-hover="transform:translateY(-4px);box-shadow:inset 0 0 0 4px #120c18,inset 0 0 0 5px rgba(201,169,106,.5),0 0 30px rgba(79,179,255,.35)">
+              <div style="width:26px;height:26px;transform:rotate(45deg);border:1.5px solid #e8d3a0;display:flex;align-items:center;justify-content:center"><div style="width:8px;height:8px;background:#e8d3a0"></div></div>
+              <span style="font-family:'Cinzel',serif;font-size:18px;letter-spacing:.06em;line-height:1.2;text-align:center">{{ c.label }}</span>
+              <span style="font-size:13px;font-style:italic;color:#a79c8a">{{ c.sub }}</span>
+            </button>
+          </sc-for>
+        </div>
+        <div style="position:relative;margin-top:56px;width:100%;max-width:760px;display:flex;align-items:center;gap:20px;padding:16px 20px;background:rgba(17,12,23,.82);border:1px solid rgba(201,169,106,.35);border-radius:6px">
+          <div style="width:10px;height:10px;border-radius:50%;background:#4fb3ff;box-shadow:0 0 10px #4fb3ff"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.24em;color:#a79c8a">PROCHAINE SESSION · VENDREDI 21H</div>
+            <div style="font-size:16px;margin-top:2px">Les Cendres de Valombre — Chapitre 4 : la Crypte des Murmures</div>
+          </div>
+          <button onClick="{{ goTable }}" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.16em;color:#f3e6c4;background:linear-gradient(180deg,#3a2540,#1c1222);border:1px solid #c9a96a;border-radius:4px;padding:10px 16px;cursor:pointer">REJOINDRE LA TABLE</button>
+        </div>
+        <div style="position:relative;margin-top:auto;padding-top:40px;display:flex;gap:28px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.2em"><a href="#">À PROPOS</a><a href="#">RÈGLES</a><a href="#">CONTACT</a><a href="#" onClick="{{ goImmersive }}">VUE IMMERSIVE</a></div>
+      </section>
+    </sc-if>
+
+    <!-- EXPLORER -->
+    <sc-if value="{{ isExplore }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Explorer" style="padding:36px 32px 60px;max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:26px">
+        <div style="display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap">
+          <div style="flex:1;min-width:260px">
+            <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.3em;color:#a79c8a">EXPLORER</div>
+            <h2 style="margin:6px 0 0;font-family:'Cinzel',serif;font-weight:500;font-size:36px;color:#e8d3a0">Campagnes & Sanctuaire</h2>
+          </div>
+          <div style="display:flex;border:1px solid rgba(201,169,106,.45);border-radius:3px;overflow:hidden">
+            <button onClick="{{ setExCamp }}" style="padding:10px 18px;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:12px;letter-spacing:.14em;background:{{ exC.bg }};color:{{ exC.col }}">CAMPAGNES</button>
+            <button onClick="{{ setExComp }}" style="padding:10px 18px;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:12px;letter-spacing:.14em;background:{{ exS.bg }};color:{{ exS.col }}">SANCTUAIRE · COMPENDIUM</button>
+          </div>
+        </div>
+        <sc-if value="{{ exIsCamp }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:22px">
+            <sc-for list="{{ campaigns }}" as="k" hint-placeholder-count="6">
+              <div style="display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.45);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.18);overflow:hidden">
+                <div style="position:relative;height:150px;margin:6px 6px 0"><image-slot id="{{ k.slot }}" shape="rounded" radius="3" placeholder="{{ k.ph }}"></image-slot>
+                  <div style="position:absolute;top:10px;left:10px;padding:4px 9px;background:rgba(11,9,18,.85);border:1px solid {{ k.badgeColor }};color:{{ k.badgeColor }};font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;border-radius:2px;pointer-events:none">{{ k.badge }}</div>
+                </div>
+                <div style="padding:16px 18px 18px;display:flex;flex-direction:column;gap:8px">
+                  <div style="font-family:'Cinzel',serif;font-size:18px;color:#f3e6c4">{{ k.name }}</div>
+                  <div style="font-size:14px;color:#a79c8a;line-height:1.45;text-wrap:pretty">{{ k.desc }}</div>
+                  <div style="display:flex;gap:14px;font-size:13px;color:#d8cbb0;margin-top:4px"><span>MJ · {{ k.mj }}</span><span>{{ k.players }}</span><span>Niv. {{ k.lvl }}</span></div>
+                  <button onClick="{{ goTable }}" style="margin-top:8px;align-self:flex-start;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.16em;color:#f3e6c4;background:transparent;border:1px solid rgba(201,169,106,.6);border-radius:3px;padding:8px 14px;cursor:pointer" style-hover="background:rgba(201,169,106,.12)">{{ k.cta }}</button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ exIsComp }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,1fr);gap:22px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <input value="{{ q }}" onChange="{{ onQ }}" placeholder="Rechercher un sort, un monstre, un objet…" style="width:100%;padding:14px 16px;background:#0e0a14;border:1px solid rgba(201,169,106,.45);border-radius:4px;color:#e9e2d4;font-size:16px;outline:none">
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <sc-for list="{{ typeChips }}" as="t" hint-placeholder-count="4">
+                  <button onClick="{{ t.on }}" style="padding:7px 14px;border-radius:999px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.col }};font-family:'Cinzel',serif;font-size:11px;letter-spacing:.12em;cursor:pointer">{{ t.label }}</button>
+                </sc-for>
+              </div>
+              <div style="font-size:13px;color:#a79c8a;font-style:italic">{{ resultCount }}</div>
+              <div style="display:flex;flex-direction:column;border:1px solid rgba(201,169,106,.3);border-radius:4px;overflow:hidden">
+                <sc-for list="{{ results }}" as="r" hint-placeholder-count="8">
+                  <button onClick="{{ r.on }}" style="display:grid;grid-template-columns:minmax(0,1fr) 110px 90px;align-items:center;gap:12px;padding:12px 16px;border:none;border-bottom:1px solid rgba(201,169,106,.14);background:{{ r.bg }};color:#e9e2d4;text-align:left;cursor:pointer" style-hover="background:rgba(201,169,106,.08)">
+                    <span style="font-family:'Cinzel',serif;font-size:15px;color:#f3e6c4">{{ r.name }}</span>
+                    <span style="font-size:13px;color:{{ r.typeColor }}">{{ r.type }}</span>
+                    <span style="font-size:13px;color:#a79c8a;text-align:right">{{ r.meta }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="position:sticky;top:90px;padding:24px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.22);display:flex;flex-direction:column;gap:12px">
+              <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.24em;color:{{ entry.typeColor }}">{{ entry.type }} · {{ entry.meta }}</div>
+              <div style="font-family:'Cinzel',serif;font-size:26px;color:#e8d3a0">{{ entry.name }}</div>
+              <div style="display:flex;align-items:center;gap:10px"><div style="flex:1;height:1px;background:linear-gradient(90deg,#c9a96a,transparent)"></div><div style="width:6px;height:6px;transform:rotate(45deg);background:#c9a96a"></div><div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,#c9a96a)"></div></div>
+              <sc-for list="{{ entry.props }}" as="p" hint-placeholder-count="3">
+                <div style="display:flex;gap:10px;font-size:14px"><span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.14em;color:#a79c8a;min-width:110px;padding-top:2px">{{ p.k }}</span><span>{{ p.v }}</span></div>
+              </sc-for>
+              <p style="margin:6px 0 0;font-size:15px;line-height:1.6;color:#d8cbb0;text-wrap:pretty">{{ entry.desc }}</p>
+              <div style="display:flex;gap:10px;margin-top:6px">
+                <button onClick="{{ entry.roll }}" style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.16em;color:#f3e6c4;background:linear-gradient(180deg,#3a2540,#1c1222);border:1px solid #c9a96a;border-radius:4px;padding:9px 14px;cursor:pointer">{{ entry.rollLabel }}</button>
+                <button style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.16em;color:#e8d3a0;background:transparent;border:1px solid rgba(201,169,106,.45);border-radius:4px;padding:9px 14px;cursor:pointer">AJOUTER À LA FICHE</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </section>
+    </sc-if>
+
+    <!-- GÉNÉRATION -->
+    <sc-if value="{{ isGen }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Génération" style="padding:36px 32px 60px;max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:26px">
+        <div style="display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap">
+          <div style="flex:1;min-width:260px">
+            <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.3em;color:#a79c8a">GÉNÉRATION</div>
+            <h2 style="margin:6px 0 0;font-family:'Cinzel',serif;font-weight:500;font-size:36px;color:#e8d3a0">La Forge des Destins</h2>
+          </div>
+          <div style="display:flex;border:1px solid rgba(201,169,106,.45);border-radius:3px;overflow:hidden">
+            <sc-for list="{{ genTabs }}" as="g" hint-placeholder-count="3">
+              <button onClick="{{ g.on }}" style="padding:10px 18px;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:12px;letter-spacing:.14em;background:{{ g.bg }};color:{{ g.col }}">{{ g.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-if value="{{ genIsPj }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,1fr);gap:22px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:22px;padding:26px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.22)">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.24em;color:#a79c8a">I · ESPÈCE</div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                  <sc-for list="{{ raceChips }}" as="t" hint-placeholder-count="8">
+                    <button onClick="{{ t.on }}" style="padding:8px 14px;border-radius:3px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.col }};font-family:'Cinzel',serif;font-size:12px;letter-spacing:.08em;cursor:pointer">{{ t.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.24em;color:#a79c8a">II · CLASSE</div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                  <sc-for list="{{ classChips }}" as="t" hint-placeholder-count="12">
+                    <button onClick="{{ t.on }}" style="padding:8px 14px;border-radius:3px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.col }};font-family:'Cinzel',serif;font-size:12px;letter-spacing:.08em;cursor:pointer">{{ t.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="flex:1;font-family:'Cinzel',serif;font-size:12px;letter-spacing:.24em;color:#a79c8a">III · CARACTÉRISTIQUES <span style="letter-spacing:.06em;font-family:'Spectral',serif;font-style:italic;text-transform:none">— 4d6, on garde les 3 meilleurs</span></div>
+                  <button onClick="{{ rollStats }}" style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.16em;color:#f3e6c4;background:linear-gradient(180deg,#3a2540,#1c1222);border:1px solid #c9a96a;border-radius:4px;padding:9px 14px;cursor:pointer" style-hover="box-shadow:0 0 18px rgba(79,179,255,.35)">LANCER LES DÉS</button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px">
+                  <sc-for list="{{ genStats }}" as="s" hint-placeholder-count="6">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 4px;background:#0e0a14;border:1px solid rgba(201,169,106,.3);border-radius:4px">
+                      <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.14em;color:#a79c8a">{{ s.k }}</span>
+                      <span style="font-family:'Cinzel',serif;font-size:28px;color:#f3e6c4">{{ s.v }}</span>
+                      <span style="font-size:13px;color:#7cc6ff">{{ s.mod }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.22);overflow:hidden">
+              <div style="height:280px;margin:6px 6px 0"><image-slot id="gen-portrait" shape="rounded" radius="3" placeholder="Portrait du personnage"></image-slot></div>
+              <div style="padding:20px 22px 22px;display:flex;flex-direction:column;gap:8px">
+                <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.24em;color:#a79c8a">APERÇU</div>
+                <div style="font-family:'Cinzel',serif;font-size:22px;color:#e8d3a0">{{ race }} · {{ cls }}</div>
+                <div style="font-size:14px;color:#d8cbb0">Niveau 1 · PV {{ genHp }} · Dé de vie {{ hitDie }}</div>
+                <button onClick="{{ goSheet }}" style="margin-top:10px;font-family:'Cinzel',serif;font-size:12px;letter-spacing:.18em;color:#f3e6c4;background:linear-gradient(180deg,#4a2a4e,#211426);border:1px solid #c9a96a;border-radius:4px;padding:12px;cursor:pointer;box-shadow:inset 0 0 0 2px #120c18,inset 0 0 0 3px rgba(201,169,106,.3)">FORGER LA FICHE</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ genIsNpc }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:22px;align-items:start">
+            <div style="height:400px;border:1px solid rgba(201,169,106,.5);border-radius:6px;padding:6px;background:#0e0a14"><image-slot id="gen-npc" shape="rounded" radius="3" placeholder="Portrait du PNJ"></image-slot></div>
+            <div style="display:flex;flex-direction:column;gap:16px;padding:28px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.22)">
+              <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.24em;color:#a79c8a">{{ npc.race }} · {{ npc.job }}</div>
+              <div style="font-family:'Cinzel',serif;font-size:32px;color:#e8d3a0">{{ npc.name }}</div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+                <div style="padding:14px;background:#0e0a14;border:1px solid rgba(201,169,106,.25);border-radius:4px"><div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#a79c8a">TRAIT</div><div style="margin-top:6px;font-size:15px">{{ npc.trait }}</div></div>
+                <div style="padding:14px;background:#0e0a14;border:1px solid rgba(201,169,106,.25);border-radius:4px"><div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#a79c8a">MOTIVATION</div><div style="margin-top:6px;font-size:15px">{{ npc.goal }}</div></div>
+                <div style="padding:14px;background:#0e0a14;border:1px solid rgba(176,48,106,.5);border-radius:4px"><div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#e07aa8">SECRET · MJ</div><div style="margin-top:6px;font-size:15px">{{ npc.secret }}</div></div>
+              </div>
+              <div style="display:flex;gap:10px;margin-top:6px">
+                <button onClick="{{ genNpc }}" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.16em;color:#f3e6c4;background:linear-gradient(180deg,#3a2540,#1c1222);border:1px solid #c9a96a;border-radius:4px;padding:11px 18px;cursor:pointer" style-hover="box-shadow:0 0 18px rgba(79,179,255,.35)">INVOQUER UN AUTRE PNJ</button>
+                <button style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.16em;color:#e8d3a0;background:transparent;border:1px solid rgba(201,169,106,.45);border-radius:4px;padding:11px 18px;cursor:pointer">AJOUTER À LA CAMPAGNE</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ genIsLoot }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:18px;padding:26px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.22)">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.24em;color:#a79c8a">NIVEAU DU TRÉSOR</div>
+              <sc-for list="{{ tierChips }}" as="t" hint-placeholder-count="4">
+                <button onClick="{{ t.on }}" style="padding:7px 14px;border-radius:999px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.col }};font-family:'Cinzel',serif;font-size:11px;letter-spacing:.1em;cursor:pointer">{{ t.label }}</button>
+              </sc-for>
+              <div style="flex:1"></div>
+              <button onClick="{{ genLoot }}" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.16em;color:#f3e6c4;background:linear-gradient(180deg,#3a2540,#1c1222);border:1px solid #c9a96a;border-radius:4px;padding:11px 18px;cursor:pointer" style-hover="box-shadow:0 0 18px rgba(79,179,255,.35)">OUVRIR LE COFFRE</button>
+            </div>
+            <div style="font-family:'Cinzel',serif;font-size:24px;color:#e8d3a0">{{ lootGold }}</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+              <sc-for list="{{ loot }}" as="l" hint-placeholder-count="4">
+                <div style="display:flex;flex-direction:column;gap:4px;padding:14px 16px;background:#0e0a14;border:1px solid {{ l.color }};border-radius:4px">
+                  <span style="font-family:'Cinzel',serif;font-size:15px;color:#f3e6c4">{{ l.name }}</span>
+                  <span style="font-size:13px;color:{{ l.color }}">{{ l.rarity }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </section>
+    </sc-if>
+
+    <!-- FICHE -->
+    <sc-if value="{{ isSheet }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Fiche de personnage" style="padding:30px 32px 60px;max-width:1360px;margin:0 auto;display:grid;grid-template-columns:minmax(260px,320px) minmax(0,1fr);gap:22px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.22);overflow:hidden">
+            <div style="height:260px;margin:6px 6px 0"><image-slot id="sheet-portrait" shape="rounded" radius="3" placeholder="Portrait : Elowen"></image-slot></div>
+            <div style="padding:16px 18px 20px;display:flex;flex-direction:column;gap:6px">
+              <input value="{{ charName }}" onChange="{{ onName }}" style="background:transparent;border:none;border-bottom:1px dashed rgba(201,169,106,.35);color:#e8d3a0;font-family:'Cinzel',serif;font-size:22px;padding:2px 0;outline:none">
+              <div style="font-size:14px;color:#d8cbb0">Elfe des bois · Rôdeuse niv. 5</div>
+              <div style="font-size:13px;color:#a79c8a;font-style:italic">Historique : Exilée · Alignement : Neutre bon</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+            <div style="display:flex;flex-direction:column;align-items:center;padding:12px 4px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:4px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;color:#a79c8a">CA</span><span style="font-family:'Cinzel',serif;font-size:24px">16</span></div>
+            <button onClick="{{ rollInit }}" style="display:flex;flex-direction:column;align-items:center;padding:12px 4px;background:#0e0a14;border:1px solid rgba(79,179,255,.5);border-radius:4px;color:#e9e2d4;cursor:pointer" style-hover="box-shadow:0 0 14px rgba(79,179,255,.35)"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;color:#7cc6ff">INITIATIVE</span><span style="font-family:'Cinzel',serif;font-size:24px">+4</span></button>
+            <div style="display:flex;flex-direction:column;align-items:center;padding:12px 4px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:4px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;color:#a79c8a">VITESSE</span><span style="font-family:'Cinzel',serif;font-size:24px">10 m</span></div>
+          </div>
+          <div style="padding:18px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.2em;color:#a79c8a;flex:1">POINTS DE VIE</span><span style="font-family:'Cinzel',serif;font-size:30px;color:#f3e6c4">{{ hp }}</span><span style="color:#a79c8a">/ {{ hpMax }}</span></div>
+            <div style="height:8px;background:#0e0a14;border:1px solid rgba(201,169,106,.3);border-radius:4px;overflow:hidden"><div style="height:100%;width:{{ hpPct }};background:{{ hpColor }};transition:width .3s"></div></div>
+            <div style="display:grid;grid-template-columns:1fr 64px 1fr;gap:8px">
+              <button onClick="{{ dmgSelf }}" style="padding:9px;border:1px solid rgba(176,48,106,.7);background:rgba(176,48,106,.15);color:#f2b3cf;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.14em;border-radius:3px;cursor:pointer">DÉGÂTS</button>
+              <input value="{{ amt }}" onChange="{{ onAmt }}" style="text-align:center;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:16px;outline:none">
+              <button onClick="{{ healSelf }}" style="padding:9px;border:1px solid rgba(79,179,255,.6);background:rgba(79,179,255,.12);color:#b8e0ff;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.14em;border-radius:3px;cursor:pointer">SOINS</button>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:22px">
+          <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px">
+            <sc-for list="{{ abilities }}" as="a" hint-placeholder-count="6">
+              <button onClick="{{ a.roll }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 4px 12px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.18);color:#e9e2d4;cursor:pointer" style-hover="box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.4),0 0 18px rgba(79,179,255,.3)">
+                <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.14em;color:#a79c8a">{{ a.k }}</span>
+                <span style="font-family:'Cinzel',serif;font-size:30px;color:#f3e6c4">{{ a.mod }}</span>
+                <span style="font-size:13px;padding:2px 10px;border:1px solid rgba(201,169,106,.35);border-radius:999px">{{ a.v }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <div style="font-size:13px;color:#a79c8a;font-style:italic;margin-top:-10px">Cliquez sur une caractéristique pour lancer un test (d20 + modificateur).</div>
+          <div style="padding:22px 24px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.22);display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+              <div style="font-family:'Cinzel',serif;font-size:18px;color:#e8d3a0;flex:1">Grimoire</div>
+              <sc-for list="{{ slotRows }}" as="sr" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:6px"><span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.14em;color:#a79c8a">NIV {{ sr.lvl }}</span>
+                  <sc-for list="{{ sr.pips }}" as="p" hint-placeholder-count="3">
+                    <button onClick="{{ p.on }}" style="width:16px;height:16px;transform:rotate(45deg);border:1px solid #7cc6ff;background:{{ p.bg }};box-shadow:{{ p.glow }};cursor:pointer;padding:0"></button>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <sc-for list="{{ spells }}" as="s" hint-placeholder-count="6">
+                <div style="display:grid;grid-template-columns:28px minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid rgba(201,169,106,.14)">
+                  <button onClick="{{ s.toggle }}" style="width:16px;height:16px;border-radius:50%;border:1px solid #c9a96a;background:{{ s.dot }};cursor:pointer;padding:0"></button>
+                  <span style="font-family:'Cinzel',serif;font-size:15px;color:{{ s.col }}">{{ s.name }}</span>
+                  <span style="font-size:13px;color:#a79c8a;white-space:nowrap">{{ s.lvl }}</span>
+                  <button onClick="{{ s.cast }}" style="justify-self:end;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;color:#e8d3a0;background:transparent;border:1px solid rgba(201,169,106,.45);border-radius:3px;padding:6px 10px;cursor:pointer" style-hover="background:rgba(201,169,106,.12)">{{ s.cta }}</button>
+                </div>
+              </sc-for>
+            </div>
+            <div style="font-size:13px;color:#a79c8a;font-style:italic">● = sort préparé · lancer un sort consomme un emplacement du niveau correspondant.</div>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- TABLE -->
+    <sc-if value="{{ isTable }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Table de jeu" style="padding:22px 24px 40px;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-family:'Cinzel',serif;font-size:18px;color:#e8d3a0;flex:1">La Crypte des Murmures · Salle 2</div>
+            <div style="font-size:13px;color:#a79c8a;font-style:italic">{{ dragHint }}</div>
+          </div>
+          <div ref="{{ mapRef }}" style="position:relative;width:100%;aspect-ratio:14/9;border:1px solid rgba(201,169,106,.55);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,0 12px 40px rgba(0,0,0,.5);overflow:hidden;background:#120d18;touch-action:none;user-select:none">
+            <div style="position:absolute;inset:0"><image-slot id="map-crypt" shape="rect" placeholder="Carte de bataille (vue de dessus, 14 × 9 cases)"></image-slot></div>
+            <div style="position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(201,169,106,.16) 1px,transparent 1px),linear-gradient(90deg,rgba(201,169,106,.16) 1px,transparent 1px);background-size:calc(100% / 14) calc(100% / 9)"></div>
+            <sc-for list="{{ tokens }}" as="t" hint-placeholder-count="6">
+              <div onPointerDown="{{ t.down }}" style="position:absolute;left:{{ t.left }};top:{{ t.top }};width:calc(100% / 14);height:calc(100% / 9);display:flex;align-items:center;justify-content:center;cursor:{{ t.cursor }};transition:{{ t.trans }};z-index:{{ t.z }}">
+                <div style="width:78%;height:78%;border-radius:50%;background:{{ t.bg }};border:2px solid {{ t.color }};box-shadow:0 0 0 2px #0b0912,0 0 14px {{ t.color }};display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:13px;font-weight:600;color:#f3e6c4">{{ t.label }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="padding:16px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center"><span style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.2em;color:#a79c8a;flex:1">INITIATIVE · ROUND {{ round }}</span><button onClick="{{ nextTurn }}" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;color:#f3e6c4;background:linear-gradient(180deg,#3a2540,#1c1222);border:1px solid #c9a96a;border-radius:3px;padding:6px 10px;cursor:pointer">SUIVANT</button></div>
+            <sc-for list="{{ order }}" as="c" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:3px;background:{{ c.rowBg }};border:1px solid {{ c.rowBd }}">
+                <span style="width:22px;font-family:'Cinzel',serif;color:#7cc6ff">{{ c.init }}</span>
+                <span style="flex:1;font-size:14px">{{ c.name }}</span>
+                <span style="font-size:12px;color:{{ c.hpCol }}">{{ c.hpText }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="padding:16px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;display:flex;flex-direction:column;gap:12px">
+            <span style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.2em;color:#a79c8a">PLATEAU DE DÉS</span>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+              <sc-for list="{{ diceBtns }}" as="d" hint-placeholder-count="7">
+                <button onClick="{{ d.on }}" style="padding:10px 0;background:#0e0a14;border:1px solid rgba(201,169,106,.45);border-radius:3px;color:#f3e6c4;font-family:'Cinzel',serif;font-size:13px;cursor:pointer" style-hover="border-color:#7cc6ff;box-shadow:0 0 12px rgba(79,179,255,.35)">{{ d.label }}</button>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto">
+              <sc-for list="{{ log }}" as="l" hint-placeholder-count="0">
+                <div style="display:flex;gap:10px;align-items:baseline;font-size:13px;padding:6px 0;border-bottom:1px solid rgba(201,169,106,.12)">
+                  <span style="flex:1;color:#d8cbb0">{{ l.label }} <span style="color:#7d7368">{{ l.txt }}</span></span>
+                  <span style="font-family:'Cinzel',serif;font-size:17px;color:{{ l.col }}">{{ l.total }}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ logEmpty }}" hint-placeholder-val="{{ true }}"><div style="font-size:13px;color:#7d7368;font-style:italic">Aucun jet pour l'instant.</div></sc-if>
+            </div>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- GUERRE -->
+    <sc-if value="{{ isWar }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Guerre" style="padding:36px 32px 60px;max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:22px">
+        <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:260px">
+            <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.3em;color:#a79c8a">GUERRE · ROUND {{ round }}</div>
+            <h2 style="margin:6px 0 0;font-family:'Cinzel',serif;font-weight:500;font-size:36px;color:#e8d3a0">Ordre d'initiative</h2>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px"><span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.16em;color:#a79c8a">MONTANT</span><input value="{{ amt }}" onChange="{{ onAmt }}" style="width:60px;padding:9px;text-align:center;background:#0e0a14;border:1px solid rgba(201,169,106,.4);border-radius:3px;color:#e9e2d4;font-size:16px;outline:none"></div>
+          <sc-if value="{{ isMJ }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ rollAllInit }}" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.14em;color:#e8d3a0;background:transparent;border:1px solid rgba(201,169,106,.5);border-radius:4px;padding:11px 16px;cursor:pointer">RELANCER L'INITIATIVE</button>
+            <button onClick="{{ addMonster }}" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.14em;color:#f2b3cf;background:rgba(176,48,106,.12);border:1px solid rgba(176,48,106,.7);border-radius:4px;padding:11px 16px;cursor:pointer">+ MONSTRE</button>
+          </sc-if>
+          <button onClick="{{ nextTurn }}" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.18em;color:#f3e6c4;background:linear-gradient(180deg,#4a2a4e,#211426);border:1px solid #c9a96a;border-radius:4px;padding:11px 20px;cursor:pointer;box-shadow:inset 0 0 0 2px #120c18,inset 0 0 0 3px rgba(201,169,106,.3)" style-hover="box-shadow:inset 0 0 0 2px #120c18,inset 0 0 0 3px rgba(201,169,106,.3),0 0 22px rgba(79,179,255,.35)">TOUR SUIVANT</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ order }}" as="c" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:64px 56px minmax(0,1fr) minmax(160px,240px) auto;align-items:center;gap:16px;padding:14px 18px;background:{{ c.cardBg }};border:1px solid {{ c.rowBd }};border-radius:6px;box-shadow:{{ c.glow }}">
+              <div style="display:flex;flex-direction:column;align-items:center"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;color:#a79c8a">INIT</span><span style="font-family:'Cinzel',serif;font-size:26px;color:#7cc6ff">{{ c.init }}</span></div>
+              <div style="width:52px;height:52px;border-radius:50%;border:2px solid {{ c.color }};background:{{ c.discBg }};display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:15px;font-weight:600;color:#f3e6c4">{{ c.short }}</div>
+              <div style="min-width:0"><div style="font-family:'Cinzel',serif;font-size:17px;color:#f3e6c4">{{ c.name }}</div><div style="font-size:13px;color:#a79c8a">{{ c.kindLabel }} · CA {{ c.ac }} {{ c.turnLabel }}</div></div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#a79c8a">PV</span><span style="color:{{ c.hpCol }}">{{ c.hpText }}</span></div>
+                <div style="height:7px;background:#0e0a14;border:1px solid rgba(201,169,106,.25);border-radius:4px;overflow:hidden"><div style="height:100%;width:{{ c.barW }};background:{{ c.barCol }};transition:width .3s"></div></div>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button onClick="{{ c.dmg }}" style="padding:8px 10px;border:1px solid rgba(176,48,106,.7);background:rgba(176,48,106,.15);color:#f2b3cf;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;border-radius:3px;cursor:pointer">− PV</button>
+                <button onClick="{{ c.heal }}" style="padding:8px 10px;border:1px solid rgba(79,179,255,.6);background:rgba(79,179,255,.12);color:#b8e0ff;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;border-radius:3px;cursor:pointer">+ PV</button>
+                <button onClick="{{ c.atk }}" style="padding:8px 10px;border:1px solid rgba(201,169,106,.5);background:transparent;color:#e8d3a0;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;border-radius:3px;cursor:pointer">ATTAQUE</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ isJoueur }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:#a79c8a;font-style:italic">Vue joueur : les PV exacts des créatures sont masqués par le MJ.</div></sc-if>
+      </section>
+    </sc-if>
+
+    <!-- CAMPAGNE -->
+    <sc-if value="{{ isCampaign }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Création de campagne" style="padding:36px 32px 60px;max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:26px">
+        <div>
+          <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.3em;color:#a79c8a">MAÎTRE DU JEU</div>
+          <h2 style="margin:6px 0 0;font-family:'Cinzel',serif;font-weight:500;font-size:36px;color:#e8d3a0">Fonder une campagne</h2>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+          <sc-for list="{{ steps }}" as="s" hint-placeholder-count="4">
+            <button onClick="{{ s.on }}" style="display:flex;align-items:center;gap:10px;padding:10px 0;background:none;border:none;border-top:2px solid {{ s.bd }};color:{{ s.col }};font-family:'Cinzel',serif;font-size:12px;letter-spacing:.12em;cursor:pointer;text-align:left">
+              <div style="width:12px;height:12px;transform:rotate(45deg);border:1px solid {{ s.bd }};background:{{ s.fill }}"></div>{{ s.label }}
+            </button>
+          </sc-for>
+        </div>
+        <div style="padding:30px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.22);display:flex;flex-direction:column;gap:20px">
+          <sc-if value="{{ step0 }}" hint-placeholder-val="{{ true }}">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:22px">
+              <div style="display:flex;flex-direction:column;gap:16px">
+                <label style="display:flex;flex-direction:column;gap:6px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#a79c8a">NOM DE LA CAMPAGNE<input value="{{ campName }}" onChange="{{ onCampName }}" style="padding:12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:16px;outline:none"></label>
+                <label style="display:flex;flex-direction:column;gap:6px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#a79c8a">SYNOPSIS<textarea rows="5" style="padding:12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:15px;outline:none;resize:vertical">Une cité engloutie par les cendres d'un volcan éteint depuis mille ans… qui vient de se réveiller.</textarea></label>
+                <div style="display:flex;flex-direction:column;gap:8px"><span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#a79c8a">TONALITÉ</span>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px">
+                    <sc-for list="{{ toneChips }}" as="t" hint-placeholder-count="5">
+                      <button onClick="{{ t.on }}" style="padding:7px 14px;border-radius:999px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.col }};font-family:'Cinzel',serif;font-size:11px;letter-spacing:.1em;cursor:pointer">{{ t.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+              <div style="height:300px;border:1px solid rgba(201,169,106,.4);border-radius:4px;padding:5px"><image-slot id="camp-cover" shape="rounded" radius="2" placeholder="Couverture de campagne"></image-slot></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ step1 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px">
+              <label style="display:flex;flex-direction:column;gap:6px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#a79c8a">NIVEAU DE DÉPART<select style="padding:12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:15px"><option>Niveau 1</option><option>Niveau 3</option><option>Niveau 5</option></select></label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#a79c8a">CARACTÉRISTIQUES<select style="padding:12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:15px"><option>4d6 (garder 3)</option><option>Achat de points</option><option>Tableau standard</option></select></label>
+              <sc-for list="{{ variants }}" as="v" hint-placeholder-count="4">
+                <button onClick="{{ v.on }}" style="display:flex;align-items:center;gap:12px;padding:14px;background:#0e0a14;border:1px solid {{ v.bd }};border-radius:4px;color:#e9e2d4;cursor:pointer;text-align:left">
+                  <div style="width:34px;height:18px;border-radius:9px;background:{{ v.track }};position:relative;flex:none"><div style="position:absolute;top:2px;left:{{ v.knob }};width:14px;height:14px;border-radius:50%;background:#f3e6c4;transition:left .2s"></div></div>
+                  <span style="font-size:15px">{{ v.label }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ step2 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;gap:10px"><input value="{{ invite }}" onChange="{{ onInvite }}" placeholder="courriel d'un joueur" style="flex:1;padding:12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:15px;outline:none"><button onClick="{{ addInvite }}" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.14em;color:#f3e6c4;background:linear-gradient(180deg,#3a2540,#1c1222);border:1px solid #c9a96a;border-radius:4px;padding:0 18px;cursor:pointer">INVITER</button></div>
+              <sc-for list="{{ invites }}" as="i" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#0e0a14;border:1px solid rgba(201,169,106,.25);border-radius:4px"><div style="width:8px;height:8px;transform:rotate(45deg);background:#7cc6ff"></div><span style="flex:1">{{ i.mail }}</span><span style="font-size:13px;color:#a79c8a;font-style:italic">invitation envoyée</span><button onClick="{{ i.remove }}" style="background:none;border:none;color:#e07aa8;cursor:pointer;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.12em">RETIRER</button></div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ step3 }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center;padding:20px 0">
+              <div style="width:22px;height:22px;transform:rotate(45deg);border:1px solid #c9a96a;display:flex;align-items:center;justify-content:center;box-shadow:0 0 22px rgba(79,179,255,.6)"><div style="width:8px;height:8px;background:#7cc6ff"></div></div>
+              <div style="font-family:'Cinzel',serif;font-size:28px;color:#e8d3a0;margin-top:10px">{{ campName }}</div>
+              <div style="color:#d8cbb0">{{ recap }}</div>
+            </div>
+          </sc-if>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(201,169,106,.2);padding-top:18px">
+            <button onClick="{{ prevStep }}" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.14em;color:#e8d3a0;background:transparent;border:1px solid rgba(201,169,106,.45);border-radius:4px;padding:11px 18px;cursor:pointer">RETOUR</button>
+            <button onClick="{{ nextStep }}" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.18em;color:#f3e6c4;background:linear-gradient(180deg,#4a2a4e,#211426);border:1px solid #c9a96a;border-radius:4px;padding:11px 22px;cursor:pointer;box-shadow:inset 0 0 0 2px #120c18,inset 0 0 0 3px rgba(201,169,106,.3)">{{ nextLabel }}</button>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- DÉ -->
+    <sc-if value="{{ dice.show }}" hint-placeholder-val="{{ false }}">
+      <div style="position:fixed;right:28px;bottom:28px;z-index:20;width:240px;padding:22px 18px 16px;background:linear-gradient(180deg,rgba(44,28,52,.98),rgba(17,12,23,.98));border:1px solid #c9a96a;border-radius:8px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.3),0 20px 50px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;gap:12px">
+        <button onClick="{{ closeDice }}" style="position:absolute;top:6px;right:10px;background:none;border:none;color:#a79c8a;cursor:pointer;font-size:16px">×</button>
+        <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.2em;color:#a79c8a;text-align:center">{{ dice.label }}</div>
+        <div style="width:96px;height:96px;display:flex;align-items:center;justify-content:center;position:relative">
+          <div style="position:absolute;inset:14px;transform:{{ dice.rotCss }};border:2px solid #7cc6ff;background:linear-gradient(135deg,#1d2f4a,#120c18);box-shadow:0 0 24px rgba(79,179,255,.55);transition:transform .06s linear"></div>
+          <span style="position:relative;font-family:'Cinzel',serif;font-size:30px;font-weight:600;color:{{ dice.col }}">{{ dice.v }}</span>
+        </div>
+        <div style="font-family:'Cinzel',serif;font-size:14px;color:#e8d3a0">{{ dice.totalText }}</div>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;homeStyle&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;immersif&quot;,&quot;classique&quot;],&quot;default&quot;:&quot;immersif&quot;,&quot;tsType&quot;:&quot;'immersif'|'classique'&quot;,&quot;section&quot;:&quot;Accueil&quot;}}">
+const R=(n)=>1+Math.floor(Math.random()*n);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const modOf=v=>Math.floor((v-10)/2);
+const sg=n=>(n>=0?'+':'')+n;
+const GOLD='#c9a96a',BLUE='#4fb3ff',MAG='#b0306a';
+const chip=(on)=>on?{bg:'rgba(201,169,106,.18)',bd:'#c9a96a',col:'#f3e6c4'}:{bg:'transparent',bd:'rgba(201,169,106,.3)',col:'#a79c8a'};
+const COMP=[
+ {id:'boule',name:'Boule de feu',type:'Sort',meta:'Niv. 3',props:[['École','Évocation'],['Portée','45 m'],['Durée','Instantanée']],desc:"Une perle incandescente file vers un point choisi puis éclate en une sphère de flammes de 6 m de rayon. Jet de sauvegarde de Dextérité pour réduire les dégâts de moitié.",dmg:[8,6]},
+ {id:'proj',name:'Projectile magique',type:'Sort',meta:'Niv. 1',props:[['École','Évocation'],['Portée','36 m'],['Durée','Instantanée']],desc:"Trois fléchettes de force lumineuse touchent automatiquement leurs cibles.",dmg:[3,4]},
+ {id:'soins',name:'Soins',type:'Sort',meta:'Niv. 1',props:[['École','Évocation'],['Portée','Contact'],['Durée','Instantanée']],desc:"Une créature touchée récupère des points de vie. Sans effet sur les morts-vivants.",dmg:[1,8]},
+ {id:'bouclier',name:'Bouclier',type:'Sort',meta:'Niv. 1',props:[['École','Abjuration'],['Temps','Réaction'],['Durée','1 round']],desc:"Une barrière invisible apparaît et accorde +5 à la CA jusqu'au début du prochain tour."},
+ {id:'toile',name:"Toile d'araignée",type:'Sort',meta:'Niv. 2',props:[['École','Invocation'],['Portée','18 m'],['Durée','1 heure']],desc:"Des fils épais et collants remplissent un cube de 6 m et entravent les créatures qui s'y trouvent."},
+ {id:'contre',name:'Contresort',type:'Sort',meta:'Niv. 3',props:[['École','Abjuration'],['Temps','Réaction'],['Portée','18 m']],desc:"Vous interrompez une créature en train de lancer un sort de niveau 3 ou moins."},
+ {id:'gob',name:'Gobelin',type:'Monstre',meta:'FP 1/4',props:[['CA','15'],['PV','7 (2d6)'],['Vitesse','9 m']],desc:"Petit humanoïde rusé qui attaque en meute et se replie dans l'ombre dès que le combat tourne mal.",dmg:[1,6]},
+ {id:'hib',name:'Hibours',type:'Monstre',meta:'FP 3',props:[['CA','13'],['PV','59 (7d10+21)'],['Vitesse','12 m']],desc:"Prédateur mi-ours mi-hibou, au cri perçant, qui règne sur les sous-bois profonds.",dmg:[2,8]},
+ {id:'drag',name:'Jeune dragon rouge',type:'Monstre',meta:'FP 10',props:[['CA','18'],['PV','178'],['Souffle','Feu, cône 9 m']],desc:"Orgueilleux et cupide, il fait de son antre volcanique un sanctuaire à sa propre gloire.",dmg:[16,6]},
+ {id:'liche',name:'Liche',type:'Monstre',meta:'FP 21',props:[['CA','17'],['PV','135'],['Vitesse','9 m']],desc:"Un mage ayant scellé son âme dans un phylactère pour échapper à la mort.",dmg:[3,6]},
+ {id:'epee',name:'Épée longue +1',type:'Objet',meta:'Peu commun',props:[['Type','Arme'],['Dégâts','1d8 +1 tranchant'],['Poids','1,5 kg']],desc:"Une lame d'acier runique dont le fil ne s'émousse jamais.",dmg:[1,8]},
+ {id:'potion',name:'Potion de soins',type:'Objet',meta:'Commun',props:[['Type','Potion'],['Effet','2d4+2 PV'],['Prix','50 po']],desc:"Un liquide rouge qui scintille lorsqu'on l'agite.",dmg:[2,4]},
+ {id:'sac',name:'Sac sans fond',type:'Objet',meta:'Peu commun',props:[['Type','Objet merveilleux'],['Capacité','250 kg'],['Poids','7 kg']],desc:"L'intérieur de ce sac est bien plus vaste que l'extérieur ne le laisse paraître."}
+];
+const TYPE_COL={Sort:'#7cc6ff',Monstre:'#e07aa8',Objet:'#e8d3a0'};
+const SPELLS=[{id:'s0',name:'Marque du chasseur',lvl:1},{id:'s1',name:'Soins',lvl:1},{id:'s2',name:'Grande foulée',lvl:1},{id:'s3',name:'Passage sans trace',lvl:2},{id:'s4',name:'Peau d\'écorce',lvl:2},{id:'s5',name:'Communication avec les animaux',lvl:1}];
+class Component extends DCLogic {
+  state={tilt:null,px:0,py:0,classic:false,screen:'home',role:'mj',auth:'login',exTab:'camp',q:'',type:'Tous',sel:'boule',genTab:'pj',race:'Elfe',cls:'Rôdeur',stats:[15,14,13,12,10,8],
+    npc:{name:'Maëlis Brumefer',race:'Naine',job:'Forgeronne',trait:'Parle à ses enclumes comme à des enfants.',goal:'Retrouver le marteau volé de son clan.',secret:'Elle a elle-même vendu le marteau pour payer une dette.'},
+    tier:'1–4',loot:[],gold:null,
+    combat:[{id:'c1',name:'Elowen',short:'EL',init:19,hp:38,max:44,ac:16,kind:'pj',color:BLUE},{id:'c2',name:'Brakk',short:'BR',init:14,hp:52,max:52,ac:18,kind:'pj',color:BLUE},{id:'c3',name:'Sœur Ilda',short:'IL',init:11,hp:22,max:31,ac:14,kind:'pj',color:BLUE},{id:'c4',name:'Gobelin A',short:'G1',init:16,hp:7,max:7,ac:15,kind:'mon',color:MAG},{id:'c5',name:'Gobelin B',short:'G2',init:9,hp:3,max:7,ac:15,kind:'mon',color:MAG},{id:'c6',name:'Hibours',short:'HB',init:12,hp:59,max:59,ac:13,kind:'mon',color:MAG}],
+    turn:0,round:1,amt:5,
+    tokens:[{id:'c1',x:3,y:5},{id:'c2',x:4,y:4},{id:'c3',x:2,y:4},{id:'c4',x:9,y:3},{id:'c5',x:10,y:5},{id:'c6',x:11,y:2}],drag:null,
+    dice:{show:false,v:20,label:'',rot:0,rolling:false,total:0,mod:0,sides:20},log:[],
+    hp:38,hpMax:44,slots:{1:[true,true,false,false],2:[true,false]},prep:{s0:true,s1:true,s2:false,s3:true,s4:false,s5:false},charName:'Elowen Sylvecœur',
+    step:0,campName:'Les Cendres de Valombre',tone:'Héroïque',vars:{'Mort instantanée':false,'Critiques maximisés':true,'Encombrement':false,'Repos longs en lieu sûr':true},invites:['lyra@royaume.fr','tomas@royaume.fr'],invite:''};
+  mapRef=React.createRef();
+  _onPar=e=>{if(this._raf)return;const r=e.currentTarget.getBoundingClientRect(),cx=e.clientX,cy=e.clientY;this._raf=requestAnimationFrame(()=>{this._raf=null;this.setState({px:(cx-r.left)/r.width*2-1,py:(cy-r.top)/r.height*2-1});});};
+  homeImage(){if(!this._img)this._img=React.createElement('img',{src:'assets/accueil-dungeonspace.png',alt:'DungeonSpace — forêt enchantée',style:{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',}});return this._img;}
+  homeAmbient(){
+    if(this._amb)return this._amb;const E=React.createElement,rnd=(a,b)=>a+Math.random()*(b-a),kids=[];
+    kids.push(E('div',{key:'fog1',style:{position:'absolute',left:'-10%',right:'-10%',bottom:'-5%',height:'45%',background:'radial-gradient(ellipse at 30% 70%,rgba(140,90,200,.28),transparent 60%),radial-gradient(ellipse at 75% 80%,rgba(60,140,200,.22),transparent 55%)',mixBlendMode:'screen',animation:'dsDrift 26s ease-in-out infinite alternate'}}));
+    kids.push(E('div',{key:'fog2',style:{position:'absolute',left:'-10%',right:'-10%',top:'20%',height:'40%',background:'radial-gradient(ellipse at 60% 50%,rgba(200,60,130,.16),transparent 60%)',mixBlendMode:'screen',animation:'dsDrift 34s ease-in-out -12s infinite alternate-reverse'}}));
+    [[767,178,90],[1063,700,120],[1418,655,130],[1425,760,120],[990,812,70],[1400,840,80]].forEach(([x,y,s],i)=>kids.push(E('div',{key:'r'+i,style:{position:'absolute',left:(x/15.36)+'%',top:(y/10.24)+'%',width:(s/15.36)+'%',aspectRatio:'1',borderRadius:'50%',background:'radial-gradient(circle,rgba(79,179,255,.75),rgba(79,179,255,.15) 45%,transparent 70%)',mixBlendMode:'screen',animation:`dsPulse ${rnd(3,6).toFixed(1)}s ease-in-out ${-rnd(0,5).toFixed(1)}s infinite`}})));
+    kids.push(E('div',{key:'horse',style:{position:'absolute',left:'34%',top:'62%',width:'20%',height:'25%',borderRadius:'50%',background:'radial-gradient(ellipse,rgba(120,150,255,.35),transparent 65%)',mixBlendMode:'screen',animation:'dsPulse 7s ease-in-out infinite'}}));
+    for(let i=0;i<55;i++){const blue=Math.random()<.25,sz=rnd(2,5);
+      kids.push(E('div',{key:'f'+i,style:{position:'absolute',left:rnd(2,98)+'%',top:rnd(30,98)+'%','--dx':rnd(-60,60)+'px','--dy':rnd(-50,30)+'px',animation:`dsFly ${rnd(6,14).toFixed(1)}s ease-in-out ${-rnd(0,14).toFixed(1)}s infinite alternate`}},
+        E('div',{style:{width:sz,height:sz,borderRadius:'50%',background:blue?'#bfe4ff':'#ffe9a8',boxShadow:blue?'0 0 8px 2px rgba(79,179,255,.85)':'0 0 8px 2px rgba(255,214,120,.85)',animation:`dsBlink ${rnd(2.5,6).toFixed(1)}s ease-in-out ${-rnd(0,6).toFixed(1)}s infinite`}})));}
+    this._amb=E('div',{style:{position:'absolute',inset:0}},kids);return this._amb;
+  }
+  componentDidMount(){
+    this._mv=e=>{const d=this.state.drag;if(!d||!this.mapRef.current)return;const r=this.mapRef.current.getBoundingClientRect();
+      const x=Math.max(0,Math.min(13,Math.floor((e.clientX-r.left)/(r.width/14)))),y=Math.max(0,Math.min(8,Math.floor((e.clientY-r.top)/(r.height/9))));
+      this.setState(s=>({tokens:s.tokens.map(t=>t.id===d?{...t,x,y}:t)}));};
+    this._up=()=>{if(this.state.drag)this.setState({drag:null});};
+    window.addEventListener('pointermove',this._mv);window.addEventListener('pointerup',this._up);
+  }
+  componentWillUnmount(){cancelAnimationFrame(this._raf);window.removeEventListener('pointermove',this._mv);window.removeEventListener('pointerup',this._up);clearInterval(this._t);}
+  roll(sides,mod,label){
+    clearInterval(this._t);mod=mod||0;
+    this.setState(s=>({dice:{...s.dice,show:true,rolling:true,label,sides,mod}}));
+    let n=0;this._t=setInterval(()=>{n++;
+      if(n<14){this.setState(s=>({dice:{...s.dice,v:R(sides),rot:s.dice.rot+53}}));return;}
+      clearInterval(this._t);const v=R(sides),total=v+mod;
+      this.setState(s=>({dice:{...s.dice,v,total,rolling:false,rot:s.dice.rot+20},log:[{label,txt:`d${sides}${mod?sg(mod):''} → ${v}`,total,crit:sides===20&&v===20,fail:sides===20&&v===1},...s.log].slice(0,20)}));
+    },55);
+  }
+  rollMulti(n,f,mod,label){
+    clearInterval(this._t);
+    this.setState(s=>({dice:{...s.dice,show:true,rolling:true,label,sides:f}}));
+    let k=0;this._t=setInterval(()=>{k++;
+      if(k<14){this.setState(s=>({dice:{...s.dice,v:R(f*n),rot:s.dice.rot+53}}));return;}
+      clearInterval(this._t);let t=0;for(let i=0;i<n;i++)t+=R(f);const total=t+(mod||0);
+      this.setState(s=>({dice:{...s.dice,v:total,total,mod:0,rolling:false},log:[{label,txt:`${n}d${f}${mod?sg(mod):''}`,total},...s.log].slice(0,20)}));
+    },55);
+  }
+  changeHp(id,delta){this.setState(s=>({combat:s.combat.map(c=>c.id===id?{...c,hp:Math.max(0,Math.min(c.max,c.hp+delta))}:c),...(id==='c1'?{hp:Math.max(0,Math.min(s.hpMax,s.hp+delta))}:{})}));}
+  renderVals(){
+    const s=this.state,set=o=>()=>this.setState(o),go=sc=>()=>this.setState({screen:sc});
+    const isMJ=s.role==='mj';
+    const NAV=[['home','Accueil','accueil'],['explore','Explorer','explorer'],['war','Combattre','combattre'],['comp','Sanctuaire','sanctuaire'],['sheet','Mon profil','profil'],['sep'],['gen','Génération','generation'],['table','Table','parchemin'],['campaign','Campagne','campagne']];
+    const TITLES={home:'Accueil',explore:'Explorer',gen:'Génération',sheet:'Fiche de personnage',table:'Table de jeu',war:'Guerre',campaign:'Création de campagne',login:'',comp:'Sanctuaire'};
+    const nav=NAV.filter(([id])=>id!=='campaign'||isMJ).map(([id,label,ic])=>{if(id==='sep')return{sep:true,item:false};const on=id==='comp'?(s.screen==='explore'&&s.exTab==='comp'):id==='explore'?(s.screen==='explore'&&s.exTab!=='comp'):s.screen===id;
+      return{sep:false,item:true,label,src:'assets/ui/ico2-'+ic+'.png',mask:ic==='generation'?'radial-gradient(circle,#000 40%,transparent 70%)':'none',go:id==='comp'?()=>this.setState({screen:'explore',exTab:'comp'}):id==='explore'?()=>this.setState({screen:'explore',exTab:'camp'}):id==='home'?()=>this.setState({screen:'home',classic:false}):go(id),
+        color:on?'#9fd4ff':'#d8cbb0',filter:on?'brightness(1.2) drop-shadow(0 0 5px rgba(79,179,255,.95)) drop-shadow(0 0 12px rgba(79,179,255,.6))':'brightness(.92)',bar:on?'#4fb3ff':'transparent'};});
+    const tog=on=>on?{bg:'rgba(201,169,106,.2)',col:'#f3e6c4',bd:'#c9a96a'}:{bg:'transparent',col:'#a79c8a',bd:'rgba(201,169,106,.3)'};
+    const u=s.q.trim().toLowerCase();
+    const res=COMP.filter(c=>(s.type==='Tous'||c.type===s.type)&&(!u||c.name.toLowerCase().includes(u)));
+    const e=COMP.find(c=>c.id===s.sel)||COMP[0];
+    const sorted=[...s.combat].sort((a,b)=>b.init-a.init);const cur=sorted[s.turn%sorted.length];
+    const hpState=c=>{const p=c.hp/c.max;return c.hp===0?'À terre':p>.75?'Indemne':p>.5?'Blessé':p>.25?'Sanglant':'Agonisant';};
+    const order=sorted.map(c=>{const p=c.hp/c.max,active=cur&&c.id===cur.id,hide=c.kind==='mon'&&!isMJ;
+      return{...c,slot:'tok-'+c.id,discBg:c.kind==='pj'?'#1d2f4a':'#3a1428',kindLabel:c.kind==='pj'?'Personnage':'Créature',turnLabel:active?'· À son tour':'',hpText:hide?hpState(c):`${c.hp} / ${c.max}`,hpCol:p<.34?'#e07aa8':'#d8cbb0',
+        barW:(hide?Math.ceil(p*4)*25:p*100)+'%',barCol:p<.34?MAG:c.kind==='pj'?BLUE:GOLD,
+        rowBg:active?'rgba(79,179,255,.12)':'transparent',rowBd:active?'rgba(79,179,255,.6)':'rgba(201,169,106,.18)',
+        cardBg:active?'linear-gradient(90deg,rgba(29,47,74,.7),rgba(17,12,23,.95))':'linear-gradient(180deg,rgba(38,26,46,.9),rgba(17,12,23,.95))',glow:active?'0 0 24px rgba(79,179,255,.25)':'none',
+        dmg:()=>this.changeHp(c.id,-(+s.amt||0)),heal:()=>this.changeHp(c.id,+s.amt||0),atk:()=>this.roll(20,c.kind==='pj'?7:4,`Attaque — ${c.name}`)};});
+    const cmap=Object.fromEntries(s.combat.map(c=>[c.id,c]));
+    const tokens=s.tokens.filter(t=>cmap[t.id]).map(t=>{const c=cmap[t.id],can=isMJ||t.id==='c1',dr=s.drag===t.id;
+      return{left:`calc(${t.x} * 100% / 14)`,top:`calc(${t.y} * 100% / 9)`,label:c.short,color:c.color,bg:c.kind==='pj'?'#1d2f4a':'#3a1428',cursor:can?(dr?'grabbing':'grab'):'not-allowed',trans:dr?'none':'left .15s, top .15s',z:dr?5:1,
+        down:ev=>{if(!can)return;ev.preventDefault();this.setState({drag:t.id});}};});
+    const g=s.stats,ab=[['FOR',10],['DEX',18],['CON',14],['INT',12],['SAG',16],['CHA',8]];
+    const HD={Barbare:12,Guerrier:10,Paladin:10,Rôdeur:10,Ensorceleur:6,Magicien:6};const hd=HD[s.cls]||8;
+    const steps=['Univers','Règles','Joueurs','Récapitulatif'];
+    const LOOT={'1–4':[['Potion de soins','Commun'],['Parchemin de Bouclier','Commun'],['Dague +1','Peu commun'],['Bottes elfiques','Peu commun'],['Corde de soie','Commun']],'5–10':[['Épée longue +1','Peu commun'],['Cape de protection','Peu commun'],['Anneau de saut','Rare'],['Potion de soins supérieurs','Peu commun']],'11–16':[['Bâton de feu','Rare'],['Armure de plates +2','Rare'],['Tapis volant','Très rare']],'17+':[['Épée vorpale','Légendaire'],['Bâton des mages','Légendaire'],['Anneau des trois souhaits','Légendaire']]};
+    const RC={Commun:'#a79c8a','Peu commun':'#7cc6ff',Rare:'#c9a96a','Très rare':'#e07aa8',Légendaire:'#f3e6c4'};
+    const d=s.dice;
+    return{
+      nav,isMJ,isJoueur:!isMJ,screenTitle:TITLES[s.screen],showTopbar:s.screen!=='login',
+      isLogin:s.screen==='login',isHome:s.screen==='home',isHomeImm:s.screen==='home'&&(this.props.homeStyle??'immersif')==='immersif'&&!s.classic,isHomeClassic:s.screen==='home'&&((this.props.homeStyle??'immersif')!=='immersif'||s.classic),
+      goExplore:go('explore'),goWar:go('war'),goGen:go('gen'),goCompendium:()=>this.setState({screen:'explore',exTab:'comp'}),goClassic:()=>this.setState({classic:true}),goImmersive:e=>{e.preventDefault();this.setState({classic:false});},
+      onParallax:this._onPar,parallaxBg:`scale(1.02) translate(${-s.px*6}px,${-s.py*4}px)`,parallaxFx:`translate(${-s.px*22}px,${-s.py*14}px)`,
+      homeImage:this.homeImage(),
+      homeSide:[{"label":"Accueil","src":"assets/ui/ico2-accueil.png","t":"19.434%","go":"goHome","home":true},{"label":"Explorer","src":"assets/ui/ico2-explorer.png","t":"32.129%","go":"goExplore","home":false},{"label":"Combattre","src":"assets/ui/ico2-combattre.png","t":"44.336%","go":"goWar","home":false},{"label":"Sanctuaire","src":"assets/ui/ico2-sanctuaire.png","t":"56.543%","go":"goCompendium","home":false},{"label":"Mon profil","src":"assets/ui/ico2-profil.png","t":"68.750%","go":"goSheet","home":false}].map(b=>({...b,go:{goHome:()=>this.setState({screen:'home',classic:false}),goExplore:go('explore'),goWar:go('war'),goCompendium:()=>this.setState({screen:'explore',exTab:'comp'}),goSheet:go('sheet')}[b.go],color:b.home?'#bfe4ff':'#e3d3ad',filter:b.home?'brightness(1.2) drop-shadow(0 0 5px rgba(79,179,255,.95)) drop-shadow(0 0 14px rgba(79,179,255,.6))':'drop-shadow(0 2px 4px rgba(0,0,0,.6))'})),
+      homeTiles:[{"id":"gen","label":"Génération","src":"assets/ui/tile2-generation.png","l":"27.276%","t":"44.423%","w":"15.891%","h":"15.450%"},{"id":"war","label":"Guerre","src":"assets/ui/tile2-guerre.png","l":"43.661%","t":"44.577%","w":"16.453%","h":"15.143%"},{"id":"comp","label":"Informations Sanctuaires","src":"assets/ui/tile2-sanctuaires.png","l":"60.854%","t":"45.545%","w":"16.313%","h":"13.206%"}].map(t=>{const on=s.tilt&&s.tilt.id===t.id,rx=on?s.tilt.rx:0,ry=on?s.tilt.ry:0,mx=on?s.tilt.mx:50,my=on?s.tilt.my:50;
+        return{...t,sock:on?.9:0,tf:on?`translateY(-8px) translateZ(30px) rotateX(${rx}deg) rotateY(${ry}deg) scale(1.07)`:'none',trans:on?'transform .08s linear, filter .3s':'transform .5s cubic-bezier(.2,.8,.2,1), filter .3s',
+          filter:on?'brightness(1.15) drop-shadow(0 0 14px rgba(79,179,255,.55)) drop-shadow(0 22px 22px rgba(0,0,0,.7))':'drop-shadow(0 8px 14px rgba(0,0,0,.5))',sheen:on?`radial-gradient(circle at ${mx}% ${my}%,rgba(180,220,255,.3),transparent 55%)`:'transparent',maskUrl:`url(${t.src})`,
+          go:t.id==='comp'?()=>this.setState({screen:'explore',exTab:'comp',tilt:null}):()=>this.setState({screen:t.id,tilt:null}),
+          move:e=>{const r=e.currentTarget.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;this.setState({tilt:{id:t.id,rx:((.5-y)*16).toFixed(2),ry:((x-.5)*20).toFixed(2),mx:x*100,my:y*100}});},
+          leave:()=>this.setState({tilt:null})};}),homeAmbient:this.homeAmbient(),isExplore:s.screen==='explore',isGen:s.screen==='gen',isSheet:s.screen==='sheet',isTable:s.screen==='table',isWar:s.screen==='war',isCampaign:s.screen==='campaign',
+      goHome:()=>this.setState({screen:'home',classic:false}),goTable:go('table'),goSheet:go('sheet'),goLogin:go('login'),
+      setJoueur:set({role:'joueur'}),setMJ:set({role:'mj'}),roleJ:tog(!isMJ),roleM:tog(isMJ),
+      setAuthLogin:set({auth:'login'}),setAuthSignup:set({auth:'signup'}),isSignup:s.auth==='signup',authCta:s.auth==='signup'?"CRÉER MON GRIMOIRE":"FRANCHIR LE PORTAIL",
+      authL:{bd:s.auth==='login'?GOLD:'transparent',col:s.auth==='login'?'#f3e6c4':'#a79c8a'},authS:{bd:s.auth==='signup'?GOLD:'transparent',col:s.auth==='signup'?'#f3e6c4':'#a79c8a'},
+      homeCards:[{label:'Génération',sub:'Héros, PNJ, trésors',go:go('gen')},{label:'Guerre',sub:'Initiative & combats',go:go('war')},{label:'Informations Sanctuaires',sub:'Compendium des règles',go:()=>this.setState({screen:'explore',exTab:'comp'})}],
+      setExCamp:set({exTab:'camp'}),setExComp:set({exTab:'comp'}),exIsCamp:s.exTab==='camp',exIsComp:s.exTab==='comp',exC:tog(s.exTab==='camp'),exS:tog(s.exTab==='comp'),
+      campaigns:[
+        {slot:'camp-1',ph:'Illustration : cité de cendres',badge:'EN COURS',badgeColor:'#7cc6ff',name:'Les Cendres de Valombre',desc:'Une cité ensevelie se réveille sous un volcan endormi.',mj:'Vous',players:'4 joueurs',lvl:'5',cta:'REPRENDRE'},
+        {slot:'camp-2',ph:'Illustration : forêt violette',badge:'RECRUTE',badgeColor:'#c9a96a',name:'La Forêt des Lucioles',desc:'Un bois enchanté où les sentiers changent à chaque lune.',mj:'Orsane',players:'2 / 5',lvl:'1',cta:'POSTULER'},
+        {slot:'camp-3',ph:'Illustration : citadelle de glace',badge:'RECRUTE',badgeColor:'#c9a96a',name:'Le Trône de Givre',desc:'Intrigues de cour dans un royaume figé par un hiver sans fin.',mj:'Kael',players:'3 / 6',lvl:'3',cta:'POSTULER'},
+        {slot:'camp-4',ph:'Illustration : archipel',badge:'ONE-SHOT',badgeColor:'#e07aa8',name:'Les Îles Murmurantes',desc:'Une soirée, un naufrage, un trésor maudit.',mj:'Lyra',players:'1 / 4',lvl:'4',cta:'POSTULER'},
+        {slot:'camp-5',ph:'Illustration : désert de verre',badge:'EN COURS',badgeColor:'#7cc6ff',name:'Sables de Verre',desc:'Caravanes, djinns et cités enfouies sous le sable vitrifié.',mj:'Tomas',players:'5 joueurs',lvl:'8',cta:'OBSERVER'},
+        {slot:'camp-6',ph:'Illustration : abysses',badge:'TERMINÉE',badgeColor:'#a79c8a',name:'Sous la Mer d\'Encre',desc:'L\'expédition qui a réveillé le Léviathan.',mj:'Orsane',players:'4 joueurs',lvl:'12',cta:'LIRE LE RÉCIT'}],
+      q:s.q,onQ:ev=>this.setState({q:ev.target.value}),
+      typeChips:['Tous','Sort','Monstre','Objet'].map(t=>({label:t==='Tous'?'Tous':t+'s',on:set({type:t}),...chip(s.type===t)})),
+      resultCount:`${res.length} entrée${res.length>1?'s':''} dans le Sanctuaire`,
+      results:res.map(c=>({...c,typeColor:TYPE_COL[c.type],bg:c.id===s.sel?'rgba(201,169,106,.12)':'transparent',on:set({sel:c.id})})),
+      entry:{...e,typeColor:TYPE_COL[e.type],type:e.type.toUpperCase(),props:e.props.map(([k,v])=>({k:k.toUpperCase(),v})),rollLabel:e.dmg?`LANCER ${e.dmg[0]}D${e.dmg[1]}`:'AUCUN JET',roll:()=>e.dmg&&this.rollMulti(e.dmg[0],e.dmg[1],0,e.name)},
+      genTabs:[['pj','PERSONNAGE'],['npc','PNJ'],['loot','TRÉSOR']].map(([id,label])=>({label,on:set({genTab:id}),...tog(s.genTab===id)})),
+      genIsPj:s.genTab==='pj',genIsNpc:s.genTab==='npc',genIsLoot:s.genTab==='loot',
+      raceChips:['Humain','Elfe','Nain','Halfelin','Drakéide','Gnome','Demi-orc','Tieffelin'].map(r=>({label:r,on:set({race:r}),...chip(s.race===r)})),
+      classChips:['Barbare','Barde','Clerc','Druide','Ensorceleur','Guerrier','Magicien','Moine','Occultiste','Paladin','Rôdeur','Roublard'].map(r=>({label:r,on:set({cls:r}),...chip(s.cls===r)})),
+      rollStats:()=>this.setState({stats:Array.from({length:6},()=>{const r=[R(6),R(6),R(6),R(6)].sort((a,b)=>a-b);return r[1]+r[2]+r[3];})}),
+      genStats:['FOR','DEX','CON','INT','SAG','CHA'].map((k,i)=>({k,v:g[i],mod:sg(modOf(g[i]))})),
+      race:s.race,cls:s.cls,hitDie:'d'+hd,genHp:hd+modOf(g[2]),
+      npc:s.npc,genNpc:()=>this.setState({npc:{name:pick(['Aldric','Sélène','Fendrel','Oriane','Garrick','Ysolde','Thibaud','Nyx'])+' '+pick(['Brumefer','Corbeval','des Saules','Pierrelune','Noirchêne','Ventegris']),race:pick(['Humain','Elfe','Naine','Gnome','Tieffeline','Halfelin']),job:pick(['Aubergiste','Cartographe','Prêtre déchu','Contrebandière','Herboriste','Capitaine de la garde']),trait:pick(['Ne regarde jamais personne dans les yeux.','Collectionne les dents de dragon.','Rit avant chaque mauvaise nouvelle.','Cite des proverbes inventés.']),goal:pick(['Racheter une faute ancienne.','Devenir riche avant l\'hiver.','Protéger sa fille à tout prix.','Retrouver un frère disparu.']),secret:pick(['Est l\'informateur de la guilde des voleurs.','Porte une malédiction lycanthrope.','Connaît l\'entrée secrète de la crypte.','Est en réalité un doppelganger.'])}}),
+      tierChips:['1–4','5–10','11–16','17+'].map(t=>({label:'Niv. '+t,on:set({tier:t}),...chip(s.tier===t)})),
+      genLoot:()=>{const pool=LOOT[s.tier];const n=2+R(2);const items=Array.from({length:n},()=>pick(pool));const mult={'1–4':10,'5–10':80,'11–16':600,'17+':4000}[s.tier];this.setState({loot:items,gold:R(6)*mult+R(mult)});},
+      loot:s.loot.map(([name,rarity])=>({name,rarity,color:RC[rarity]})),lootGold:s.gold==null?'Le coffre est encore scellé.':`${s.gold} pièces d'or`,
+      charName:s.charName,onName:ev=>this.setState({charName:ev.target.value}),
+      hp:s.hp,hpMax:s.hpMax,hpPct:(s.hp/s.hpMax*100)+'%',hpColor:s.hp/s.hpMax<.34?MAG:BLUE,
+      amt:s.amt,onAmt:ev=>this.setState({amt:ev.target.value.replace(/\D/g,'')}),
+      dmgSelf:()=>this.changeHp('c1',-(+s.amt||0)),healSelf:()=>this.changeHp('c1',+s.amt||0),
+      rollInit:()=>this.roll(20,4,'Initiative — Elowen'),
+      abilities:ab.map(([k,v])=>({k,v,mod:sg(modOf(v)),roll:()=>this.roll(20,modOf(v),`Test de ${k}`)})),
+      slotRows:Object.entries(s.slots).map(([lvl,arr])=>({lvl,pips:arr.map((used,i)=>({bg:used?'transparent':'#4fb3ff',glow:used?'none':'0 0 8px #4fb3ff',on:()=>this.setState(st=>({slots:{...st.slots,[lvl]:st.slots[lvl].map((x,j)=>j===i?!x:x)}}))}))})),
+      spells:SPELLS.map(sp=>{const p=s.prep[sp.id];return{name:sp.name,lvl:'Niveau '+sp.lvl,dot:p?GOLD:'transparent',col:p?'#f3e6c4':'#a79c8a',cta:'LANCER',
+        toggle:()=>this.setState(st=>({prep:{...st.prep,[sp.id]:!st.prep[sp.id]}})),
+        cast:()=>{const arr=s.slots[sp.lvl];const i=arr.indexOf(false);if(i<0){this.setState(st=>({dice:{...st.dice,show:true,label:sp.name.toUpperCase(),v:'—',total:null,rolling:false}}));return;}this.setState(st=>({slots:{...st.slots,[sp.lvl]:arr.map((x,j)=>j===i?true:x)}}));if(sp.id==='s1')this.rollMulti(1,8,3,'Soins');else this.roll(20,6,sp.name);}}}),
+      mapRef:this.mapRef,tokens,dragHint:isMJ?'Glissez les jetons pour les déplacer':'Vous ne pouvez déplacer que votre jeton (EL)',
+      round:s.round,order,nextTurn:()=>this.setState(st=>{const n=st.turn+1;return n>=st.combat.length?{turn:0,round:st.round+1}:{turn:n};}),
+      rollAllInit:()=>this.setState(st=>({combat:st.combat.map(c=>({...c,init:R(20)+(c.kind==='pj'?3:1)})),turn:0,round:1})),
+      addMonster:()=>this.setState(st=>{const n=st.combat.filter(c=>c.kind==='mon').length+1,id='m'+Date.now();return{combat:[...st.combat,{id,name:'Squelette '+n,short:'S'+n,init:R(20)+2,hp:13,max:13,ac:13,kind:'mon',color:MAG}],tokens:[...st.tokens,{id,x:12,y:6}]};}),
+      diceBtns:[4,6,8,10,12,20,100].map(f=>({label:'d'+f,on:()=>this.roll(f,0,'Jet libre')})).concat([{label:'2d6',on:()=>this.rollMulti(2,6,0,'Jet libre')}]),
+      log:s.log.map(l=>({...l,col:l.crit?'#7cc6ff':l.fail?'#e07aa8':'#f3e6c4'})),logEmpty:s.log.length===0,
+      dice:{show:d.show,label:(d.label||'').toUpperCase(),v:d.v,rotCss:`rotate(${45+d.rot}deg)`,col:d.rolling?'#a79c8a':(d.sides===20&&d.v===20?'#7cc6ff':d.sides===20&&d.v===1?'#e07aa8':'#f3e6c4'),
+        totalText:d.rolling?'Les dés roulent…':d.total==null?'Plus d\'emplacement disponible':d.sides===20&&d.v===20?`Critique ! Total ${d.total}`:d.sides===20&&d.v===1?`Échec critique · ${d.total}`:`Total : ${d.total}${d.mod?` (${sg(d.mod)})`:''}`},
+      closeDice:()=>this.setState(st=>({dice:{...st.dice,show:false}})),
+      steps:steps.map((l,i)=>({label:`${['I','II','III','IV'][i]} · ${l.toUpperCase()}`,on:set({step:i}),bd:i<=s.step?GOLD:'rgba(201,169,106,.2)',col:i===s.step?'#f3e6c4':i<s.step?'#c9b48a':'#7d7368',fill:i<s.step?GOLD:i===s.step?BLUE:'transparent'})),
+      step0:s.step===0,step1:s.step===1,step2:s.step===2,step3:s.step===3,
+      campName:s.campName,onCampName:ev=>this.setState({campName:ev.target.value}),
+      toneChips:['Héroïque','Sombre','Mystère','Humoristique','Bac à sable'].map(t=>({label:t,on:set({tone:t}),...chip(s.tone===t)})),
+      variants:Object.entries(s.vars).map(([label,on])=>({label,bd:on?'rgba(79,179,255,.5)':'rgba(201,169,106,.25)',track:on?BLUE:'#2b2233',knob:on?'18px':'2px',on:()=>this.setState(st=>({vars:{...st.vars,[label]:!st.vars[label]}}))})),
+      invite:s.invite,onInvite:ev=>this.setState({invite:ev.target.value}),addInvite:()=>s.invite.trim()&&this.setState(st=>({invites:[...st.invites,st.invite.trim()],invite:''})),
+      invites:s.invites.map((mail,i)=>({mail,remove:()=>this.setState(st=>({invites:st.invites.filter((_,j)=>j!==i)}))})),
+      recap:`Ton ${s.tone.toLowerCase()} · ${s.invites.length} joueur${s.invites.length>1?'s':''} invité${s.invites.length>1?'s':''} · D&D 5e`,
+      prevStep:()=>this.setState(st=>({step:Math.max(0,st.step-1)})),
+      nextStep:()=>s.step===3?this.setState({screen:'table',step:0}):this.setState(st=>({step:st.step+1})),
+      nextLabel:s.step===3?'OUVRIR LA TABLE':'CONTINUER'
+    };
+  }
+}
+</script>
+</body>
+</html>

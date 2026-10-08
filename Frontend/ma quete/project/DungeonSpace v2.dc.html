@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cinzel+Decorative:wght@400;700&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="image-slot.js"></script>
+<style>
+html,body{margin:0;background:#0b0912;color:#e9e2d4}
+*{box-sizing:border-box}
+a{color:#e8d3a0;text-decoration:none}a:hover{color:#7cc6ff}
+input,select,textarea{font-family:'Spectral',serif}
+::placeholder{color:#7d7368}
+@keyframes dsFly{from{transform:translate(0,0)}to{transform:translate(var(--dx),var(--dy))}}
+@keyframes dsBlink{0%,100%{opacity:0}40%,60%{opacity:1}}
+@keyframes dsPulse{0%,100%{opacity:.35;transform:translate(-50%,-50%) scale(.9)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}}
+@keyframes dsDrift{from{transform:translateX(-6%)}to{transform:translateX(6%)}}
+@keyframes dsIn{from{opacity:0;filter:blur(8px)}to{opacity:1;filter:blur(0)}}
+@keyframes dsFloat{0%{opacity:0;transform:translate(-50%,-20%) scale(.7)}15%{opacity:1;transform:translate(-50%,-60%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-220%) scale(1)}}
+@keyframes dsTurn{0%,100%{box-shadow:0 0 0 2px #0b0912,0 0 0 4px #7cc6ff,0 0 14px #4fb3ff}50%{box-shadow:0 0 0 2px #0b0912,0 0 0 4px #bfe4ff,0 0 26px #4fb3ff}}
+</style>
+</helmet>
+<div style="display:grid;grid-template-columns:104px minmax(0,1fr);height:100vh;background:radial-gradient(ellipse at 50% -10%,#2a1530 0%,#0b0912 60%);font-family:'Spectral',serif;color:#e9e2d4;overflow:hidden">
+
+  <nav style="display:flex;flex-direction:column;align-items:center;padding:18px 0 16px;gap:4px;border-right:1px solid rgba(201,169,106,.22);background:linear-gradient(180deg,rgba(14,10,20,.9),rgba(11,9,18,.98));position:relative;z-index:5;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;min-height:0">
+    <img src="assets/ui/logo-star.png" alt="DungeonSpace" style="width:84px;height:auto;margin-bottom:14px;flex:none">
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+      <button onClick="{{ n.go }}" style="position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;flex:none;padding:10px 0;background:none;border:none;cursor:pointer;color:{{ n.color }};font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;transition:transform .25s" style-hover="transform:scale(1.06)">
+        <div style="position:absolute;left:0;top:18%;bottom:18%;width:2px;background:{{ n.bar }};box-shadow:0 0 8px {{ n.bar }}"></div>
+        <img src="{{ n.src }}" alt="" style="width:38px;height:38px;object-fit:contain;filter:{{ n.filter }};transition:filter .25s">
+        <span>{{ n.label }}</span>
+      </button>
+    </sc-for>
+    <div style="flex:1"></div>
+    <button onClick="{{ goLogin }}" style="background:none;border:1px solid rgba(201,169,106,.3);color:#a79c8a;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;padding:8px 10px;border-radius:3px;cursor:pointer;flex:none" style-hover="color:#f3e6c4;border-color:#c9a96a">QUITTER</button>
+  </nav>
+
+  <main style="position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden">
+    <header style="position:relative;z-index:8;flex:none;display:flex;align-items:center;gap:14px;padding:12px 20px;background:linear-gradient(180deg,rgba(11,9,18,.97),rgba(11,9,18,.88));border-bottom:1px solid rgba(201,169,106,.2)">
+      <div style="font-family:'Cinzel Decorative',serif;font-size:20px;color:#e8d3a0;letter-spacing:.04em;white-space:nowrap">DungeonSpace</div>
+      <div style="width:6px;height:6px;transform:rotate(45deg);background:#c9a96a;flex:none"></div>
+      <div style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:#a79c8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1">{{ screenTitle }}</div>
+
+      <div style="position:relative;min-width:0;flex:0 1 300px">
+        <button onClick="{{ toggleCampMenu }}" style="display:flex;align-items:center;gap:12px;width:100%;min-width:0;padding:6px 12px 6px 6px;background:#0e0a14;border:1px solid {{ campBtnBd }};border-radius:4px;color:#e9e2d4;cursor:pointer;text-align:left" style-hover="border-color:#c9a96a">
+          <div style="width:32px;height:32px;flex:none;border-radius:3px;border:1px solid rgba(201,169,106,.5);display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#3a2540,#120c18)"><div style="width:10px;height:10px;transform:rotate(45deg);background:{{ camp.color }};box-shadow:0 0 8px {{ camp.color }}"></div></div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:.22em;color:#a79c8a">CAMPAGNE · {{ camp.roleLabel }}</span><span style="font-family:'Cinzel',serif;font-size:13.5px;color:#f3e6c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ camp.name }}</span></div>
+          <span style="color:#c9a96a;font-size:11px;transform:rotate({{ chevRot }}deg);transition:transform .2s">▼</span>
+        </button>
+        <sc-if value="{{ campMenu }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;right:0;top:calc(100% + 6px);width:360px;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(38,26,46,.99),rgba(17,12,23,.99));border:1px solid rgba(201,169,106,.55);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.2),0 20px 50px rgba(0,0,0,.7);overflow:hidden;z-index:30">
+            <div style="padding:12px"><input value="{{ campQ }}" onChange="{{ onCampQ }}" placeholder="Rechercher une campagne…" style="width:100%;padding:9px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:14px;outline:none"></div>
+            <div style="display:flex;flex-direction:column;max-height:320px;overflow:auto">
+              <sc-for list="{{ campList }}" as="k" hint-placeholder-count="4">
+                <button onClick="{{ k.on }}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:none;border-top:1px solid rgba(201,169,106,.1);background:{{ k.bg }};color:#e9e2d4;cursor:pointer;text-align:left" style-hover="background:rgba(201,169,106,.08)">
+                  <div style="width:30px;height:30px;flex:none;border-radius:3px;border:1px solid rgba(201,169,106,.4);display:flex;align-items:center;justify-content:center;background:#120c18"><div style="width:9px;height:9px;transform:rotate(45deg);background:{{ k.color }}"></div></div>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-family:'Cinzel',serif;font-size:13.5px;color:#f3e6c4">{{ k.name }}</span><span style="font-size:12px;color:#a79c8a">{{ k.meta }}</span></div>
+                  <span style="padding:2px 7px;border:1px solid {{ k.roleBd }};border-radius:2px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:.14em;color:{{ k.roleCol }}">{{ k.roleLabel }}</span>
+                  <span style="width:14px;color:#7cc6ff">{{ k.check }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px;border-top:1px solid rgba(201,169,106,.25)">
+              <button onClick="{{ openNewCamp }}" style="font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.14em;color:#f3e6c4;background:linear-gradient(180deg,#4a2a4e,#211426);border:1px solid #c9a96a;border-radius:3px;padding:10px 6px;cursor:pointer">+ CRÉER</button>
+              <button onClick="{{ openJoin }}" style="font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.14em;color:#e8d3a0;background:transparent;border:1px solid rgba(201,169,106,.45);border-radius:3px;padding:10px 6px;cursor:pointer">REJOINDRE (CODE)</button>
+            </div>
+            <sc-if value="{{ joinOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:8px;padding:0 12px 12px"><input value="{{ joinCode }}" onChange="{{ onJoinCode }}" placeholder="Code d'invitation" style="flex:1;padding:9px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:14px;outline:none;letter-spacing:.14em;text-transform:uppercase"><button onClick="{{ join }}" style="font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.14em;color:#bfe4ff;background:rgba(79,179,255,.1);border:1px solid rgba(79,179,255,.55);border-radius:3px;padding:0 12px;cursor:pointer">OK</button></div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="display:flex;border:1px solid rgba(201,169,106,.45);border-radius:3px;overflow:hidden;flex:none">
+        <button onClick="{{ setJoueur }}" style="padding:9px 14px;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.14em;background:{{ roleJ.bg }};color:{{ roleJ.col }}">JOUEUR</button>
+        <button onClick="{{ setMJ }}" style="padding:9px 14px;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.14em;background:{{ roleM.bg }};color:{{ roleM.col }}">MAÎTRE DU JEU</button>
+      </div>
+      <div style="width:36px;height:36px;flex:none;border-radius:50%;border:1px solid #c9a96a;overflow:hidden"><image-slot id="avatar-top" shape="circle" placeholder="avatar"></image-slot></div>
+    </header>
+
+    <div style="position:relative;flex:1;min-height:0">
+      <sc-if value="{{ isExplore }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0"><dc-import name="Chronique" role="{{ role }}" campaign="{{ camp.name }}" style="display:block;width:100%;height:100%" hint-size="100%,100%"></dc-import></div>
+      </sc-if>
+      <sc-if value="{{ isCombat }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0"><dc-import name="Combat" role="{{ role }}" style="display:block;width:100%;height:100%" hint-size="100%,100%"></dc-import></div>
+      </sc-if>
+      <sc-if value="{{ isSanct }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0"><dc-import name="Sanctuaire" role="{{ role }}" on-roll="{{ roll }}" style="display:block;width:100%;height:100%" hint-size="100%,100%"></dc-import></div>
+      </sc-if>
+      <sc-if value="{{ isPerso }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0"><dc-import name="Fiche Personnage" on-roll="{{ roll }}" on-navigate="{{ navigate }}" style="display:block;width:100%;height:100%" hint-size="100%,100%"></dc-import></div>
+      </sc-if>
+    </div>
+
+    <!-- ACCUEIL IMMERSIF -->
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <section data-screen-label="Accueil" onMouseMove="{{ onParallax }}" style="position:fixed;inset:0;z-index:10;background:#0b0912;overflow:hidden;display:flex;align-items:center;justify-content:center">
+        <img src="assets/accueil-dungeonspace.png" alt="" style="position:absolute;inset:-40px;width:calc(100% + 80px);height:calc(100% + 80px);object-fit:cover;filter:blur(30px) brightness(.45);pointer-events:none">
+        <div style="position:relative;width:min(100vw,150vh);aspect-ratio:3/2;overflow:hidden;container-type:inline-size;animation:dsIn 1.6s ease-out both">
+          <div style="position:absolute;inset:0;transform:{{ parallaxBg }};transition:transform .4s ease-out;pointer-events:none">
+            {{ homeImage }}
+            <div style="position:absolute;left:1.6%;top:18%;width:8.4%;height:62%;background:linear-gradient(90deg,rgba(8,6,12,.97) 0%,rgba(8,6,12,.95) 72%,rgba(8,6,12,0) 100%);-webkit-mask-image:linear-gradient(180deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(180deg,transparent,#000 8%,#000 92%,transparent);pointer-events:none"></div>
+            <sc-for list="{{ homeSide }}" as="b" hint-placeholder-count="5">
+              <button onClick="{{ b.go }}" aria-label="{{ b.label }}" style="pointer-events:auto;position:absolute;left:1.9%;top:{{ b.t }};width:6.8%;height:10%;padding:0;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9%;color:{{ b.color }};font-family:'Cinzel',serif;font-size:0.74cqw;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;transition:transform .3s cubic-bezier(.2,.8,.2,1), color .3s" style-hover="transform:scale(1.12);color:#bfe4ff">
+                <img src="{{ b.src }}" alt="" style="height:48%;width:auto;filter:{{ b.filter }};transition:filter .3s">
+                <span>{{ b.label }}</span>
+              </button>
+            </sc-for>
+            <sc-for list="{{ homeTiles }}" as="t" hint-placeholder-count="3">
+              <div style="position:absolute;left:{{ t.l }};top:{{ t.t }};width:{{ t.w }};height:{{ t.h }};perspective:900px">
+                <div style="position:absolute;inset:4%;border-radius:12px;background:#07050b;filter:blur(10px);opacity:{{ t.sock }};transition:opacity .3s;pointer-events:none"></div>
+                <button onClick="{{ t.go }}" onMouseMove="{{ t.move }}" onMouseLeave="{{ t.leave }}" aria-label="{{ t.label }}" style="pointer-events:auto;position:absolute;inset:0;padding:0;border:none;background:none;cursor:pointer;transform-style:preserve-3d;transform:{{ t.tf }};transition:{{ t.trans }};filter:{{ t.filter }}">
+                  <img src="{{ t.src }}" alt="" style="width:100%;height:100%;display:block">
+                  <div style="position:absolute;inset:0;background:{{ t.sheen }};mix-blend-mode:screen;pointer-events:none;-webkit-mask-image:{{ t.maskUrl }};mask-image:{{ t.maskUrl }};-webkit-mask-size:100% 100%;mask-size:100% 100%"></div>
+                </button>
+              </div>
+            </sc-for>
+            
+          
+          
+          
+          
+          
+          
+          
+          <button onClick="{{ goClassic }}" aria-label="Mon personnage" title="Mon personnage" style="pointer-events:auto;position:absolute;left:95.44%;top:82.62%;width:2.08%;height:3.13%;background:transparent;border:1px solid transparent;border-radius:50%;cursor:pointer;transition:box-shadow .25s, border-color .25s, background .25s" style-hover="border-color:rgba(124,198,255,.7);background:rgba(79,179,255,.08);box-shadow:0 0 28px rgba(79,179,255,.55), inset 0 0 22px rgba(79,179,255,.25)"></button>
+          <button onClick="{{ goLogin }}" aria-label="Déconnexion" title="Déconnexion" style="pointer-events:auto;position:absolute;left:95.44%;top:86.52%;width:2.08%;height:3.13%;background:transparent;border:1px solid transparent;border-radius:50%;cursor:pointer;transition:box-shadow .25s, border-color .25s, background .25s" style-hover="border-color:rgba(124,198,255,.7);background:rgba(79,179,255,.08);box-shadow:0 0 28px rgba(79,179,255,.55), inset 0 0 22px rgba(79,179,255,.25)"></button>
+          <button onClick="{{ goHome }}" aria-label="À propos" title="À propos" style="pointer-events:auto;position:absolute;left:41.67%;top:95.12%;width:4.95%;height:2.54%;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;transition:box-shadow .25s, border-color .25s, background .25s" style-hover="border-color:rgba(124,198,255,.7);background:rgba(79,179,255,.08);box-shadow:0 0 28px rgba(79,179,255,.55), inset 0 0 22px rgba(79,179,255,.25)"></button>
+          <button onClick="{{ goCompendium }}" aria-label="Règles" title="Règles" style="pointer-events:auto;position:absolute;left:47.92%;top:95.12%;width:3.91%;height:2.54%;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;transition:box-shadow .25s, border-color .25s, background .25s" style-hover="border-color:rgba(124,198,255,.7);background:rgba(79,179,255,.08);box-shadow:0 0 28px rgba(79,179,255,.55), inset 0 0 22px rgba(79,179,255,.25)"></button>
+          <button onClick="{{ goHome }}" aria-label="Contact" title="Contact" style="pointer-events:auto;position:absolute;left:53.13%;top:95.12%;width:4.95%;height:2.54%;background:transparent;border:1px solid transparent;border-radius:4px;cursor:pointer;transition:box-shadow .25s, border-color .25s, background .25s" style-hover="border-color:rgba(124,198,255,.7);background:rgba(79,179,255,.08);box-shadow:0 0 28px rgba(79,179,255,.55), inset 0 0 22px rgba(79,179,255,.25)"></button>
+          </div>
+          <div style="position:absolute;inset:0;transform:{{ parallaxFx }};transition:transform .4s ease-out;pointer-events:none">
+            {{ homeAmbient }}
+          </div>
+          <div style="position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 120px 40px rgba(11,9,18,.75)"></div>
+          
+          <button onClick="{{ goTable }}" style="position:absolute;left:50%;bottom:9%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:10px 18px;background:rgba(17,12,23,.72);border:1px solid rgba(201,169,106,.45);border-radius:4px;color:#e9e2d4;cursor:pointer;backdrop-filter:blur(4px);white-space:nowrap;opacity:.85;transition:opacity .25s, box-shadow .25s" style-hover="opacity:1;box-shadow:0 0 24px rgba(79,179,255,.4)">
+            <div style="width:8px;height:8px;border-radius:50%;background:#4fb3ff;box-shadow:0 0 10px #4fb3ff"></div>
+            <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.2em;color:#d8cbb0">VENDREDI 21H · LA CRYPTE DES MURMURES</span>
+            <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.16em;color:#7cc6ff">REJOINDRE →</span>
+          </button>
+        </div>
+      </section>
+    </sc-if>
+
+    
+
+    <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Connexion" style="position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:40px;background:#0b0912">
+        <img src="assets/accueil-dungeonspace.png" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(14px) brightness(.5);transform:scale(1.06)">
+        <div style="position:relative;width:100%;max-width:440px;padding:36px 36px 30px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.22),0 20px 60px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:18px">
+          <img src="assets/ui/logo.png" alt="DungeonSpace" style="width:100%;height:auto">
+          <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid rgba(201,169,106,.25)">
+            <button onClick="{{ setAuthLogin }}" style="background:none;border:none;border-bottom:2px solid {{ authL.bd }};padding:10px;color:{{ authL.col }};font-family:'Cinzel',serif;font-size:13px;letter-spacing:.14em;cursor:pointer">CONNEXION</button>
+            <button onClick="{{ setAuthSignup }}" style="background:none;border:none;border-bottom:2px solid {{ authS.bd }};padding:10px;color:{{ authS.col }};font-family:'Cinzel',serif;font-size:13px;letter-spacing:.14em;cursor:pointer">INSCRIPTION</button>
+          </div>
+          <sc-if value="{{ isSignup }}" hint-placeholder-val="{{ false }}">
+            <label style="display:flex;flex-direction:column;gap:6px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#a79c8a">NOM D'AVENTURIER<input placeholder="Elowen" style="padding:11px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:15px;outline:none;letter-spacing:0"></label>
+          </sc-if>
+          <label style="display:flex;flex-direction:column;gap:6px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#a79c8a">COURRIEL<input placeholder="vous@royaume.fr" style="padding:11px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:15px;outline:none;letter-spacing:0"></label>
+          <label style="display:flex;flex-direction:column;gap:6px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;color:#a79c8a">MOT DE PASSE<input type="password" placeholder="••••••••" style="padding:11px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:15px;outline:none"></label>
+          <button onClick="{{ goHome }}" style="margin-top:6px;font-family:'Cinzel',serif;font-size:14px;letter-spacing:.2em;color:#f3e6c4;background:linear-gradient(180deg,#4a2a4e,#211426);border:1px solid #c9a96a;border-radius:4px;padding:14px;cursor:pointer;box-shadow:inset 0 0 0 2px #120c18,inset 0 0 0 3px rgba(201,169,106,.3)" style-hover="box-shadow:inset 0 0 0 2px #120c18,inset 0 0 0 3px rgba(201,169,106,.3),0 0 24px rgba(79,179,255,.35)">{{ authCta }}</button>
+          <div style="text-align:center;font-size:13px;color:#a79c8a;font-style:italic">Mot de passe oublié ? <a href="#">Invoquer un rappel</a></div>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ newCampOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeNewCamp }}" style="position:fixed;inset:0;z-index:40;background:rgba(5,4,8,.72);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)">
+        <div onClick="{{ stop }}" style="width:100%;max-width:640px;max-height:calc(100vh - 40px);overflow:auto;display:flex;flex-direction:column;gap:16px;padding:28px;background:linear-gradient(180deg,rgba(44,28,52,.99),rgba(17,12,23,.99));border:1px solid #c9a96a;border-radius:8px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.3),0 30px 80px rgba(0,0,0,.7)">
+          <div style="display:flex;align-items:center"><div style="flex:1"><div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.3em;color:#a79c8a">MAÎTRE DU JEU</div><div style="font-family:'Cinzel',serif;font-size:24px;color:#e8d3a0">Fonder une campagne</div></div><button onClick="{{ closeNewCamp }}" style="background:none;border:none;color:#a79c8a;font-size:20px;cursor:pointer">×</button></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:16px">
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <label style="display:flex;flex-direction:column;gap:6px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">NOM<input value="{{ nc.name }}" onChange="{{ onNcName }}" placeholder="Les Cendres de…" style="padding:11px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:16px;outline:none;letter-spacing:0"></label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">SYNOPSIS<textarea rows="3" placeholder="En quelques lignes…" style="padding:11px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:14px;outline:none;resize:vertical;letter-spacing:0"></textarea></label>
+            </div>
+            <div style="height:170px;border:1px solid rgba(201,169,106,.4);border-radius:4px;padding:4px"><image-slot id="camp-cover-new" shape="rounded" radius="2" placeholder="Couverture"></image-slot></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">TONALITÉ</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ toneChips }}" as="t" hint-placeholder-count="5"><button onClick="{{ t.on }}" style="padding:7px 13px;border-radius:999px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.col }};font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.1em;cursor:pointer">{{ t.label }}</button></sc-for></div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">NIVEAU DE DÉPART</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ lvlChips }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.on }}" style="min-width:44px;padding:7px 12px;border-radius:3px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.col }};font-family:'Cinzel',serif;font-size:11px;cursor:pointer">{{ t.label }}</button></sc-for></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">INVITER DES JOUEURS</span>
+            <div style="display:flex;gap:8px"><input value="{{ nc.invite }}" onChange="{{ onNcInvite }}" onKeyDown="{{ onNcKey }}" placeholder="courriel d'un joueur (Entrée)" style="flex:1;padding:10px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:14px;outline:none"><button onClick="{{ addNcInvite }}" style="font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.14em;color:#e8d3a0;background:transparent;border:1px solid rgba(201,169,106,.45);border-radius:3px;padding:0 14px;cursor:pointer">AJOUTER</button></div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ ncInvites }}" as="i" hint-placeholder-count="0"><span style="display:flex;align-items:center;gap:6px;padding:4px 6px 4px 10px;border:1px solid rgba(79,179,255,.45);border-radius:999px;font-size:12.5px;color:#bfe4ff">{{ i.mail }}<button onClick="{{ i.remove }}" style="background:none;border:none;color:#7d7368;cursor:pointer">×</button></span></sc-for></div>
+            <div style="font-size:12.5px;color:#a79c8a;font-style:italic">Code d'invitation généré : <span style="font-family:'Cinzel',serif;font-style:normal;letter-spacing:.2em;color:#e8d3a0">{{ ncCode }}</span></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:6px;border-top:1px solid rgba(201,169,106,.2)">
+            <button onClick="{{ closeNewCamp }}" style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.14em;color:#e8d3a0;background:transparent;border:1px solid rgba(201,169,106,.45);border-radius:4px;padding:11px 16px;cursor:pointer">ANNULER</button>
+            <button onClick="{{ createCamp }}" style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.16em;color:#f3e6c4;background:linear-gradient(180deg,#4a2a4e,#211426);border:1px solid #c9a96a;border-radius:4px;padding:11px 18px;cursor:pointer;opacity:{{ ncO }}">FONDER LA CAMPAGNE</button>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ dice.show }}" hint-placeholder-val="{{ false }}">
+      <div style="position:fixed;right:28px;bottom:28px;z-index:60;width:250px;padding:22px 18px 16px;background:linear-gradient(180deg,rgba(44,28,52,.98),rgba(17,12,23,.98));border:1px solid #c9a96a;border-radius:8px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.3),0 20px 50px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;gap:12px">
+        <button onClick="{{ closeDice }}" style="position:absolute;top:6px;right:10px;background:none;border:none;color:#a79c8a;cursor:pointer;font-size:16px">×</button>
+        <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.2em;color:#a79c8a;text-align:center">{{ dice.label }}</div>
+        <div style="width:96px;height:96px;display:flex;align-items:center;justify-content:center;position:relative">
+          <div style="position:absolute;inset:14px;transform:{{ dice.rotCss }};border:2px solid #7cc6ff;background:linear-gradient(135deg,#1d2f4a,#120c18);box-shadow:0 0 24px rgba(79,179,255,.55);transition:transform .06s linear"></div>
+          <span style="position:relative;font-family:'Cinzel',serif;font-size:30px;font-weight:600;color:{{ dice.col }}">{{ dice.v }}</span>
+        </div>
+        <div style="font-family:'Cinzel',serif;font-size:14px;color:#e8d3a0;text-align:center">{{ dice.totalText }}</div>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const R=n=>1+Math.floor(Math.random()*n);
+const sg=n=>(n>=0?'+':'')+n;
+const CAMPS=[
+ {id:'k1',name:'Les Cendres de Valombre',role:'mj',color:'#4fb3ff',meta:'Session 6 · 4 joueurs · niv. 5'},
+ {id:'k2',name:'La Forêt des Lucioles',role:'joueur',color:'#b9a4e0',meta:'MJ Orsane · Nym, barde niv. 2'},
+ {id:'k3',name:'Le Trône de Givre',role:'joueur',color:'#bfe4ff',meta:'MJ Kael · Elowen, invitée'},
+ {id:'k4',name:"Sous la Mer d'Encre",role:'mj',color:'#e07aa8',meta:'Terminée · 12 sessions'}
+];
+const chip=on=>on?{bg:'rgba(201,169,106,.18)',bd:'#c9a96a',col:'#f3e6c4'}:{bg:'transparent',bd:'rgba(201,169,106,.28)',col:'#a79c8a'};
+const code=()=>Array.from({length:6},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
+class Component extends DCLogic {
+  state={screen:'home',role:'mj',camps:CAMPS,camp:'k1',campMenu:false,campQ:'',joinOpen:false,joinCode:'',newCampOpen:false,nc:{name:'',tone:'Héroïque',lvl:1,invite:'',invites:[],code:code()},
+    auth:'login',tilt:null,px:0,py:0,dice:{show:false,v:20,label:'',rot:0,rolling:false,total:0,mod:0,sides:20}};
+  componentDidMount(){this._doc=e=>{if(this.state.campMenu&&!e.target.closest('[data-camp-menu]'))this.setState({campMenu:false});};}
+  componentWillUnmount(){clearInterval(this._t);cancelAnimationFrame(this._raf);}
+  _onPar=e=>{if(this._raf)return;const r=e.currentTarget.getBoundingClientRect(),cx=e.clientX,cy=e.clientY;this._raf=requestAnimationFrame(()=>{this._raf=null;this.setState({px:(cx-r.left)/r.width*2-1,py:(cy-r.top)/r.height*2-1});});};
+  homeImage(){if(!this._img)this._img=React.createElement('img',{src:'assets/accueil-dungeonspace.png',alt:'DungeonSpace — forêt enchantée',style:{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',}});return this._img;}
+  homeAmbient(){
+    if(this._amb)return this._amb;const E=React.createElement,rnd=(a,b)=>a+Math.random()*(b-a),kids=[];
+    kids.push(E('div',{key:'fog1',style:{position:'absolute',left:'-10%',right:'-10%',bottom:'-5%',height:'45%',background:'radial-gradient(ellipse at 30% 70%,rgba(140,90,200,.28),transparent 60%),radial-gradient(ellipse at 75% 80%,rgba(60,140,200,.22),transparent 55%)',mixBlendMode:'screen',animation:'dsDrift 26s ease-in-out infinite alternate'}}));
+    kids.push(E('div',{key:'fog2',style:{position:'absolute',left:'-10%',right:'-10%',top:'20%',height:'40%',background:'radial-gradient(ellipse at 60% 50%,rgba(200,60,130,.16),transparent 60%)',mixBlendMode:'screen',animation:'dsDrift 34s ease-in-out -12s infinite alternate-reverse'}}));
+    [[767,178,90],[1063,700,120],[1418,655,130],[1425,760,120],[990,812,70],[1400,840,80]].forEach(([x,y,s],i)=>kids.push(E('div',{key:'r'+i,style:{position:'absolute',left:(x/15.36)+'%',top:(y/10.24)+'%',width:(s/15.36)+'%',aspectRatio:'1',borderRadius:'50%',background:'radial-gradient(circle,rgba(79,179,255,.75),rgba(79,179,255,.15) 45%,transparent 70%)',mixBlendMode:'screen',animation:`dsPulse ${rnd(3,6).toFixed(1)}s ease-in-out ${-rnd(0,5).toFixed(1)}s infinite`}})));
+    kids.push(E('div',{key:'horse',style:{position:'absolute',left:'34%',top:'62%',width:'20%',height:'25%',borderRadius:'50%',background:'radial-gradient(ellipse,rgba(120,150,255,.35),transparent 65%)',mixBlendMode:'screen',animation:'dsPulse 7s ease-in-out infinite'}}));
+    for(let i=0;i<55;i++){const blue=Math.random()<.25,sz=rnd(2,5);
+      kids.push(E('div',{key:'f'+i,style:{position:'absolute',left:rnd(2,98)+'%',top:rnd(30,98)+'%','--dx':rnd(-60,60)+'px','--dy':rnd(-50,30)+'px',animation:`dsFly ${rnd(6,14).toFixed(1)}s ease-in-out ${-rnd(0,14).toFixed(1)}s infinite alternate`}},
+        E('div',{style:{width:sz,height:sz,borderRadius:'50%',background:blue?'#bfe4ff':'#ffe9a8',boxShadow:blue?'0 0 8px 2px rgba(79,179,255,.85)':'0 0 8px 2px rgba(255,214,120,.85)',animation:`dsBlink ${rnd(2.5,6).toFixed(1)}s ease-in-out ${-rnd(0,6).toFixed(1)}s infinite`}})));}
+    this._amb=E('div',{style:{position:'absolute',inset:0}},kids);return this._amb;
+  }
+  roll(label,n,f,mod){
+    clearInterval(this._t);n=n||1;mod=mod||0;
+    this.setState(s=>({dice:{...s.dice,show:true,rolling:true,label,sides:f,mod,n}}));
+    let k=0;this._t=setInterval(()=>{k++;
+      if(k<14){this.setState(s=>({dice:{...s.dice,v:R(f*n),rot:s.dice.rot+53}}));return;}
+      clearInterval(this._t);let v=0;for(let i=0;i<n;i++)v+=R(f);
+      this.setState(s=>({dice:{...s.dice,v,total:v+mod,rolling:false,rot:s.dice.rot+20}}));
+    },55);
+  }
+  renderVals(){
+    const s=this.state,go=sc=>()=>this.setState({screen:sc,campMenu:false}),isMJ=s.role==='mj';
+    const camp=s.camps.find(c=>c.id===s.camp)||s.camps[0];
+    const NAV=[['home','Accueil','accueil'],['explore','Explorer','explorer'],['combat','Combattre','combattre'],['sanctuaire','Sanctuaire','sanctuaire'],['perso','Personnage','profil']];
+    const TITLES={home:'Accueil',explore:'Explorer · Chronique',combat:'Combattre',sanctuaire:'Sanctuaire',perso:'Personnage',login:''};
+    const tog=on=>on?{bg:'rgba(201,169,106,.2)',col:'#f3e6c4'}:{bg:'transparent',col:'#a79c8a'};
+    const nc=s.nc,setNc=o=>this.setState(st=>({nc:{...st.nc,...o}}));
+    const addInv=()=>{const m=nc.invite.trim();if(m)setNc({invites:[...nc.invites,m],invite:''});};
+    const q=s.campQ.trim().toLowerCase(),d=s.dice;
+    return{
+      nav:NAV.map(([id,label,ic])=>{const on=s.screen===id;return{label,src:'assets/ui/ico2-'+ic+'.png',go:go(id),color:on?'#9fd4ff':'#d8cbb0',bar:on?'#4fb3ff':'transparent',
+        filter:on?'brightness(1.2) drop-shadow(0 0 5px rgba(79,179,255,.95)) drop-shadow(0 0 12px rgba(79,179,255,.6))':'brightness(.92)'};}),
+      screenTitle:TITLES[s.screen],role:s.role,
+      isHome:s.screen==='home',isExplore:s.screen==='explore',isCombat:s.screen==='combat',isSanct:s.screen==='sanctuaire',isPerso:s.screen==='perso',isLogin:s.screen==='login',
+      goHome:go('home'),goLogin:go('login'),goTable:go('combat'),goCompendium:go('sanctuaire'),goClassic:go('perso'),goExplore:go('explore'),goWar:go('combat'),goSheet:go('perso'),
+      navigate:sc=>this.setState({screen:sc}),roll:(l,n,f,m)=>this.roll(l,n,f,m),
+      setJoueur:()=>this.setState({role:'joueur'}),setMJ:()=>this.setState({role:'mj'}),roleJ:tog(!isMJ),roleM:tog(isMJ),
+      camp:{...camp,roleLabel:isMJ?'MJ':'JOUEUR'},campMenu:s.campMenu,chevRot:s.campMenu?180:0,campBtnBd:s.campMenu?'#c9a96a':'rgba(201,169,106,.4)',
+      toggleCampMenu:()=>this.setState({campMenu:!s.campMenu,joinOpen:false}),
+      campQ:s.campQ,onCampQ:e=>this.setState({campQ:e.target.value}),
+      campList:s.camps.filter(c=>!q||c.name.toLowerCase().includes(q)).map(c=>{const on=c.id===camp.id;return{...c,check:on?'◆':'',bg:on?'rgba(79,179,255,.08)':'transparent',roleLabel:c.role==='mj'?'MJ':'JOUEUR',roleBd:c.role==='mj'?'rgba(201,169,106,.6)':'rgba(79,179,255,.5)',roleCol:c.role==='mj'?'#e8d3a0':'#bfe4ff',
+        on:()=>this.setState({camp:c.id,role:c.role,campMenu:false})};}),
+      openJoin:()=>this.setState({joinOpen:!s.joinOpen}),joinOpen:s.joinOpen,joinCode:s.joinCode,onJoinCode:e=>this.setState({joinCode:e.target.value}),
+      join:()=>{const c=s.joinCode.trim().toUpperCase();if(!c)return;const id='k'+Date.now();this.setState(st=>({camps:[...st.camps,{id,name:`Campagne ${c}`,role:'joueur',color:'#c9a96a',meta:'Rejointe à l’instant'}],camp:id,role:'joueur',campMenu:false,joinCode:'',joinOpen:false}));},
+      openNewCamp:()=>this.setState({newCampOpen:true,campMenu:false,nc:{name:'',tone:'Héroïque',lvl:1,invite:'',invites:[],code:code()}}),closeNewCamp:()=>this.setState({newCampOpen:false}),stop:e=>e.stopPropagation(),
+      newCampOpen:s.newCampOpen,nc,onNcName:e=>setNc({name:e.target.value}),onNcInvite:e=>setNc({invite:e.target.value}),onNcKey:e=>{if(e.key==='Enter')addInv();},addNcInvite:addInv,
+      ncInvites:nc.invites.map((mail,i)=>({mail,remove:()=>setNc({invites:nc.invites.filter((_,j)=>j!==i)})})),ncCode:nc.code,ncO:nc.name.trim()?1:.45,
+      toneChips:['Héroïque','Sombre','Mystère','Humoristique','Bac à sable'].map(t=>({label:t,on:()=>setNc({tone:t}),...chip(nc.tone===t)})),
+      lvlChips:[1,3,5,10].map(l=>({label:String(l),on:()=>setNc({lvl:l}),...chip(nc.lvl===l)})),
+      createCamp:()=>{const n=nc.name.trim();if(!n)return;const id='k'+Date.now();this.setState(st=>({camps:[{id,name:n,role:'mj',color:'#c9a96a',meta:`Session 0 · ${nc.invites.length} invité${nc.invites.length>1?'s':''} · niv. ${nc.lvl}`},...st.camps],camp:id,role:'mj',newCampOpen:false,screen:'explore'}));},
+      setAuthLogin:()=>this.setState({auth:'login'}),setAuthSignup:()=>this.setState({auth:'signup'}),isSignup:s.auth==='signup',authCta:s.auth==='signup'?'CRÉER MON GRIMOIRE':'FRANCHIR LE PORTAIL',
+      authL:{bd:s.auth==='login'?'#c9a96a':'transparent',col:s.auth==='login'?'#f3e6c4':'#a79c8a'},authS:{bd:s.auth==='signup'?'#c9a96a':'transparent',col:s.auth==='signup'?'#f3e6c4':'#a79c8a'},
+      dice:{show:d.show,label:(d.label||'').toUpperCase(),v:d.v,rotCss:`rotate(${45+d.rot}deg)`,col:d.rolling?'#a79c8a':(d.sides===20&&d.n===1&&d.v===20?'#7cc6ff':d.sides===20&&d.n===1&&d.v===1?'#e07aa8':'#f3e6c4'),
+        totalText:d.rolling?'Les dés roulent…':d.sides===20&&d.n===1&&d.v===20?`Critique ! Total ${d.total}`:d.sides===20&&d.n===1&&d.v===1?`Échec critique · ${d.total}`:`${d.n>1?d.n:''}d${d.sides}${d.mod?` ${sg(d.mod)}`:''} · Total : ${d.total}`},
+      closeDice:()=>this.setState(st=>({dice:{...st.dice,show:false}})),
+      onParallax:this._onPar,parallaxBg:`scale(1.02) translate(${-s.px*6}px,${-s.py*4}px)`,parallaxFx:`translate(${-s.px*22}px,${-s.py*14}px)`,
+      homeImage:this.homeImage(),homeAmbient:this.homeAmbient(),
+      homeSide:[{"label":"Accueil","src":"assets/ui/ico2-accueil.png","t":"19.434%","go":"goHome","home":true},{"label":"Explorer","src":"assets/ui/ico2-explorer.png","t":"32.129%","go":"goExplore","home":false},{"label":"Combattre","src":"assets/ui/ico2-combattre.png","t":"44.336%","go":"goWar","home":false},{"label":"Sanctuaire","src":"assets/ui/ico2-sanctuaire.png","t":"56.543%","go":"goCompendium","home":false},{"label":"Mon profil","src":"assets/ui/ico2-profil.png","t":"68.750%","go":"goSheet","home":false}].map(b=>({...b,go:{goHome:go('home'),goExplore:go('explore'),goWar:go('combat'),goCompendium:go('sanctuaire'),goSheet:go('perso')}[b.go],color:b.home?'#bfe4ff':'#e3d3ad',filter:b.home?'brightness(1.2) drop-shadow(0 0 5px rgba(79,179,255,.95)) drop-shadow(0 0 14px rgba(79,179,255,.6))':'drop-shadow(0 2px 4px rgba(0,0,0,.6))'})),
+      homeTiles:[{"id":"sanctuaire","label":"Génération","src":"assets/ui/tile2-generation.png","l":"27.276%","t":"44.423%","w":"15.891%","h":"15.450%"},{"id":"combat","label":"Guerre","src":"assets/ui/tile2-guerre.png","l":"43.661%","t":"44.577%","w":"16.453%","h":"15.143%"},{"id":"sanctuaire2","label":"Informations Sanctuaires","src":"assets/ui/tile2-sanctuaires.png","l":"60.854%","t":"45.545%","w":"16.313%","h":"13.206%"}].map(t=>{const on=s.tilt&&s.tilt.id===t.id,rx=on?s.tilt.rx:0,ry=on?s.tilt.ry:0,mx=on?s.tilt.mx:50,my=on?s.tilt.my:50;
+        return{...t,sock:on?.9:0,tf:on?`translateY(-8px) translateZ(30px) rotateX(${rx}deg) rotateY(${ry}deg) scale(1.07)`:'none',trans:on?'transform .08s linear, filter .3s':'transform .5s cubic-bezier(.2,.8,.2,1), filter .3s',
+          filter:on?'brightness(1.15) drop-shadow(0 0 14px rgba(79,179,255,.55)) drop-shadow(0 22px 22px rgba(0,0,0,.7))':'drop-shadow(0 8px 14px rgba(0,0,0,.5))',sheen:on?`radial-gradient(circle at ${mx}% ${my}%,rgba(180,220,255,.3),transparent 55%)`:'transparent',maskUrl:`url(${t.src})`,
+          go:t.id==='comp'?()=>this.setState({screen:'explore',exTab:'comp',tilt:null}):()=>this.setState({screen:t.id.replace('2',''),tilt:null}),
+          move:e=>{const r=e.currentTarget.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;this.setState({tilt:{id:t.id,rx:((.5-y)*16).toFixed(2),ry:((x-.5)*20).toFixed(2),mx:x*100,my:y*100}});},
+          leave:()=>this.setState({tilt:null})};}),
+    };
+  }
+}
+</script>
+</body>
+</html>

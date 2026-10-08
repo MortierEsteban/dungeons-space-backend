@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="image-slot.js"></script>
+<style>html,body{margin:0;background:#0b0912;height:100%}*{box-sizing:border-box}a{color:#e8d3a0}a:hover{color:#7cc6ff}select option{background:#120d18;color:#e9e2d4}</style>
+</helmet>
+<div data-screen-label="Sanctuaire" style="height:100%;overflow:auto;background:radial-gradient(ellipse at 50% -10%,#2a1530 0%,#0b0912 60%);font-family:'Spectral',serif;color:#e9e2d4">
+<div style="max-width:1440px;margin:0 auto;padding:28px 28px 60px;display:flex;flex-direction:column;gap:22px">
+  <div style="display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap">
+    <div style="flex:1;min-width:240px">
+      <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.3em;color:#a79c8a">SANCTUAIRE</div>
+      <h2 style="margin:6px 0 0;font-family:'Cinzel',serif;font-weight:500;font-size:34px;color:#e8d3a0">{{ heading }}</h2>
+    </div>
+    <div style="display:flex;border:1px solid rgba(201,169,106,.45);border-radius:3px;overflow:hidden">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2">
+        <button onClick="{{ t.on }}" style="padding:10px 18px;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:12px;letter-spacing:.14em;background:{{ t.bg }};color:{{ t.col }}">{{ t.label }}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:22px;align-items:start">
+    <div style="min-width:0">
+      <sc-if value="{{ isLib }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <input value="{{ q }}" onChange="{{ onQ }}" placeholder="Rechercher un sort, un monstre, un objet…" style="width:100%;padding:14px 16px;background:#0e0a14;border:1px solid rgba(201,169,106,.45);border-radius:4px;color:#e9e2d4;font-size:16px;outline:none;font-family:'Spectral',serif">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+            <sc-for list="{{ typeChips }}" as="t" hint-placeholder-count="5">
+              <button onClick="{{ t.on }}" style="padding:7px 14px;border-radius:999px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.col }};font-family:'Cinzel',serif;font-size:11px;letter-spacing:.12em;cursor:pointer">{{ t.label }}</button>
+            </sc-for>
+            <div style="flex:1"></div>
+            <span style="font-size:13px;color:#a79c8a;font-style:italic">{{ resultCount }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;border:1px solid rgba(201,169,106,.3);border-radius:4px;overflow:hidden">
+            <sc-for list="{{ results }}" as="r" hint-placeholder-count="10">
+              <button onClick="{{ r.on }}" style="display:grid;grid-template-columns:14px minmax(0,1fr) 120px 110px;align-items:center;gap:12px;padding:12px 16px;border:none;border-bottom:1px solid rgba(201,169,106,.14);background:{{ r.bg }};color:#e9e2d4;text-align:left;cursor:pointer" style-hover="background:rgba(201,169,106,.08)">
+                <span style="width:8px;height:8px;transform:rotate(45deg);background:{{ r.color }}"></span>
+                <span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="font-family:'Cinzel',serif;font-size:15px;color:#f3e6c4">{{ r.name }}</span><sc-if value="{{ r.mine }}" hint-placeholder-val="{{ false }}"><span style="padding:2px 7px;border:1px solid rgba(79,179,255,.6);border-radius:2px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:.14em;color:#bfe4ff">CRÉATION</span></sc-if></span>
+                <span style="font-size:13px;color:{{ r.typeColor }}">{{ r.type }}</span>
+                <span style="font-size:13px;color:#a79c8a;text-align:right">{{ r.meta }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isForge }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:210px minmax(0,1fr);gap:18px;align-items:start">
+          <div style="position:sticky;top:0;display:flex;flex-direction:column;gap:10px">
+            <button onClick="{{ newDraft }}" style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.16em;color:#f3e6c4;background:linear-gradient(180deg,#3a2540,#1c1222);border:1px solid #c9a96a;border-radius:4px;padding:11px;cursor:pointer">+ NOUVELLE CRÉATION</button>
+            <span style="margin-top:6px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.22em;color:#a79c8a">MES CRÉATIONS</span>
+            <sc-for list="{{ myList }}" as="m" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:4px;border:1px solid {{ m.bd }};background:{{ m.bg }}">
+                <span style="width:8px;height:8px;flex:none;transform:rotate(45deg);background:{{ m.color }}"></span>
+                <button onClick="{{ m.open }}" style="flex:1;min-width:0;background:none;border:none;padding:0;text-align:left;cursor:pointer;color:#e9e2d4;display:flex;flex-direction:column;gap:1px"><span style="font-family:'Cinzel',serif;font-size:12.5px;color:#f3e6c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.name }}</span><span style="font-size:11.5px;color:#a79c8a">{{ m.kind }}</span></button>
+                <button onClick="{{ m.remove }}" title="Supprimer" style="background:none;border:none;color:#7d7368;cursor:pointer" style-hover="color:#e07aa8">×</button>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">
+              <sc-for list="{{ kinds }}" as="k" hint-placeholder-count="6">
+                <button onClick="{{ k.on }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:11px 12px;border-radius:5px;border:1px solid {{ k.bd }};background:{{ k.bg }};color:{{ k.col }};cursor:pointer;text-align:left;box-shadow:{{ k.glow }}">
+                  <span style="font-family:'Cinzel',serif;font-size:13px">{{ k.label }}</span><span style="font-size:11.5px;color:#a79c8a">{{ k.sub }}</span>
+                </button>
+              </sc-for>
+            </div>
+
+            <div style="padding:20px 22px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.2);display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Cinzel',serif;font-size:13px;color:#7cc6ff">I</span><span style="font-family:'Cinzel',serif;font-size:17px;color:#e8d3a0">Identité</span></div>
+              <input value="{{ d.name }}" onChange="{{ onName }}" placeholder="Nom de la création" style="padding:12px 14px;background:#0e0a14;border:1px solid rgba(201,169,106,.4);border-radius:3px;color:#f3e6c4;font-size:20px;outline:none;font-family:'Cinzel',serif">
+              <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">RARETÉ</span>
+                <div style="display:flex;flex-wrap:wrap;gap:6px">
+                  <sc-for list="{{ rarities }}" as="r" hint-placeholder-count="5">
+                    <button onClick="{{ r.on }}" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid {{ r.bd }};background:{{ r.bg }};color:{{ r.col }};font-family:'Cinzel',serif;font-size:11px;letter-spacing:.06em;cursor:pointer"><span style="width:7px;height:7px;transform:rotate(45deg);background:{{ r.c }}"></span>{{ r.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+                <sc-for list="{{ idFields }}" as="f" hint-placeholder-count="3">
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">{{ f.label }}</span>
+                    <sc-if value="{{ f.isStep }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;border:1px solid rgba(201,169,106,.35);border-radius:3px;background:#0e0a14"><button onClick="{{ f.minus }}" style="width:34px;height:36px;background:none;border:none;color:#e8d3a0;cursor:pointer;font-size:16px">−</button><span style="flex:1;text-align:center;font-size:15px">{{ f.display }}</span><button onClick="{{ f.plus }}" style="width:34px;height:36px;background:none;border:none;color:#e8d3a0;cursor:pointer;font-size:16px">+</button></div></sc-if>
+                    <sc-if value="{{ f.isToggle }}" hint-placeholder-val="{{ false }}"><button onClick="{{ f.on }}" style="display:flex;align-items:center;gap:10px;height:38px;padding:0 12px;background:#0e0a14;border:1px solid {{ f.bd }};border-radius:3px;color:#e9e2d4;cursor:pointer;font-size:14px;font-family:'Spectral',serif"><span style="width:30px;height:16px;border-radius:8px;background:{{ f.track }};position:relative;flex:none"><span style="position:absolute;top:2px;left:{{ f.knob }};width:12px;height:12px;border-radius:50%;background:#f3e6c4;transition:left .2s"></span></span>{{ f.text }}</button></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="padding:20px 22px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.2);display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Cinzel',serif;font-size:13px;color:#7cc6ff">II</span><span style="font-family:'Cinzel',serif;font-size:17px;color:#e8d3a0">Apparence</span><span style="flex:1"></span><span style="font-size:12.5px;color:#a79c8a;font-style:italic">Déposez l'illustration directement sur l'aperçu →</span></div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+                <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">CADRE</span>
+                  <div style="display:flex;gap:6px"><sc-for list="{{ frames }}" as="r" hint-placeholder-count="3"><button onClick="{{ r.on }}" style="flex:1;padding:8px 4px;border-radius:3px;border:1px solid {{ r.bd }};background:{{ r.bg }};color:{{ r.col }};font-family:'Cinzel',serif;font-size:11px;cursor:pointer">{{ r.label }}</button></sc-for></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">TEINTE</span>
+                  <div style="display:flex;gap:8px;align-items:center"><sc-for list="{{ tints }}" as="c" hint-placeholder-count="5"><button onClick="{{ c.on }}" title="{{ c.title }}" style="width:28px;height:28px;border-radius:50%;background:{{ c.c }};border:2px solid {{ c.bd }};cursor:pointer;font-family:'Cinzel',serif;font-size:8px;color:#0b0912">{{ c.txt }}</button></sc-for></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">AURA</span>
+                  <button onClick="{{ toggleHalo }}" style="display:flex;align-items:center;gap:10px;height:36px;padding:0 12px;background:#0e0a14;border:1px solid {{ halo.bd }};border-radius:3px;color:#e9e2d4;cursor:pointer;font-size:14px;font-family:'Spectral',serif"><span style="width:30px;height:16px;border-radius:8px;background:{{ halo.track }};position:relative;flex:none"><span style="position:absolute;top:2px;left:{{ halo.knob }};width:12px;height:12px;border-radius:50%;background:#f3e6c4;transition:left .2s"></span></span>Halo lumineux</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="padding:20px 22px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.2);display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Cinzel',serif;font-size:13px;color:#7cc6ff">III</span><span style="font-family:'Cinzel',serif;font-size:17px;color:#e8d3a0">Mécanique · {{ d.kind }}</span></div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px">
+                <sc-for list="{{ mechFields }}" as="f" hint-placeholder-count="4">
+                  <div style="display:flex;flex-direction:column;gap:6px;grid-column:{{ f.col }}">
+                    <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">{{ f.label }}</span>
+                    <sc-if value="{{ f.isStep }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;border:1px solid rgba(201,169,106,.35);border-radius:3px;background:#0e0a14"><button onClick="{{ f.minus }}" style="width:34px;height:36px;background:none;border:none;color:#e8d3a0;cursor:pointer;font-size:16px">−</button><span style="flex:1;text-align:center;font-size:15px">{{ f.display }}</span><button onClick="{{ f.plus }}" style="width:34px;height:36px;background:none;border:none;color:#e8d3a0;cursor:pointer;font-size:16px">+</button></div></sc-if>
+                    <sc-if value="{{ f.isChips }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ f.opts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.on }}" style="padding:6px 11px;border-radius:999px;border:1px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.col }};font-size:12.5px;cursor:pointer;font-family:'Spectral',serif">{{ o.label }}</button></sc-for></div></sc-if>
+                    <sc-if value="{{ f.isText }}" hint-placeholder-val="{{ false }}"><input value="{{ f.value }}" onChange="{{ f.onChange }}" style="height:38px;padding:0 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:14px;outline:none;font-family:'Spectral',serif"></sc-if>
+                    <sc-if value="{{ f.isToggle }}" hint-placeholder-val="{{ false }}"><button onClick="{{ f.on }}" style="display:flex;align-items:center;gap:10px;height:38px;padding:0 12px;background:#0e0a14;border:1px solid {{ f.bd }};border-radius:3px;color:#e9e2d4;cursor:pointer;font-size:14px;font-family:'Spectral',serif"><span style="width:30px;height:16px;border-radius:8px;background:{{ f.track }};position:relative;flex:none"><span style="position:absolute;top:2px;left:{{ f.knob }};width:12px;height:12px;border-radius:50%;background:#f3e6c4;transition:left .2s"></span></span>{{ f.text }}</button></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="padding:20px 22px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.2);display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font-family:'Cinzel',serif;font-size:13px;color:#7cc6ff">IV</span><span style="font-family:'Cinzel',serif;font-size:17px;color:#e8d3a0">Pouvoirs</span><span style="font-size:12.5px;color:#a79c8a;font-style:italic">Passifs : toujours actifs · Actifs : déclenchés par le porteur</span></div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ presets }}" as="p" hint-placeholder-count="6">
+                  <button onClick="{{ p.on }}" style="padding:7px 12px;border-radius:3px;border:1px dashed {{ p.bd }};background:transparent;color:{{ p.col }};font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.08em;cursor:pointer" style-hover="background:rgba(201,169,106,.1)">{{ p.label }}</button>
+                </sc-for>
+              </div>
+              <sc-if value="{{ noEffects }}" hint-placeholder-val="{{ false }}"><div style="padding:18px;text-align:center;border:1px dashed rgba(201,169,106,.3);border-radius:4px;color:#7d7368;font-style:italic;font-size:14px">Aucun pouvoir. Ajoutez-en un avec les raccourcis ci-dessus.</div></sc-if>
+              <sc-for list="{{ effects }}" as="e" hint-placeholder-count="2">
+                <div style="display:flex;flex-direction:column;gap:10px;padding:14px;background:#0e0a14;border:1px solid {{ e.bd }};border-left:3px solid {{ e.accent }};border-radius:4px">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div style="display:flex;border:1px solid rgba(201,169,106,.35);border-radius:3px;overflow:hidden">
+                      <button onClick="{{ e.setPassif }}" style="padding:5px 10px;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;background:{{ e.pBg }};color:{{ e.pCol }}">PASSIF</button>
+                      <button onClick="{{ e.setActif }}" style="padding:5px 10px;border:none;cursor:pointer;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;background:{{ e.aBg }};color:{{ e.aCol }}">ACTIF</button>
+                    </div>
+                    <span style="flex:1"></span>
+                    <button onClick="{{ e.up }}" title="Monter" style="width:26px;height:26px;background:none;border:1px solid rgba(201,169,106,.25);border-radius:3px;color:#a79c8a;cursor:pointer">↑</button>
+                    <button onClick="{{ e.down }}" title="Descendre" style="width:26px;height:26px;background:none;border:1px solid rgba(201,169,106,.25);border-radius:3px;color:#a79c8a;cursor:pointer">↓</button>
+                    <button onClick="{{ e.dup }}" title="Dupliquer" style="width:26px;height:26px;background:none;border:1px solid rgba(201,169,106,.25);border-radius:3px;color:#a79c8a;cursor:pointer">⧉</button>
+                    <button onClick="{{ e.remove }}" title="Supprimer" style="width:26px;height:26px;background:none;border:1px solid rgba(176,48,106,.45);border-radius:3px;color:#e07aa8;cursor:pointer">×</button>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+                    <label style="display:flex;flex-direction:column;gap:5px;font-family:'Cinzel',serif;font-size:9.5px;letter-spacing:.16em;color:#a79c8a">DÉCLENCHEUR
+                      <select value="{{ e.trigger }}" onChange="{{ e.onTrigger }}" style="height:34px;padding:0 8px;background:#16101c;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:13.5px;font-family:'Spectral',serif;letter-spacing:0"><sc-for list="{{ e.triggers }}" as="o" hint-placeholder-count="4"><option value="{{ o }}">{{ o }}</option></sc-for></select></label>
+                    <label style="display:flex;flex-direction:column;gap:5px;font-family:'Cinzel',serif;font-size:9.5px;letter-spacing:.16em;color:#a79c8a">EFFET
+                      <select value="{{ e.kind }}" onChange="{{ e.onKind }}" style="height:34px;padding:0 8px;background:#16101c;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:13.5px;font-family:'Spectral',serif;letter-spacing:0"><sc-for list="{{ effectKinds }}" as="o" hint-placeholder-count="6"><option value="{{ o }}">{{ o }}</option></sc-for></select></label>
+                    <label style="display:flex;flex-direction:column;gap:5px;font-family:'Cinzel',serif;font-size:9.5px;letter-spacing:.16em;color:#a79c8a">VALEUR
+                      <input value="{{ e.value }}" onChange="{{ e.onValue }}" placeholder="{{ e.ph }}" style="height:34px;padding:0 10px;background:#16101c;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:13.5px;outline:none;font-family:'Spectral',serif;letter-spacing:0"></label>
+                    <sc-if value="{{ e.isActif }}" hint-placeholder-val="{{ false }}">
+                      <div style="display:flex;flex-direction:column;gap:5px"><span style="font-family:'Cinzel',serif;font-size:9.5px;letter-spacing:.16em;color:#a79c8a">CHARGES</span>
+                        <div style="display:flex;align-items:center;height:34px;border:1px solid rgba(201,169,106,.35);border-radius:3px;background:#16101c"><button onClick="{{ e.chMinus }}" style="width:30px;height:100%;background:none;border:none;color:#e8d3a0;cursor:pointer">−</button><span style="flex:1;text-align:center;font-size:13.5px">{{ e.chText }}</span><button onClick="{{ e.chPlus }}" style="width:30px;height:100%;background:none;border:none;color:#e8d3a0;cursor:pointer">+</button></div></div>
+                      <label style="display:flex;flex-direction:column;gap:5px;font-family:'Cinzel',serif;font-size:9.5px;letter-spacing:.16em;color:#a79c8a">RECHARGE
+                        <select value="{{ e.recharge }}" onChange="{{ e.onRecharge }}" style="height:34px;padding:0 8px;background:#16101c;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:13.5px;font-family:'Spectral',serif;letter-spacing:0"><sc-for list="{{ recharges }}" as="o" hint-placeholder-count="4"><option value="{{ o }}">{{ o }}</option></sc-for></select></label>
+                    </sc-if>
+                  </div>
+                  <input value="{{ e.desc }}" onChange="{{ e.onDesc }}" placeholder="Description affichée au joueur (facultatif)" style="height:34px;padding:0 10px;background:#16101c;border:1px solid rgba(201,169,106,.25);border-radius:3px;color:#e9e2d4;font-size:13.5px;outline:none;font-family:'Spectral',serif;font-style:italic">
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="padding:20px 22px;background:linear-gradient(180deg,rgba(38,26,46,.94),rgba(17,12,23,.96));border:1px solid rgba(201,169,106,.5);border-radius:6px;box-shadow:inset 0 0 0 3px #0e0a14,inset 0 0 0 4px rgba(201,169,106,.2);display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'Cinzel',serif;font-size:13px;color:#7cc6ff">V</span><span style="font-family:'Cinzel',serif;font-size:17px;color:#e8d3a0">Récit</span></div>
+              <textarea rows="3" value="{{ d.lore }}" onChange="{{ onLore }}" placeholder="Légende, origine, rumeurs…" style="padding:12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:15px;outline:none;font-family:'Spectral',serif;font-style:italic;resize:vertical"></textarea>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="position:sticky;top:0;display:flex;flex-direction:column;gap:12px">
+      <div style="position:relative;display:flex;flex-direction:column;gap:12px;padding:16px;background:linear-gradient(180deg,#2a1b32,#120c18);border:{{ card.border }};border-radius:8px;box-shadow:{{ card.shadow }};transition:box-shadow .3s">
+        <sc-if value="{{ card.ornate }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:-6px;left:50%;margin-left:-6px;width:12px;height:12px;transform:rotate(45deg);background:{{ card.tint }};box-shadow:0 0 10px {{ card.tint }}"></div>
+          <div style="position:absolute;bottom:-6px;left:50%;margin-left:-6px;width:12px;height:12px;transform:rotate(45deg);background:{{ card.tint }};box-shadow:0 0 10px {{ card.tint }}"></div>
+        </sc-if>
+        <div style="height:190px;border-radius:4px;overflow:hidden;border:1px solid {{ card.tintSoft }}"><image-slot id="{{ card.artId }}" shape="rect" placeholder="Illustration"></image-slot></div>
+        <div>
+          <div style="font-family:'Cinzel',serif;font-size:22px;line-height:1.15;color:{{ card.tint }}">{{ card.name }}</div>
+          <div style="margin-top:4px;font-size:13.5px;font-style:italic;color:#a79c8a">{{ card.subtitle }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px"><div style="flex:1;height:1px;background:linear-gradient(90deg,{{ card.tint }},transparent)"></div><div style="width:6px;height:6px;transform:rotate(45deg);background:{{ card.tint }}"></div><div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,{{ card.tint }})"></div></div>
+        <sc-if value="{{ card.hasStat }}" hint-placeholder-val="{{ true }}"><div style="font-family:'Cinzel',serif;font-size:18px;color:#f3e6c4">{{ card.stat }}</div></sc-if>
+        <sc-for list="{{ card.lines }}" as="l" hint-placeholder-count="2">
+          <div style="display:flex;gap:10px;font-size:13.5px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;color:#a79c8a;min-width:96px;padding-top:2px">{{ l.k }}</span><span style="color:#e9e2d4">{{ l.v }}</span></div>
+        </sc-for>
+        <sc-if value="{{ card.hasTags }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-wrap:wrap;gap:5px"><sc-for list="{{ card.tags }}" as="t" hint-placeholder-count="2"><span style="padding:3px 8px;border:1px solid rgba(201,169,106,.35);border-radius:999px;font-size:11.5px;color:#d8cbb0">{{ t }}</span></sc-for></div></sc-if>
+        <sc-for list="{{ card.effects }}" as="e" hint-placeholder-count="0">
+          <div style="display:flex;flex-direction:column;gap:3px;padding:9px 10px;border-radius:4px;background:{{ e.bg }};border:1px solid {{ e.bd }}">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-family:'Cinzel',serif;font-size:9.5px;letter-spacing:.16em;color:{{ e.col }}">{{ e.tag }}</span><span style="font-size:12px;color:#a79c8a">{{ e.trig }}</span></div>
+            <div style="font-size:14px;color:#f3e6c4">{{ e.text }}</div>
+            <sc-if value="{{ e.hasDesc }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:#d8cbb0;font-style:italic">{{ e.desc }}</div></sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{ card.hasLore }}" hint-placeholder-val="{{ true }}"><p style="margin:0;font-size:14px;line-height:1.55;color:#d8cbb0;font-style:italic;text-wrap:pretty">{{ card.lore }}</p></sc-if>
+        <sc-if value="{{ card.hasFoot }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid rgba(201,169,106,.2);font-size:12.5px;color:#a79c8a"><span>{{ card.footL }}</span><span>{{ card.footR }}</span></div></sc-if>
+      </div>
+      <sc-if value="{{ isForge }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:{{ saveState.col }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ saveState.col }}"></span>{{ saveState.text }}</div>
+        <button onClick="{{ save }}" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.18em;color:#f3e6c4;background:linear-gradient(180deg,#4a2a4e,#211426);border:1px solid #c9a96a;border-radius:4px;padding:13px;cursor:pointer;box-shadow:inset 0 0 0 2px #120c18,inset 0 0 0 3px rgba(201,169,106,.3)" style-hover="box-shadow:inset 0 0 0 2px #120c18,inset 0 0 0 3px rgba(201,169,106,.3),0 0 22px rgba(79,179,255,.35)">ENREGISTRER DANS LE SANCTUAIRE</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button onClick="{{ duplicate }}" style="font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.14em;color:#e8d3a0;background:transparent;border:1px solid rgba(201,169,106,.45);border-radius:4px;padding:10px;cursor:pointer">DUPLIQUER</button>
+          <button onClick="{{ give }}" style="font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.14em;color:#bfe4ff;background:rgba(79,179,255,.08);border:1px solid rgba(79,179,255,.5);border-radius:4px;padding:10px;cursor:pointer">{{ giveLabel }}</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isLib }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button onClick="{{ libRoll }}" style="font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.14em;color:#f3e6c4;background:linear-gradient(180deg,#3a2540,#1c1222);border:1px solid #c9a96a;border-radius:4px;padding:10px;cursor:pointer;opacity:{{ libRollO }}">{{ libRollLabel }}</button>
+          <button onClick="{{ toForge }}" style="font-family:'Cinzel',serif;font-size:10.5px;letter-spacing:.14em;color:#e8d3a0;background:transparent;border:1px solid rgba(201,169,106,.45);border-radius:4px;padding:10px;cursor:pointer">{{ toForgeLabel }}</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ toast.show }}" hint-placeholder-val="{{ false }}"><div style="padding:10px 12px;border:1px solid #4fb3ff;background:rgba(29,47,74,.8);border-radius:4px;font-size:13.5px;color:#bfe4ff">{{ toast.text }}</div></sc-if>
+    </div>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;mj&quot;,&quot;joueur&quot;],&quot;default&quot;:&quot;mj&quot;,&quot;tsType&quot;:&quot;'mj'|'joueur'&quot;},&quot;onRoll&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(label:string,n:number,faces:number,mod:number)=&gt;void&quot;}}">
+const RAR=[['Commun','#a79c8a'],['Peu commun','#7cc6ff'],['Rare','#c9a96a'],['Très rare','#e07aa8'],['Légendaire','#f3e6c4']];
+const RC=Object.fromEntries(RAR);
+const TYPE_COL={Sort:'#7cc6ff',Monstre:'#e07aa8',Objet:'#e8d3a0'};
+const KINDS=[['Arme','Épées, arcs, bâtons'],['Armure','Armures et boucliers'],['Objet merveilleux','Anneaux, capes, reliques'],['Potion','Consommables'],['Sort','Magie personnalisée'],['Créature','PNJ et monstres']];
+const KIND_TYPE={Arme:'Objet',Armure:'Objet','Objet merveilleux':'Objet',Potion:'Objet',Sort:'Sort','Créature':'Monstre'};
+const TRIG_P=['Toujours','Quand équipé','Quand harmonisé','En présence de morts-vivants','En dessous de la moitié des PV'];
+const TRIG_A=['Action','Action bonus','Réaction','Sur un coup critique','Au toucher','Mot de commande'];
+const EFFECTS=['Dégâts supplémentaires','Soins','Bonus de CA','Bonus de caractéristique','Résistance','Immunité','Condition infligée','Lance un sort','Lumière','Vitesse','Avantage'];
+const RECH=['Aube','Repos court','Repos long','Jamais'];
+const MECH0={Arme:{n:1,f:8,dtype:'Tranchant',bonus:1,props:['Polyvalente']},Armure:{ca:14,atype:'Intermédiaire',bonus:0,stealth:false},'Objet merveilleux':{slot:'Cou',conso:false},Potion:{n:2,f:4,mod:2,ptype:'Soins'},
+  Sort:{lvl:3,school:'Évocation',cast:'1 action',range:'45 m',dur:'Instantanée',comps:['V','S'],conc:false,ritual:false},'Créature':{cr:'2',ac:13,hp:45,spd:'9 m',stats:[16,12,14,8,10,6]}};
+const blank=(kind)=>({id:'d'+Date.now(),kind,name:'',rarity:'Peu commun',attune:false,weight:1,price:100,mech:JSON.parse(JSON.stringify(MECH0[kind])),frame:'Runique',halo:false,tint:null,effects:[],lore:''});
+const D0={id:'d1',kind:'Arme',name:'Lame des Cendres',rarity:'Rare',attune:true,weight:1.5,price:2500,mech:{n:1,f:8,dtype:'Tranchant',bonus:1,props:['Polyvalente','Finesse']},frame:'Orné',halo:true,tint:null,
+  effects:[{id:'f1',mode:'Passif',trigger:'Quand harmonisé',kind:'Résistance',value:'Feu',charges:0,recharge:'Aube',desc:''},{id:'f2',mode:'Actif',trigger:'Action bonus',kind:'Dégâts supplémentaires',value:'2d6 feu',charges:3,recharge:'Aube',desc:"La lame s'embrase jusqu'à la fin de votre tour."}],
+  lore:"Forgée dans la lave du volcan de Valombre, elle murmure le nom de son premier porteur quand on la dégaine."};
+const D1={id:'d2',kind:'Objet merveilleux',name:'Cloche de Valombre',rarity:'Très rare',attune:true,weight:2,price:8000,mech:{slot:'Main',conso:false},frame:'Runique',halo:false,tint:'#7cc6ff',
+  effects:[{id:'f3',mode:'Actif',trigger:'Action',kind:'Condition infligée',value:'Effrayé, JS Sag DD 15',charges:1,recharge:'Aube',desc:'Tous les morts-vivants à 9 m doivent fuir.'}],lore:"Elle sonne seule à minuit, trois coups."};
+const COMP=[
+ {id:'boule',name:'Boule de feu',type:'Sort',meta:'Niv. 3',lines:[['École','Évocation'],['Portée','45 m'],['Durée','Instantanée']],desc:"Une perle incandescente file vers un point choisi puis éclate en une sphère de flammes de 6 m de rayon.",dmg:[8,6]},
+ {id:'proj',name:'Projectile magique',type:'Sort',meta:'Niv. 1',lines:[['École','Évocation'],['Portée','36 m']],desc:"Trois fléchettes de force touchent automatiquement leurs cibles.",dmg:[3,4]},
+ {id:'soins',name:'Soins',type:'Sort',meta:'Niv. 1',lines:[['École','Évocation'],['Portée','Contact']],desc:"Une créature touchée récupère des points de vie.",dmg:[1,8]},
+ {id:'bouclier',name:'Bouclier',type:'Sort',meta:'Niv. 1',lines:[['École','Abjuration'],['Temps','Réaction']],desc:"Une barrière invisible accorde +5 à la CA jusqu'au début de votre prochain tour."},
+ {id:'contre',name:'Contresort',type:'Sort',meta:'Niv. 3',lines:[['École','Abjuration'],['Temps','Réaction']],desc:"Vous interrompez une créature en train de lancer un sort."},
+ {id:'gob',name:'Gobelin',type:'Monstre',meta:'FP 1/4',lines:[['CA','15'],['PV','7 (2d6)'],['Vitesse','9 m']],desc:"Petit humanoïde rusé qui attaque en meute.",dmg:[1,6]},
+ {id:'hib',name:'Hibours',type:'Monstre',meta:'FP 3',lines:[['CA','13'],['PV','59'],['Vitesse','12 m']],desc:"Prédateur mi-ours mi-hibou, au cri perçant.",dmg:[2,8]},
+ {id:'drag',name:'Jeune dragon rouge',type:'Monstre',meta:'FP 10',lines:[['CA','18'],['PV','178'],['Souffle','Feu, cône 9 m']],desc:"Orgueilleux et cupide.",dmg:[16,6]},
+ {id:'liche',name:'Liche',type:'Monstre',meta:'FP 21',lines:[['CA','17'],['PV','135']],desc:"Un mage ayant scellé son âme dans un phylactère."},
+ {id:'epee',name:'Épée longue +1',type:'Objet',meta:'Peu commun',lines:[['Dégâts','1d8 + 1 tranchant'],['Poids','1,5 kg']],desc:"Une lame d'acier runique.",dmg:[1,8]},
+ {id:'potion',name:'Potion de soins',type:'Objet',meta:'Commun',lines:[['Effet','2d4 + 2 PV'],['Prix','50 po']],desc:"Un liquide rouge qui scintille.",dmg:[2,4]},
+ {id:'sac',name:'Sac sans fond',type:'Objet',meta:'Peu commun',lines:[['Capacité','250 kg'],['Poids','7 kg']],desc:"Bien plus vaste à l'intérieur qu'à l'extérieur."}
+];
+const chip=(on,c)=>on?{bg:'rgba(201,169,106,.18)',bd:c||'#c9a96a',col:'#f3e6c4'}:{bg:'transparent',bd:'rgba(201,169,106,.28)',col:'#a79c8a'};
+const tg=(on,bdOn)=>on?{bd:bdOn||'rgba(79,179,255,.5)',track:'#4fb3ff',knob:'16px'}:{bd:'rgba(201,169,106,.25)',track:'#2b2233',knob:'2px'};
+const hexA=(h,a)=>{const n=parseInt(h.slice(1),16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;};
+const fr=n=>String(n).replace('.',',');
+class Component extends DCLogic {
+  state={tab:'forge',q:'',type:'Tous',sel:'boule',mine:[D0,D1],draft:JSON.parse(JSON.stringify(D0)),dirty:false,toast:null};
+  upd(fn){this.setState(s=>{const d=JSON.parse(JSON.stringify(s.draft));fn(d);return{draft:d,dirty:true};});}
+  toast(t){clearTimeout(this._t);this.setState({toast:t});this._t=setTimeout(()=>this.setState({toast:null}),2200);}
+  componentWillUnmount(){clearTimeout(this._t);}
+  cardOf(d){const m=d.mech,tint=d.tint||RC[d.rarity];let stat='',lines=[],tags=[],sub='';
+    const rar=`${d.rarity.toLowerCase()}${d.attune?' (harmonisation requise)':''}`;
+    if(d.kind==='Arme'){stat=`${m.n}d${m.f}${m.bonus?' + '+m.bonus:''} ${m.dtype.toLowerCase()}`;sub=`Arme, ${rar}`;tags=m.props;if(m.bonus)lines.push({k:'BONUS',v:`+${m.bonus} aux jets d'attaque et de dégâts`});}
+    if(d.kind==='Armure'){stat=`CA ${m.ca}${m.bonus?' + '+m.bonus:''}`;sub=`Armure ${m.atype.toLowerCase()}, ${rar}`;if(m.stealth)tags=['Désavantage en Discrétion'];}
+    if(d.kind==='Objet merveilleux'){sub=`Objet merveilleux, ${rar}`;lines.push({k:'EMPLACEMENT',v:m.slot});if(m.conso)tags=['Consommable'];}
+    if(d.kind==='Potion'){stat=`${m.n}d${m.f} + ${m.mod} · ${m.ptype}`;sub=`Potion, ${rar}`;tags=['Consommable'];}
+    if(d.kind==='Sort'){stat=m.lvl===0?`Tour de magie · ${m.school}`:`Niveau ${m.lvl} · ${m.school}`;sub=`Sort ${m.school.toLowerCase()}`;lines=[{k:'INCANTATION',v:m.cast},{k:'PORTÉE',v:m.range},{k:'DURÉE',v:(m.conc?'Concentration, ':'')+m.dur},{k:'COMPOSANTES',v:m.comps.join(', ')||'—'}];if(m.ritual)tags=['Rituel'];}
+    if(d.kind==='Créature'){stat=`CA ${m.ac} · ${m.hp} PV · ${m.spd}`;sub=`Créature, FP ${m.cr}`;const K=['FOR','DEX','CON','INT','SAG','CHA'];lines=[{k:'CARAC.',v:m.stats.map((v,i)=>`${K[i]} ${v}`).join(' · ')}];}
+    const sh=d.frame==='Simple'?`0 14px 40px rgba(0,0,0,.55)`:d.frame==='Runique'?`inset 0 0 0 4px #120c18,inset 0 0 0 5px ${hexA(tint,.4)},0 14px 40px rgba(0,0,0,.55)`:`inset 0 0 0 5px #120c18,inset 0 0 0 6px ${hexA(tint,.6)},inset 0 0 0 9px #120c18,inset 0 0 0 10px ${hexA(tint,.3)},0 14px 40px rgba(0,0,0,.55)`;
+    return{name:d.name||'Sans nom',subtitle:sub,tint,tintSoft:hexA(tint,.35),border:`${d.frame==='Orné'?2:1}px solid ${hexA(tint,.75)}`,shadow:sh+(d.halo?`,0 0 46px ${hexA(tint,.45)}`:''),ornate:d.frame==='Orné',artId:'art-'+d.id,
+      hasStat:!!stat,stat,lines,hasTags:tags.length>0,tags,
+      effects:d.effects.map(e=>{const act=e.mode==='Actif';return{tag:act?'ACTIF':'PASSIF',col:act?'#7cc6ff':'#e8d3a0',bg:act?'rgba(79,179,255,.07)':'rgba(201,169,106,.07)',bd:act?'rgba(79,179,255,.3)':'rgba(201,169,106,.25)',
+        trig:e.trigger+(act&&e.charges?` · ${e.charges} charge${e.charges>1?'s':''} / ${e.recharge.toLowerCase()}`:''),text:e.kind+(e.value?' — '+e.value:''),hasDesc:!!e.desc,desc:e.desc};}),
+      hasLore:!!d.lore,lore:d.lore,hasFoot:d.kind!=='Sort'&&d.kind!=='Créature',footL:`${fr(d.weight)} kg`,footR:`${d.price.toLocaleString('fr-FR')} po`};}
+  renderVals(){
+    const s=this.state,d=s.draft,m=d.mech,isMJ=(this.props.role??'mj')==='mj';
+    const lib=[...COMP.map(c=>({...c,mine:false})),...s.mine.map(x=>({id:x.id,name:x.name||'Sans nom',type:KIND_TYPE[x.kind],meta:x.kind==='Sort'?`Niv. ${x.mech.lvl}`:x.kind==='Créature'?`FP ${x.mech.cr}`:x.rarity,mine:true,src:x}))];
+    const u=s.q.trim().toLowerCase();
+    const res=lib.filter(c=>(s.type==='Tous'||(s.type==='Mes créations'?c.mine:c.type===s.type))&&(!u||c.name.toLowerCase().includes(u)));
+    const e=lib.find(c=>c.id===s.sel)||lib[0];
+    let card;
+    if(s.tab==='forge')card=this.cardOf(d);
+    else if(e.mine)card=this.cardOf(e.src);
+    else{const tint=TYPE_COL[e.type];card={name:e.name,subtitle:`${e.type} · ${e.meta}`,tint,tintSoft:hexA(tint,.35),border:`1px solid ${hexA(tint,.7)}`,shadow:`inset 0 0 0 4px #120c18,inset 0 0 0 5px ${hexA(tint,.35)},0 14px 40px rgba(0,0,0,.55)`,ornate:false,artId:'lib-'+e.id,
+      hasStat:false,stat:'',lines:e.lines.map(([k,v])=>({k:k.toUpperCase(),v})),hasTags:false,tags:[],effects:[],hasLore:true,lore:e.desc,hasFoot:false};}
+    const setM=(k,v)=>this.upd(x=>{x.mech[k]=v;});
+    const step=(label,get,set,min,max,stepv,fmt)=>({label,isStep:true,display:fmt?fmt(get):get,minus:()=>set(Math.max(min,+(get-stepv).toFixed(2))),plus:()=>set(Math.min(max,+(get+stepv).toFixed(2))),col:'auto'});
+    const chips=(label,key,opts,multi,full)=>({label,isChips:true,col:full?'1 / -1':'auto',opts:opts.map(o=>{const on=multi?m[key].includes(o):m[key]===o;return{label:o,...chip(on),on:()=>this.upd(x=>{x.mech[key]=multi?(on?x.mech[key].filter(y=>y!==o):[...x.mech[key],o]):o;})};})});
+    const text=(label,key)=>({label,isText:true,col:'auto',value:m[key],onChange:ev=>setM(key,ev.target.value)});
+    const toggle=(label,key,txt)=>({label,isToggle:true,col:'auto',text:txt,...tg(m[key]),on:()=>setM(key,!m[key])});
+    let mechFields=[];
+    if(d.kind==='Arme')mechFields=[step('NOMBRE DE DÉS',m.n,v=>setM('n',v),1,10,1),chips('DÉ','f',[4,6,8,10,12]),step('BONUS MAGIQUE',m.bonus,v=>setM('bonus',v),0,3,1,v=>'+'+v),chips('TYPE DE DÉGÂTS','dtype',['Tranchant','Perforant','Contondant','Feu','Froid','Foudre','Nécrotique','Radiant'],false,true),chips('PROPRIÉTÉS','props',['Finesse','Légère','Lourde','Deux mains','Polyvalente','Portée','Lancer','Allonge'],true,true)];
+    if(d.kind==='Armure')mechFields=[step('CA DE BASE',m.ca,v=>setM('ca',v),10,20,1),step('BONUS MAGIQUE',m.bonus,v=>setM('bonus',v),0,3,1,v=>'+'+v),chips('CATÉGORIE','atype',['Légère','Intermédiaire','Lourde','Bouclier']),toggle('DISCRÉTION','stealth','Désavantage')];
+    if(d.kind==='Objet merveilleux')mechFields=[chips('EMPLACEMENT','slot',['Tête','Cou','Épaules','Mains','Doigt','Taille','Pieds','Main'],false,true),toggle('USAGE','conso','Consommable')];
+    if(d.kind==='Potion')mechFields=[step('NOMBRE DE DÉS',m.n,v=>setM('n',v),1,10,1),chips('DÉ','f',[4,6,8,10]),step('MODIFICATEUR',m.mod,v=>setM('mod',v),0,20,1,v=>'+'+v),chips('EFFET','ptype',['Soins','Résistance','Force de géant','Invisibilité','Vol'],false,true)];
+    if(d.kind==='Sort')mechFields=[step('NIVEAU',m.lvl,v=>setM('lvl',v),0,9,1,v=>v===0?'Tour de magie':String(v)),chips('ÉCOLE','school',['Abjuration','Divination','Enchantement','Évocation','Illusion','Invocation','Nécromancie','Transmutation'],false,true),text('TEMPS D\'INCANTATION','cast'),text('PORTÉE','range'),text('DURÉE','dur'),chips('COMPOSANTES','comps',['V','S','M'],true),toggle('CONCENTRATION','conc','Requise'),toggle('RITUEL','ritual','Peut être rituel')];
+    if(d.kind==='Créature'){mechFields=[chips('FACTEUR DE PUISSANCE','cr',['1/4','1/2','1','2','3','5','8','10','15','20'],false,true),step('CLASSE D\'ARMURE',m.ac,v=>setM('ac',v),5,25,1),step('POINTS DE VIE',m.hp,v=>setM('hp',v),1,500,5),text('VITESSE','spd')];
+      ['FOR','DEX','CON','INT','SAG','CHA'].forEach((k,i)=>mechFields.push(step(k,m.stats[i],v=>this.upd(x=>{x.mech.stats[i]=v;}),1,30,1,v=>`${v} (${Math.floor((v-10)/2)>=0?'+':''}${Math.floor((v-10)/2)})`)));}
+    const idFields=[];
+    if(d.kind!=='Sort'&&d.kind!=='Créature'){idFields.push(step('POIDS',d.weight,v=>this.upd(x=>{x.weight=v;}),0,100,.5,v=>fr(v)+' kg'));idFields.push(step('PRIX',d.price,v=>this.upd(x=>{x.price=v;}),0,100000,50,v=>v.toLocaleString('fr-FR')+' po'));
+      idFields.push({label:'HARMONISATION',isToggle:true,text:'Requise',...tg(d.attune),on:()=>this.upd(x=>{x.attune=!x.attune;})});}
+    const mkE=(o)=>({id:'f'+Date.now()+Math.random(),mode:'Passif',trigger:'Quand équipé',kind:'Bonus de CA',value:'',charges:0,recharge:'Aube',desc:'',...o});
+    const addE=o=>this.upd(x=>{x.effects.push(mkE(o));});
+    const n=d.effects.length;
+    return{
+      heading:s.tab==='forge'?'La Forge':'Bibliothèque',isLib:s.tab==='lib',isForge:s.tab==='forge',
+      tabs:[['lib','BIBLIOTHÈQUE'],['forge','FORGE · CRÉER']].map(([k,label])=>({label,on:()=>this.setState({tab:k}),bg:s.tab===k?'rgba(201,169,106,.2)':'transparent',col:s.tab===k?'#f3e6c4':'#a79c8a'})),
+      q:s.q,onQ:ev=>this.setState({q:ev.target.value}),
+      typeChips:['Tous','Sort','Monstre','Objet','Mes créations'].map(t=>({label:t==='Tous'||t==='Mes créations'?t:t+'s',on:()=>this.setState({type:t}),...chip(s.type===t)})),
+      resultCount:`${res.length} entrée${res.length>1?'s':''}`,
+      results:res.map(c=>({name:c.name,type:c.type,meta:c.meta,mine:c.mine,color:TYPE_COL[c.type],typeColor:TYPE_COL[c.type],bg:c.id===e.id?'rgba(201,169,106,.12)':'transparent',on:()=>this.setState({sel:c.id})})),
+      card,
+      libRollLabel:e.dmg?`LANCER ${e.dmg[0]}D${e.dmg[1]}`:'AUCUN JET',libRollO:e.dmg?1:.4,
+      libRoll:()=>{if(e.dmg&&this.props.onRoll)this.props.onRoll(e.name,e.dmg[0],e.dmg[1],0);else if(e.dmg)this.toast(`${e.name} : ${Array.from({length:e.dmg[0]},()=>1+Math.floor(Math.random()*e.dmg[1])).reduce((a,b)=>a+b,0)}`);},
+      toForgeLabel:e.mine?'MODIFIER':'COPIER DANS LA FORGE',
+      toForge:()=>{if(e.mine){this.setState({tab:'forge',draft:JSON.parse(JSON.stringify(e.src)),dirty:false});return;}
+        const kind=e.type==='Sort'?'Sort':e.type==='Monstre'?'Créature':'Objet merveilleux';const b=blank(kind);b.name=e.name+' (variante)';b.lore=e.desc;this.setState({tab:'forge',draft:b,dirty:true});},
+      newDraft:()=>this.setState({draft:blank(d.kind),dirty:false}),
+      myList:s.mine.map(x=>({name:x.name||'Sans nom',kind:x.kind,color:x.tint||RC[x.rarity],bd:x.id===d.id?'#c9a96a':'rgba(201,169,106,.18)',bg:x.id===d.id?'rgba(201,169,106,.1)':'#0e0a14',
+        open:()=>this.setState({draft:JSON.parse(JSON.stringify(x)),dirty:false}),remove:()=>this.setState(st=>({mine:st.mine.filter(y=>y.id!==x.id)}))})),
+      kinds:KINDS.map(([k,sub])=>{const on=d.kind===k;return{label:k,sub,on:()=>{if(on)return;this.upd(x=>{x.kind=k;x.mech=JSON.parse(JSON.stringify(MECH0[k]));});},bd:on?'#c9a96a':'rgba(201,169,106,.25)',bg:on?'linear-gradient(180deg,rgba(74,42,78,.6),rgba(33,20,38,.6))':'#0e0a14',col:on?'#f3e6c4':'#d8cbb0',glow:on?'0 0 18px rgba(79,179,255,.2)':'none'};}),
+      d,onName:ev=>{const v=ev.target.value;this.upd(x=>{x.name=v;});},onLore:ev=>{const v=ev.target.value;this.upd(x=>{x.lore=v;});},
+      rarities:RAR.map(([r,c])=>({label:r,c,on:()=>this.upd(x=>{x.rarity=r;}),...chip(d.rarity===r,c)})),
+      idFields,mechFields,
+      frames:['Simple','Runique','Orné'].map(f=>({label:f,on:()=>this.upd(x=>{x.frame=f;}),...chip(d.frame===f)})),
+      tints:[[null,'Auto'],['#c9a96a',''],['#7cc6ff',''],['#e07aa8',''],['#b9a4e0','']].map(([c,txt])=>({c:c||RC[d.rarity],txt,title:c?c:'Couleur de rareté',bd:d.tint===c?'#f3e6c4':'transparent',on:()=>this.upd(x=>{x.tint=c;})})),
+      halo:tg(d.halo),toggleHalo:()=>this.upd(x=>{x.halo=!x.halo;}),
+      presets:[{label:'+ PASSIF',o:{mode:'Passif'}},{label:'+ POUVOIR ACTIF',o:{mode:'Actif',trigger:'Action',kind:'Dégâts supplémentaires',charges:3}},{label:'Résistance au feu',o:{mode:'Passif',trigger:'Quand harmonisé',kind:'Résistance',value:'Feu'}},{label:'+1 CA',o:{mode:'Passif',trigger:'Quand équipé',kind:'Bonus de CA',value:'+1'}},{label:'Lance un sort',o:{mode:'Actif',trigger:'Action',kind:'Lance un sort',value:'Boule de feu (DD 15)',charges:1}},{label:'Lumière',o:{mode:'Actif',trigger:'Mot de commande',kind:'Lumière',value:'Vive 6 m, faible 6 m',charges:0,recharge:'Jamais'}}]
+        .map((p,i)=>({label:p.label,bd:i<2?'#c9a96a':'rgba(201,169,106,.4)',col:i<2?'#f3e6c4':'#d8cbb0',on:()=>addE(p.o)})),
+      noEffects:n===0,effectKinds:EFFECTS,recharges:RECH,
+      effects:d.effects.map((ef,i)=>{const act=ef.mode==='Actif',set=o=>this.upd(x=>{Object.assign(x.effects[i],o);});
+        return{...ef,isActif:act,triggers:act?TRIG_A:TRIG_P,accent:act?'#4fb3ff':'#c9a96a',bd:act?'rgba(79,179,255,.3)':'rgba(201,169,106,.25)',
+          pBg:!act?'rgba(201,169,106,.22)':'transparent',pCol:!act?'#f3e6c4':'#7d7368',aBg:act?'rgba(79,179,255,.22)':'transparent',aCol:act?'#bfe4ff':'#7d7368',
+          setPassif:()=>set({mode:'Passif',trigger:TRIG_P.includes(ef.trigger)?ef.trigger:'Quand équipé'}),setActif:()=>set({mode:'Actif',trigger:TRIG_A.includes(ef.trigger)?ef.trigger:'Action',charges:ef.charges||1}),
+          onTrigger:ev=>set({trigger:ev.target.value}),onKind:ev=>set({kind:ev.target.value}),onValue:ev=>set({value:ev.target.value}),onRecharge:ev=>set({recharge:ev.target.value}),onDesc:ev=>set({desc:ev.target.value}),
+          ph:ef.kind==='Dégâts supplémentaires'?'ex. 1d6 feu':ef.kind==='Résistance'?'ex. Feu':ef.kind==='Lance un sort'?'ex. Bouclier':'Valeur',
+          chText:ef.charges?String(ef.charges):'Illimité',chMinus:()=>set({charges:Math.max(0,ef.charges-1)}),chPlus:()=>set({charges:Math.min(20,ef.charges+1)}),
+          up:()=>{if(i>0)this.upd(x=>{const t=x.effects[i];x.effects[i]=x.effects[i-1];x.effects[i-1]=t;});},down:()=>{if(i<n-1)this.upd(x=>{const t=x.effects[i];x.effects[i]=x.effects[i+1];x.effects[i+1]=t;});},
+          dup:()=>this.upd(x=>{x.effects.splice(i+1,0,{...x.effects[i],id:'f'+Date.now()});}),remove:()=>this.upd(x=>{x.effects.splice(i,1);})};}),
+      saveState:s.dirty?{text:'Modifications non enregistrées',col:'#e8d3a0'}:{text:'Enregistré',col:'#7cc6ff'},
+      save:()=>{const dd={...d,name:d.name.trim()||'Sans nom'};this.setState(st=>({mine:st.mine.some(x=>x.id===dd.id)?st.mine.map(x=>x.id===dd.id?dd:x):[dd,...st.mine],draft:dd,dirty:false}));this.toast(`« ${dd.name} » rejoint le Sanctuaire.`);},
+      duplicate:()=>{const c=JSON.parse(JSON.stringify(d));c.id='d'+Date.now();c.name=(d.name||'Sans nom')+' (copie)';this.setState({draft:c,dirty:true});},
+      giveLabel:isMJ?'DONNER À UN JOUEUR':'AJOUTER À MA FICHE',give:()=>this.toast(isMJ?`« ${d.name||'Sans nom'} » envoyé à Elowen.`:`« ${d.name||'Sans nom'} » ajouté à votre inventaire.`),
+      toast:s.toast?{show:true,text:s.toast}:{show:false}
+    };
+  }
+}
+</script>
+</body>
+</html>

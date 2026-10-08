@@ -41,11 +41,11 @@ status: draft
 
 ## Indicateurs de succès (MVP)
 
-| Indicateur | Cible |
-|---|---|
-| Une campagne réelle jouée de bout en bout par nous deux + un groupe test | ≥ 3 sessions consécutives |
-| Temps pour créer un PJ niveau 1 | < 10 min |
-| Temps pour créer un lien dans la Constellation | < 5 s, ≤ 3 interactions |
-| Temps pour retrouver « quand a-t-on rencontré X ? » | < 10 s |
-| Fluidité du tracker de combat (action → écran des autres joueurs) | < 300 ms p95 |
-| Constellation 3D | 60 fps jusqu'à 500 nœuds, utilisable à 2000 |
+| Indicateur                                                               | Cible                                       |
+| ------------------------------------------------------------------------ | ------------------------------------------- |
+| Une campagne réelle jouée de bout en bout par nous deux + un groupe test | ≥ 3 sessions consécutives                   |
+| Temps pour créer un PJ niveau 1                                          | < 10 min                                    |
+| Temps pour créer un lien dans la Constellation                           | < 5 s, ≤ 3 interactions                     |
+| Temps pour retrouver « quand a-t-on rencontré X ? »                      | < 10 s                                      |
+| Fluidité du tracker de combat (action → écran des autres joueurs)        | < 300 ms p95                                |
+| Constellation 3D                                                         | 60 fps jusqu'à 500 nœuds, utilisable à 2000 |
