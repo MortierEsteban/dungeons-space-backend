@@ -1,5 +1,5 @@
 import type { CombatEventEnvelope } from '@ds/shared';
-import { lazy, Suspense, useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useLocalPref, useMediaQuery } from '../../shared/hooks';
 import { useDice } from '../../shared/dice/DiceProvider';
@@ -11,7 +11,7 @@ import { useCampaignCharacters } from '../character/api';
 import { useCombat, type CommandInput } from './api';
 import { Board, type BoardProps, type FloatText, type Tool, type ToolOptions } from './Board';
 import { Replay } from './Replay';
-import { FX_DURATION, hasWebGL, type AttackFx } from './scene/support';
+import { FX_DURATION, hasWebGL, withCharacterModels, type AttackFx } from './scene/support';
 import { ActionBar, CombatLog, GmSetup, InitiativeBar, Inspector, Toolbar, ToolOptionsPanel, TrackerList } from './panels';
 import s from './combat.module.css';
 
@@ -64,7 +64,10 @@ export default function BattlePage() {
     },
     [dice, three],
   );
-  const { state, log, error, send: rawSend } = useCombat(encounterId, onEvents);
+  const { state: rawState, log, error, send: rawSend } = useCombat(encounterId, onEvents);
+  // Les modèles 3D des PJ viennent de leur fiche, tenue à jour en temps réel.
+  const characterModels = useMemo(() => new Map(characters.map((c) => [c.id, c.modelUrl])), [characters]);
+  const state = useMemo(() => rawState && withCharacterModels(rawState, characterModels), [rawState, characterModels]);
   const send = (cmd: CommandInput) => void rawSend(cmd);
 
   const [view, setView] = useState<'board' | 'tracker' | 'replay'>(narrow ? 'tracker' : 'board');
@@ -145,7 +148,7 @@ export default function BattlePage() {
         )}
       </div>
       {view === 'replay' ? (
-        <Replay encounterId={encounterId} isGm={isGm} userId={userId} three={three} />
+        <Replay encounterId={encounterId} isGm={isGm} userId={userId} three={three} characterModels={characterModels} />
       ) : (
         <>
       <InitiativeBar state={state} isGm={isGm} canEndTurn={!!active && active.ownerUserId === userId} onSelect={setSelected} send={send} />

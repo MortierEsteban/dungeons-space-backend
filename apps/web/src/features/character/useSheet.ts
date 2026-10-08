@@ -34,7 +34,7 @@ export function useSheet(character: CharacterDto) {
       m.update.mutate({ portraitUrl: url }, { onError });
     },
     setModel(url: string | null) {
-      m.update.mutate({ modelUrl: url }, { onError, onSuccess: () => toast(url ? 'Modèle 3D enregistré : il apparaîtra au prochain combat.' : 'Retour au jeton simple.', 'success') });
+      m.update.mutate({ modelUrl: url }, { onError, onSuccess: () => toast(url ? 'Modèle 3D enregistré : il apparaît sur le plateau, combats en cours compris.' : 'Retour au jeton simple.', 'success') });
     },
     updateNpc: (patch: Partial<NonNullable<CharacterDto['npc']>>) => m.update.mutate({ npc: patch }, { onError }),
     remove: m.remove,

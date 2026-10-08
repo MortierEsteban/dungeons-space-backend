@@ -23,8 +23,11 @@ son flux de travail : importer une carte en image (vue de dessus), puis la retou
   ou inspecteur du combat). Sans modèle, la créature est un **jeton simple** (pièce aux couleurs du camp, portrait ou initiales).
   Le modèle est mis à l'échelle de la case, posé au sol, orienté dans le sens de la marche, et joue ses clips `idle`/`walk`/`death`
   s'il en possède. Un modèle illisible retombe sur le jeton (frontière d'erreur), jamais sur un écran blanc.
-- Données : colonne `characters.model_url` (modèle par défaut du PJ) et champ facultatif `modelUrl` du combattant, modifié par la
-  commande `set_model` (propriétaire ou MJ) → événement `combat.combatant_updated`. Les anciens combats restent rejouables.
+- Données : colonne `characters.model_url` et champ facultatif `modelUrl` du combattant (commande `set_model`, propriétaire ou MJ →
+  événement `combat.combatant_updated`). **Pour un PJ, la fiche fait foi en direct** : le plateau affiche le modèle de la fiche, y compris
+  dans un combat déjà engagé, et le met à jour chez tous via la notification temps réel des personnages. Le champ du combattant sert
+  aux créatures (bestiaire) et de repli. Les anciens combats restent rejouables.
+- Mise à l'échelle : la hauteur prime (1,2 case pour une créature M) ; une arme peut déborder jusqu'à 1,6 case de large.
 
 ## Sécurité
 - Le serveur reconnaît un GLB par sa signature (jamais par l'extension), vérifie la version, la longueur et le bloc JSON, et **refuse

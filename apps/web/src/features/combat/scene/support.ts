@@ -1,3 +1,5 @@
+import type { CombatState } from '@ds/rules';
+
 /**
  * Ce que la page de combat doit savoir du plateau 3D sans le charger :
  * ce module n'importe pas three.js (le moteur reste dans le morceau chargé à la demande).
@@ -27,4 +29,20 @@ export function hasWebGL(): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Le modèle d'un PJ suit sa fiche en direct (même s'il est déjà engagé dans un combat) ;
+ * les autres créatures gardent celui choisi dans le combat. Renvoie le même objet si rien ne change.
+ */
+export function withCharacterModels(state: CombatState, models: ReadonlyMap<string, string | null>): CombatState {
+  let combatants: CombatState['combatants'] | null = null;
+  for (const c of Object.values(state.combatants)) {
+    if (!c.characterId || !models.has(c.characterId)) continue;
+    const modelUrl = models.get(c.characterId) ?? c.modelUrl ?? null;
+    if (modelUrl === (c.modelUrl ?? null)) continue;
+    combatants ??= { ...state.combatants };
+    combatants[c.id] = { ...c, modelUrl };
+  }
+  return combatants ? { ...state, combatants } : state;
 }

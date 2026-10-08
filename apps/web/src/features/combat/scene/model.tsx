@@ -1,13 +1,11 @@
 import { useAnimations, useGLTF } from '@react-three/drei';
 import { Component, useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { Box3, Color, LoopOnce, Mesh, Vector3, type AnimationAction, type Group, type Material, type Object3D } from 'three';
+import { Color, LoopOnce, Mesh, type AnimationAction, type Group, type Material, type Object3D } from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { fitModel } from './fit';
 
 /** Décodeur Draco servi localement (aucune ressource tierce). */
 const DRACO_PATH = '/draco/';
-
-/** Hauteur visée d'une créature de taille M, en cases (≈ 1,8 m pour une case de 1,5 m). */
-const HUMAN_HEIGHT = 1.2;
 
 export type ModelPose = 'idle' | 'walk' | 'dead';
 
@@ -48,14 +46,7 @@ export function FittedModel({ url, size, pose, ghost, dim }: Props) {
         o.frustumCulled = false;
       }
     });
-    const box = new Box3().setFromObject(object);
-    const dims = box.getSize(new Vector3());
-    const height = Math.max(dims.y, 1e-3);
-    const width = Math.max(dims.x, dims.z, 1e-3);
-    const target = HUMAN_HEIGHT * (size === 1 ? 1 : 0.75 + size * 0.45);
-    const scale = Math.min(target / height, (0.95 * size) / width);
-    const center = box.getCenter(new Vector3());
-    return { object, scale, offset: new Vector3(-center.x * scale, -box.min.y * scale, -center.z * scale) };
+    return { object, ...fitModel(object, size) };
   }, [scene, size]);
 
   useEffect(

@@ -5,7 +5,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { http } from '../../shared/api/client';
 import { Button, Loading, Panel, Select } from '../../shared/ui/components';
 import { Board, type BoardProps, type ToolOptions } from './Board';
-import { FX_DURATION, type AttackFx } from './scene/support';
+import { FX_DURATION, withCharacterModels, type AttackFx } from './scene/support';
 
 const Board3D = lazy(() => import('./scene/Board3D'));
 import { CombatLog, InitiativeBar } from './panels';
@@ -23,7 +23,7 @@ const NO_OPTIONS: ToolOptions = { brush: 'wall', zone: { shape: 'circle', size: 
  * Lecteur de replay « façon Chess.com » (CMB-61/62/63) : l'état à l'instant N est
  * reconstruit en rejouant les N premiers événements avec le réducteur partagé.
  */
-export function Replay({ encounterId, isGm, userId, three = false }: { encounterId: string; isGm: boolean; userId: string; three?: boolean }) {
+export function Replay({ encounterId, isGm, userId, three = false, characterModels }: { encounterId: string; isGm: boolean; userId: string; three?: boolean; characterModels?: ReadonlyMap<string, string | null> }) {
   const { data: stream, isLoading } = useQuery({
     queryKey: ['encounter', encounterId, 'stream'],
     queryFn: async () => (await http.get<{ events: CombatEventEnvelope[] }>(`/encounters/${encounterId}/events`)).events,
@@ -58,7 +58,10 @@ export function Replay({ encounterId, isGm, userId, three = false }: { encounter
     if (playing && index >= events.length) setPlaying(false);
   }, [playing, index, events.length]);
 
-  const state: CombatState | null = useMemo(() => replayCombat(events, index), [events, index]);
+  const state: CombatState | null = useMemo(() => {
+    const s = replayCombat(events, index);
+    return s && characterModels ? withCharacterModels(s, characterModels) : s;
+  }, [events, index, characterModels]);
 
   // En avançant pas à pas, les attaques rejouées retrouvent leur projectile.
   const [effects, setEffects] = useState<AttackFx[]>([]);

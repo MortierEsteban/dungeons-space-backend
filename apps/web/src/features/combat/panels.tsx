@@ -11,11 +11,14 @@ import {
   type ZoneShape,
 } from '@ds/rules';
 import type { CharacterSummaryDto, CombatEventEnvelope } from '@ds/shared';
+import { useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import { errorMessage, http, qk } from '../../shared/api/client';
 import { num } from '../../shared/format';
 import { Bar, Button, Chip, cx, IconButton, Input, Select, Stepper, Toggle } from '../../shared/ui/components';
-import { http } from '../../shared/api/client';
 import { ImageDrop } from '../../shared/ui/ImageDrop';
+import { useToast } from '../../shared/ui/toast';
+import { useCurrentCampaign } from '../campaigns/CampaignContext';
 import type { CommandInput } from './api';
 import { ModelDrop } from './ModelDrop';
 import { conditionColor, OBJECT_META, TERRAIN_META, type Tool, type ToolOptions } from './Board';
@@ -81,6 +84,9 @@ export function Inspector({ state, combatantId, objectId, isGm, userId, send, on
   onAttack(attackerId: string): void;
 }) {
   const [amount, setAmount] = useState(5);
+  const { campaignId } = useCurrentCampaign();
+  const client = useQueryClient();
+  const toast = useToast();
   const c = combatantId ? state.combatants[combatantId] : null;
   const o = objectId ? state.map.objects.find((x) => x.id === objectId) : null;
   if (!c && !o) return null;
@@ -185,8 +191,12 @@ export function Inspector({ state, combatantId, objectId, isGm, userId, send, on
             preview={false}
             onChange={(url) => {
               send({ type: 'set_model', combatantId: cc.id, modelUrl: url });
-              // Le modèle d'un PJ est aussi mémorisé sur sa fiche pour les combats suivants.
-              if (cc.characterId) void http.patch(`/characters/${cc.characterId}`, { modelUrl: url }).catch(() => undefined);
+              // Pour un PJ, la fiche fait foi : tous les plateaux (et les combats suivants) la suivent.
+              if (cc.characterId)
+                http
+                  .patch(`/characters/${cc.characterId}`, { modelUrl: url })
+                  .then(() => void (campaignId && client.invalidateQueries({ queryKey: qk.characters(campaignId) })))
+                  .catch((e: unknown) => toast(errorMessage(e), 'error'));
             }}
           />
         </details>

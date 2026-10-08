@@ -7,6 +7,7 @@ import { cx } from '../../../shared/ui/components';
 import type { FloatText } from '../Board';
 import s from '../combat.module.css';
 import { footprintCenter, type Frame } from './coords';
+import { modelHeight } from './fit';
 import { FittedModel, ModelBoundary, type ModelPose } from './model';
 import { beaconMaterial, useAnimatedMaterial, useDisposable } from './shaders';
 import { loadImage, SIDE_COLOR, tokenFace } from './textures';
@@ -151,7 +152,7 @@ export function Piece({ c, frame, selected, active, targeting, veiled, floats, o
   const color = SIDE_COLOR[c.side];
   const r = 0.4 * c.size;
   const pose: ModelPose = dead ? 'dead' : moving ? 'walk' : 'idle';
-  const head = c.modelUrl ? 1.25 * (c.size === 1 ? 1 : 0.75 + c.size * 0.45) + 0.2 : 0.42 + (active ? 0.12 : 0);
+  const head = c.modelUrl ? modelHeight(c.size) + 0.25 : 0.42 + (active ? 0.12 : 0);
   const pct = hpPct(c);
   const coin = <Coin c={c} dim={dead} ghost={veiled} />;
 
