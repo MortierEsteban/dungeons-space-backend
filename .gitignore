@@ -136,3 +136,19 @@ GitHub.sublime-settings
 !.vscode/launch.json 
 !.vscode/extensions.json 
 .history
+
+# Obsidian (config locale)
+docs/.obsidian/workspace*.json
+
+# Rust
+target/
+
+# Node / monorepo TypeScript
+node_modules/
+apps/*/dist/
+packages/*/dist/
+.data/
+*.tsbuildinfo
+# Les dossiers « lib/ » ignorés plus haut (Python) ne concernent pas les sources TS
+!apps/**/lib/
+!packages/**/lib/

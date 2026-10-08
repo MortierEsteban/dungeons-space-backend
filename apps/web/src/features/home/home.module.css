@@ -1,0 +1,440 @@
+/* ───────────── Accueil immersif ───────────── */
+.immersive {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--night);
+}
+.blurBg {
+  position: absolute;
+  inset: -40px;
+  background: url('/assets/accueil-960.webp') center / cover no-repeat;
+  filter: blur(30px) brightness(0.45);
+}
+.stage {
+  position: relative;
+  width: min(100vw, 150vh);
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  container-type: inline-size;
+  animation: ds-in 1.6s ease-out both;
+}
+.layer {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.4s ease-out;
+}
+.art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Masque la navigation peinte dans l'illustration : la vraie navigation est interactive. */
+.sideMask {
+  position: absolute;
+  left: 1.6%;
+  top: 18%;
+  width: 8.4%;
+  height: 62%;
+  background: linear-gradient(90deg, rgba(8, 6, 12, 0.97) 0%, rgba(8, 6, 12, 0.95) 72%, rgba(8, 6, 12, 0) 100%);
+  mask-image: linear-gradient(180deg, transparent, #000 8%, #000 92%, transparent);
+  pointer-events: none;
+}
+.side,
+.sideOn {
+  position: absolute;
+  left: 1.9%;
+  width: 6.8%;
+  height: 10%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9%;
+  color: #e3d3ad;
+  font-family: var(--font-title);
+  font-size: 0.74cqw;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.3s;
+}
+.side img,
+.sideOn img {
+  height: 48%;
+  width: auto;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+  transition: filter 0.3s;
+}
+.sideOn {
+  color: var(--arcane-pale);
+}
+.sideOn img {
+  filter: brightness(1.2) drop-shadow(0 0 5px rgba(79, 179, 255, 0.95)) drop-shadow(0 0 14px rgba(79, 179, 255, 0.6));
+}
+.side:hover,
+.sideOn:hover {
+  transform: scale(1.12);
+  color: var(--arcane-pale);
+}
+.tileWrap {
+  position: absolute;
+  perspective: 900px;
+}
+.tileSocket {
+  position: absolute;
+  inset: 4%;
+  border-radius: 12px;
+  background: #07050b;
+  filter: blur(10px);
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.tile {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  transform-style: preserve-3d;
+}
+.tile img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.sheen {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+}
+.hotspot,
+.hotspotRound {
+  position: absolute;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: box-shadow 0.25s, border-color 0.25s, background 0.25s;
+}
+.hotspot {
+  top: 95.12%;
+  height: 2.54%;
+  border-radius: 4px;
+}
+.hotspotRound {
+  width: 2.08%;
+  height: 3.13%;
+  border-radius: 50%;
+}
+.hotspot:hover,
+.hotspotRound:hover,
+.hotspot:focus-visible,
+.hotspotRound:focus-visible {
+  border-color: rgba(124, 198, 255, 0.7);
+  background: rgba(79, 179, 255, 0.08);
+  box-shadow: 0 0 28px rgba(79, 179, 255, 0.55), inset 0 0 22px rgba(79, 179, 255, 0.25);
+}
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 120px 40px rgba(11, 9, 18, 0.75);
+}
+.nextSession {
+  position: absolute;
+  left: 50%;
+  bottom: 9%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 70%;
+  padding: 10px 18px;
+  background: rgba(17, 12, 23, 0.72);
+  border: 1px solid rgba(201, 169, 106, 0.45);
+  border-radius: 4px;
+  color: var(--parchment);
+  backdrop-filter: blur(4px);
+  opacity: 0.88;
+  transition: opacity 0.25s, box-shadow 0.25s;
+}
+.nextSession:hover {
+  opacity: 1;
+  box-shadow: 0 0 24px rgba(79, 179, 255, 0.4);
+}
+.nextText {
+  font-family: var(--font-title);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nextCta {
+  font-family: var(--font-title);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--arcane-light);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.liveDot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--arcane);
+  box-shadow: 0 0 10px var(--arcane);
+}
+.corner {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Ambiance */
+.ambient {
+  position: absolute;
+  inset: 0;
+}
+.fog1 {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: -5%;
+  height: 45%;
+  background: radial-gradient(ellipse at 30% 70%, rgba(140, 90, 200, 0.28), transparent 60%), radial-gradient(ellipse at 75% 80%, rgba(60, 140, 200, 0.22), transparent 55%);
+  mix-blend-mode: screen;
+  animation: ds-drift 26s ease-in-out infinite alternate;
+}
+.fog2 {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  top: 20%;
+  height: 40%;
+  background: radial-gradient(ellipse at 60% 50%, rgba(200, 60, 130, 0.16), transparent 60%);
+  mix-blend-mode: screen;
+  animation: ds-drift 34s ease-in-out -12s infinite alternate-reverse;
+}
+.runeGlow {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(79, 179, 255, 0.75), rgba(79, 179, 255, 0.15) 45%, transparent 70%);
+  mix-blend-mode: screen;
+  animation: ds-pulse 4s ease-in-out infinite;
+}
+.horse {
+  position: absolute;
+  left: 34%;
+  top: 62%;
+  width: 20%;
+  height: 25%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(120, 150, 255, 0.35), transparent 65%);
+  mix-blend-mode: screen;
+  animation: ds-pulse 7s ease-in-out infinite;
+}
+.fly {
+  position: absolute;
+  animation: ds-fly 10s ease-in-out infinite alternate;
+}
+.flyGold,
+.flyBlue {
+  border-radius: 50%;
+  animation: ds-blink 4s ease-in-out infinite;
+}
+.flyGold {
+  background: #ffe9a8;
+  box-shadow: 0 0 8px 2px rgba(255, 214, 120, 0.85);
+}
+.flyBlue {
+  background: var(--arcane-pale);
+  box-shadow: 0 0 8px 2px rgba(79, 179, 255, 0.85);
+}
+
+/* ───────────── Accueil classique ───────────── */
+.classic {
+  position: relative;
+  min-height: calc(100dvh - var(--topbar-height));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 64px var(--gutter) 40px;
+  overflow: hidden;
+}
+.classicBg {
+  position: absolute;
+  inset: -30px;
+  /* L'illustration contient déjà logo et tuiles « peints » : on la floute pour n'en garder que l'ambiance. */
+  background: url('/assets/accueil-960.webp') center 70% / cover no-repeat;
+  filter: blur(14px) brightness(0.6) saturate(1.2);
+}
+.classicBg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(11, 9, 18, 0.5), rgba(11, 9, 18, 0.15) 45%, rgba(11, 9, 18, 0.85));
+}
+.classicFrame {
+  position: absolute;
+  inset: 16px;
+  pointer-events: none;
+  border: 1px solid rgba(201, 169, 106, 0.35);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 4px rgba(11, 9, 18, 0.4), inset 0 0 0 5px rgba(201, 169, 106, 0.15);
+}
+.hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.heroRule {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.heroRule span:first-child,
+.heroRule span:last-child {
+  width: 90px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold));
+}
+.heroRule span:last-child {
+  background: linear-gradient(90deg, var(--gold), transparent);
+}
+.heroTitle {
+  margin: 14px 0 0;
+  font-size: clamp(40px, 8vw, 92px);
+  text-shadow: 0 2px 0 #5a4526, 0 0 40px rgba(201, 169, 106, 0.25);
+}
+.heroTagline {
+  font-family: var(--font-title);
+  font-size: clamp(11px, 2.4vw, 14px);
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+.cards {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 240px));
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+  margin-top: 56px;
+}
+.card {
+  height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: linear-gradient(180deg, rgba(52, 32, 56, 0.9), rgba(24, 15, 30, 0.94));
+  border: 1px solid rgba(201, 169, 106, 0.6);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 4px #120c18, inset 0 0 0 5px rgba(201, 169, 106, 0.3), 0 12px 40px rgba(0, 0, 0, 0.5);
+  color: var(--text-strong);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: inset 0 0 0 4px #120c18, inset 0 0 0 5px rgba(201, 169, 106, 0.5), 0 0 30px rgba(79, 179, 255, 0.35);
+}
+.cardGem {
+  width: 26px;
+  height: 26px;
+  transform: rotate(45deg);
+  border: 1.5px solid var(--gold-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cardGem span {
+  width: 8px;
+  height: 8px;
+  background: var(--gold-light);
+}
+.cardLabel {
+  font-family: var(--font-title);
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-align: center;
+}
+.sessionBar {
+  position: relative;
+  margin-top: 48px;
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 20px;
+  flex-wrap: wrap;
+}
+.sessionName {
+  font-size: 16px;
+  margin-top: 2px;
+}
+.footRule {
+  position: relative;
+  width: min(420px, 80%);
+  margin-top: auto;
+  padding-top: 40px;
+}
+.footer {
+  position: relative;
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 14px;
+  font-family: var(--font-title);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.footer button {
+  background: none;
+  border: none;
+  color: var(--arcane-light);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+@media (max-width: 767px) {
+  .classic {
+    padding-top: 40px;
+  }
+  .classicFrame {
+    inset: 8px;
+  }
+  .cards {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 36px;
+    gap: 14px;
+  }
+  .card {
+    height: 110px;
+  }
+}

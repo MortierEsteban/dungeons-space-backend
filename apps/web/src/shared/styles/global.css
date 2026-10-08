@@ -1,0 +1,273 @@
+/* Charte graphique DungeonSpace v1.0 — « forêt enchantée la nuit ».
+   Proportions : 70 % nuit, 20 % parchemin, 8 % or, 2 % bleu arcane (état actif, magie, succès).
+   Le magenta signale dégâts, ennemis et échecs. */
+:root {
+  --night: #0b0912;
+  --ink: #120d18;
+  --ink-deep: #0e0a14;
+  --amethyst: #26182e;
+  --plum: #4a2a4e;
+  --plum-dark: #211426;
+  --gold: #c9a96a;
+  --gold-light: #e8d3a0;
+  --parchment: #e9e2d4;
+  --text-strong: #f3e6c4;
+  --text-soft: #d8cbb0;
+  --ash: #a79c8a;
+  --muted: #7d7368;
+  --arcane: #4fb3ff;
+  --arcane-light: #7cc6ff;
+  --arcane-pale: #bfe4ff;
+  --magenta: #b0306a;
+  --magenta-light: #e07aa8;
+  --magenta-pale: #f2b3cf;
+  --nature: #8fbf6a;
+  --violet: #b9a4e0;
+
+  --gold-a12: rgba(201, 169, 106, 0.12);
+  --gold-a18: rgba(201, 169, 106, 0.18);
+  --gold-a25: rgba(201, 169, 106, 0.25);
+  --gold-a35: rgba(201, 169, 106, 0.35);
+  --gold-a50: rgba(201, 169, 106, 0.5);
+  --arcane-glow: 0 0 22px rgba(79, 179, 255, 0.35);
+
+  --font-display: 'Cinzel Decorative', 'Cinzel', serif;
+  --font-title: 'Cinzel', Georgia, serif;
+  --font-body: 'Spectral', Georgia, serif;
+
+  --panel-bg: linear-gradient(180deg, rgba(38, 26, 46, 0.94), rgba(17, 12, 23, 0.96));
+  --panel-border: 1px solid var(--gold-a50);
+  --panel-shadow: inset 0 0 0 3px var(--ink-deep), inset 0 0 0 4px rgba(201, 169, 106, 0.22);
+
+  --radius: 6px;
+  --radius-sm: 3px;
+  --nav-width: 104px;
+  --topbar-height: 63px;
+  --bottom-nav-height: 64px;
+  --gutter: 32px;
+
+  color-scheme: dark;
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --nav-width: 80px;
+    --gutter: 22px;
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --gutter: 16px;
+    --topbar-height: 56px;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--night);
+  color: var(--parchment);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: radial-gradient(ellipse at 50% -10%, #2a1530 0%, var(--night) 60%) fixed;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+a {
+  color: var(--gold-light);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--arcane-light);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+::placeholder {
+  color: var(--muted);
+}
+
+:focus-visible {
+  outline: 2px solid var(--arcane-light);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(79, 179, 255, 0.35);
+}
+
+/* Barres de défilement discrètes */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 169, 106, 0.35) transparent;
+}
+
+/* ── Typographie ── */
+.ds-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: var(--gold-light);
+  line-height: 1;
+}
+.ds-h1 {
+  margin: 0;
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: clamp(26px, 4vw, 36px);
+  color: var(--gold-light);
+  line-height: 1.15;
+}
+.ds-h2 {
+  margin: 0;
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: 22px;
+  color: var(--text-strong);
+}
+.ds-h3 {
+  margin: 0;
+  font-family: var(--font-title);
+  font-weight: 500;
+  font-size: 18px;
+  color: var(--gold-light);
+}
+.ds-label {
+  font-family: var(--font-title);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+.ds-help {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--ash);
+}
+.ds-muted {
+  color: var(--ash);
+}
+
+/* ── Mise en page ── */
+.ds-page {
+  width: 100%;
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 32px var(--gutter) 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.ds-page-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+}
+.ds-page-head > :first-child {
+  flex: 1;
+  min-width: 220px;
+}
+.ds-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ds-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ds-grow {
+  flex: 1;
+  min-width: 0;
+}
+.ds-visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── Animations ── */
+@keyframes ds-fly {
+  from { transform: translate(0, 0); }
+  to { transform: translate(var(--dx), var(--dy)); }
+}
+@keyframes ds-blink {
+  0%, 100% { opacity: 0; }
+  40%, 60% { opacity: 1; }
+}
+@keyframes ds-pulse {
+  0%, 100% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.9); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+}
+@keyframes ds-drift {
+  from { transform: translateX(-6%); }
+  to { transform: translateX(6%); }
+}
+@keyframes ds-in {
+  from { opacity: 0; filter: blur(8px); }
+  to { opacity: 1; filter: blur(0); }
+}
+@keyframes ds-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ds-float {
+  0% { opacity: 0; transform: translate(-50%, -20%) scale(0.7); }
+  15% { opacity: 1; transform: translate(-50%, -60%) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -220%) scale(1); }
+}
+@keyframes ds-turn {
+  0%, 100% { box-shadow: 0 0 0 2px var(--night), 0 0 0 4px var(--arcane-light), 0 0 14px var(--arcane); }
+  50% { box-shadow: 0 0 0 2px var(--night), 0 0 0 4px var(--arcane-pale), 0 0 26px var(--arcane); }
+}
+@keyframes ds-spin {
+  to { transform: rotate(405deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

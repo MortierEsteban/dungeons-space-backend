@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#0b0912;height:100%}*{box-sizing:border-box}a{color:#e8d3a0}a:hover{color:#7cc6ff}</style>
+</helmet>
+<div data-screen-label="Explorer — Chronique" style="position:relative;height:100%;display:grid;grid-template-columns:minmax(0,1fr) 360px;background:radial-gradient(ellipse at 40% 45%,#22132a 0%,#0b0912 70%);font-family:'Spectral',serif;color:#e9e2d4;overflow:hidden">
+  <div style="position:relative;min-width:0;overflow:hidden">
+    <div ref="{{ stageRef }}" onPointerDown="{{ onDown }}" onClick="{{ onStageClick }}" onWheel="{{ onWheel }}" style="position:absolute;inset:0;cursor:{{ cursor }};touch-action:none;user-select:none">
+      <sc-for list="{{ lines }}" as="l" hint-placeholder-count="0">
+        <div style="position:absolute;left:{{ l.x }}px;top:{{ l.y }}px;width:{{ l.len }}px;height:{{ l.w }}px;margin-top:{{ l.mt }}px;background:{{ l.c }};opacity:{{ l.o }};transform:rotate({{ l.a }}rad);transform-origin:0 50%;pointer-events:none;box-shadow:{{ l.glow }}"></div>
+      </sc-for>
+      <sc-for list="{{ axis }}" as="a" hint-placeholder-count="0">
+        <div style="position:absolute;left:{{ a.x }}px;top:{{ a.y }}px;z-index:{{ a.z }};transform:translate(-50%,-50%);opacity:{{ a.o }};pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="width:12px;height:12px;transform:rotate(45deg);border:1px solid #c9a96a;background:#0b0912;box-shadow:0 0 10px rgba(201,169,106,.5)"></div>
+          <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.22em;color:#c9a96a;white-space:nowrap">{{ a.label }}</span>
+        </div>
+      </sc-for>
+      <sc-for list="{{ nodes }}" as="n" hint-placeholder-count="0">
+        <button onClick="{{ n.click }}" onPointerEnter="{{ n.enter }}" onPointerLeave="{{ n.leave }}" style="position:absolute;left:{{ n.x }}px;top:{{ n.y }}px;z-index:{{ n.z }};opacity:{{ n.o }};transform:translate(-50%,-11px) scale({{ n.s }});transform-origin:50% 11px;padding:0;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:9px;color:#e9e2d4">
+          <div style="width:22px;height:22px;transform:rotate(45deg);border:1.5px solid {{ n.color }};background:{{ n.fill }};box-shadow:{{ n.glow }};transition:box-shadow .2s, background .2s"></div>
+          <span style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.04em;white-space:nowrap;padding:3px 8px;background:rgba(11,9,18,.82);border:1px solid {{ n.lblBd }};border-radius:3px;opacity:{{ n.lblO }};color:{{ n.lblCol }}">{{ n.title }}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="position:absolute;top:18px;left:18px;width:min(340px,calc(100% - 36px));display:flex;flex-direction:column;gap:10px;padding:14px;background:rgba(17,12,23,.88);border:1px solid rgba(201,169,106,.4);border-radius:6px;backdrop-filter:blur(6px)">
+      <input value="{{ q }}" onChange="{{ onQ }}" placeholder="Rechercher dans la chronique…" style="padding:9px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:14px;outline:none;font-family:'Spectral',serif">
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <sc-for list="{{ typeChips }}" as="t" hint-placeholder-count="6">
+          <button onClick="{{ t.on }}" style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.col }};font-family:'Cinzel',serif;font-size:10px;letter-spacing:.1em;cursor:pointer">
+            <span style="width:7px;height:7px;transform:rotate(45deg);background:{{ t.dot }}"></span>{{ t.label }}
+          </button>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+        <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">PERSONNAGES</span>
+        <sc-for list="{{ charChips }}" as="t" hint-placeholder-count="3">
+          <button onClick="{{ t.on }}" style="padding:5px 10px;border-radius:999px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.col }};font-size:12px;cursor:pointer;font-family:'Spectral',serif">{{ t.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <sc-if value="{{ linkingOn }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);margin-left:110px;padding:10px 16px;background:rgba(29,47,74,.92);border:1px solid #4fb3ff;border-radius:4px;box-shadow:0 0 24px rgba(79,179,255,.35);display:flex;align-items:center;gap:14px;font-size:14px;white-space:nowrap">
+        <span>Cliquez les événements à relier à <b style="font-family:'Cinzel',serif;font-weight:500;color:#bfe4ff">{{ linkingTitle }}</b></span>
+        <button onClick="{{ stopLinking }}" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;color:#f3e6c4;background:transparent;border:1px solid rgba(191,228,255,.6);border-radius:3px;padding:6px 10px;cursor:pointer">TERMINER</button>
+      </div>
+    </sc-if>
+
+    <div style="position:absolute;left:18px;bottom:18px;display:flex;gap:6px;align-items:center">
+      <button onClick="{{ toggleAuto }}" style="padding:8px 12px;border-radius:3px;border:1px solid {{ autoBtn.bd }};background:{{ autoBtn.bg }};color:{{ autoBtn.col }};font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;cursor:pointer">ROTATION AUTO</button>
+      <button onClick="{{ recenter }}" style="padding:8px 12px;border-radius:3px;border:1px solid rgba(201,169,106,.4);background:rgba(17,12,23,.88);color:#e8d3a0;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;cursor:pointer">RECENTRER</button>
+      <button onClick="{{ flat }}" style="padding:8px 12px;border-radius:3px;border:1px solid rgba(201,169,106,.4);background:rgba(17,12,23,.88);color:#e8d3a0;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;cursor:pointer">FRISE</button>
+      <button onClick="{{ zoomOut }}" style="width:32px;height:32px;border-radius:3px;border:1px solid rgba(201,169,106,.4);background:rgba(17,12,23,.88);color:#e8d3a0;font-size:16px;cursor:pointer">−</button>
+      <button onClick="{{ zoomIn }}" style="width:32px;height:32px;border-radius:3px;border:1px solid rgba(201,169,106,.4);background:rgba(17,12,23,.88);color:#e8d3a0;font-size:16px;cursor:pointer">+</button>
+      <span style="margin-left:10px;font-size:13px;color:#7d7368;font-style:italic">Glisser : pivoter · Molette : zoom · Clic : ouvrir</span>
+    </div>
+  </div>
+
+  <aside style="display:flex;flex-direction:column;min-height:0;border-left:1px solid rgba(201,169,106,.25);background:linear-gradient(180deg,rgba(28,18,34,.97),rgba(14,10,20,.98))">
+    <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:18px;padding:26px 24px;overflow:auto">
+        <div>
+          <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.3em;color:#a79c8a">CHRONIQUE</div>
+          <div style="margin-top:6px;font-family:'Cinzel',serif;font-size:24px;color:#e8d3a0;line-height:1.2">{{ campaign }}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <sc-for list="{{ stats }}" as="s" hint-placeholder-count="3">
+            <div style="padding:12px 6px;text-align:center;background:#0e0a14;border:1px solid rgba(201,169,106,.25);border-radius:4px"><div style="font-family:'Cinzel',serif;font-size:22px;color:#f3e6c4">{{ s.v }}</div><div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:.16em;color:#a79c8a;margin-top:2px">{{ s.k }}</div></div>
+          </sc-for>
+        </div>
+        <button onClick="{{ openAdd }}" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.18em;color:#f3e6c4;background:linear-gradient(180deg,#4a2a4e,#211426);border:1px solid #c9a96a;border-radius:4px;padding:13px;cursor:pointer;box-shadow:inset 0 0 0 2px #120c18,inset 0 0 0 3px rgba(201,169,106,.3)" style-hover="box-shadow:inset 0 0 0 2px #120c18,inset 0 0 0 3px rgba(201,169,106,.3),0 0 22px rgba(79,179,255,.35)">+ NOTER UN ÉVÉNEMENT</button>
+        <div style="display:flex;align-items:center;gap:10px"><div style="flex:1;height:1px;background:linear-gradient(90deg,#c9a96a,transparent)"></div><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.24em;color:#a79c8a">DERNIÈRES ENTRÉES</span><div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,#c9a96a)"></div></div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ recent }}" as="r" hint-placeholder-count="5">
+            <button onClick="{{ r.on }}" style="display:flex;gap:12px;align-items:flex-start;padding:10px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.18);border-radius:4px;color:#e9e2d4;text-align:left;cursor:pointer" style-hover="border-color:rgba(201,169,106,.5)">
+              <span style="margin-top:6px;width:8px;height:8px;flex:none;transform:rotate(45deg);background:{{ r.color }}"></span>
+              <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-family:'Cinzel',serif;font-size:13px;color:#f3e6c4">{{ r.title }}</span><span style="font-size:12px;color:#a79c8a">Session {{ r.s }} · noté par {{ r.by }}</span></span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:16px;padding:24px;overflow:auto">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="width:10px;height:10px;transform:rotate(45deg);background:{{ ev.color }};box-shadow:0 0 10px {{ ev.color }}"></span>
+          <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.22em;color:{{ ev.color }}">{{ ev.typeUp }} · SESSION {{ ev.s }}</span>
+          <div style="flex:1"></div>
+          <button onClick="{{ closeDetail }}" style="background:none;border:none;color:#a79c8a;font-size:18px;cursor:pointer">×</button>
+        </div>
+        <div style="font-family:'Cinzel',serif;font-size:24px;color:#e8d3a0;line-height:1.2">{{ ev.title }}</div>
+        <sc-if value="{{ ev.secret }}" hint-placeholder-val="{{ false }}">
+          <div style="align-self:flex-start;padding:4px 10px;border:1px solid rgba(176,48,106,.7);background:rgba(176,48,106,.14);color:#f2b3cf;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;border-radius:2px">SECRET · VISIBLE PAR LE MJ UNIQUEMENT</div>
+        </sc-if>
+        <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:#a79c8a">
+          <span style="width:26px;height:26px;border-radius:50%;border:1px solid #c9a96a;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:11px;color:#e8d3a0">{{ ev.initial }}</span>
+          <span>Noté par <b style="color:#d8cbb0;font-weight:500">{{ ev.by }}</b></span>
+        </div>
+        <p style="margin:0;font-size:15px;line-height:1.6;color:#d8cbb0;text-wrap:pretty">{{ ev.text }}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ ev.chars }}" as="c" hint-placeholder-count="2">
+            <span style="padding:4px 10px;border-radius:999px;border:1px solid rgba(79,179,255,.45);color:#bfe4ff;font-size:12px">{{ c }}</span>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.24em;color:#a79c8a">LIENS ({{ ev.linkCount }})</span><div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(201,169,106,.5),transparent)"></div></div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ ev.linked }}" as="k" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:#0e0a14;border:1px solid rgba(201,169,106,.2);border-radius:4px">
+              <span style="width:8px;height:8px;flex:none;transform:rotate(45deg);background:{{ k.color }}"></span>
+              <button onClick="{{ k.on }}" style="flex:1;min-width:0;background:none;border:none;padding:0;color:#f3e6c4;text-align:left;cursor:pointer;font-family:'Cinzel',serif;font-size:13px" style-hover="color:#7cc6ff">{{ k.title }}</button>
+              <span style="font-size:12px;color:#7d7368">S{{ k.s }}</span>
+              <button onClick="{{ k.remove }}" title="Retirer le lien" style="background:none;border:none;color:#7d7368;cursor:pointer;font-size:14px" style-hover="color:#e07aa8">×</button>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onClick="{{ startLinking }}" style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.16em;color:#bfe4ff;background:rgba(79,179,255,.1);border:1px solid rgba(79,179,255,.6);border-radius:4px;padding:10px 14px;cursor:pointer">RELIER À UN ÉVÉNEMENT</button>
+          <button onClick="{{ openAdd }}" style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.16em;color:#e8d3a0;background:transparent;border:1px solid rgba(201,169,106,.45);border-radius:4px;padding:10px 14px;cursor:pointer">+ SUITE DE CET ÉVÉNEMENT</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isAdd }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:14px;padding:24px;overflow:auto">
+        <div style="display:flex;align-items:center"><span style="flex:1;font-family:'Cinzel',serif;font-size:20px;color:#e8d3a0">Noter un événement</span><button onClick="{{ closeDetail }}" style="background:none;border:none;color:#a79c8a;font-size:18px;cursor:pointer">×</button></div>
+        <label style="display:flex;flex-direction:column;gap:6px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">TITRE<input value="{{ form.title }}" onChange="{{ onTitle }}" placeholder="Ce qui s'est passé…" style="padding:10px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:15px;outline:none;font-family:'Spectral',serif;letter-spacing:0"></label>
+        <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">SESSION</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <sc-for list="{{ sessionChips }}" as="t" hint-placeholder-count="7">
+              <button onClick="{{ t.on }}" style="min-width:34px;padding:6px 8px;border-radius:3px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.col }};font-family:'Cinzel',serif;font-size:11px;cursor:pointer">{{ t.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">NATURE</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <sc-for list="{{ formTypes }}" as="t" hint-placeholder-count="6">
+              <button onClick="{{ t.on }}" style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.col }};font-family:'Cinzel',serif;font-size:10px;letter-spacing:.1em;cursor:pointer"><span style="width:7px;height:7px;transform:rotate(45deg);background:{{ t.dot }}"></span>{{ t.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">PERSONNAGES IMPLIQUÉS</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <sc-for list="{{ formChars }}" as="t" hint-placeholder-count="3">
+              <button onClick="{{ t.on }}" style="padding:6px 10px;border-radius:999px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.col }};font-size:12px;cursor:pointer;font-family:'Spectral',serif">{{ t.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">RÉCIT<textarea rows="4" value="{{ form.text }}" onChange="{{ onText }}" placeholder="Racontez, en quelques lignes…" style="padding:10px 12px;background:#0e0a14;border:1px solid rgba(201,169,106,.35);border-radius:3px;color:#e9e2d4;font-size:14px;outline:none;font-family:'Spectral',serif;letter-spacing:0;resize:vertical"></textarea></label>
+        <div style="display:flex;flex-direction:column;gap:6px"><span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;color:#a79c8a">RELIÉ À ({{ formLinkCount }})</span>
+          <div style="display:flex;flex-direction:column;max-height:180px;overflow:auto;border:1px solid rgba(201,169,106,.2);border-radius:4px">
+            <sc-for list="{{ formLinks }}" as="t" hint-placeholder-count="5">
+              <button onClick="{{ t.on }}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:none;border-bottom:1px solid rgba(201,169,106,.1);background:{{ t.bg }};color:#e9e2d4;text-align:left;cursor:pointer;font-size:13px">
+                <span style="width:14px;height:14px;flex:none;border:1px solid {{ t.bd }};background:{{ t.fill }};border-radius:2px"></span>
+                <span style="flex:1">{{ t.label }}</span><span style="color:#7d7368;font-size:12px">S{{ t.s }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+        <sc-if value="{{ isMJ }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ toggleSecret }}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0e0a14;border:1px solid {{ secretBtn.bd }};border-radius:4px;color:#e9e2d4;cursor:pointer;text-align:left;font-size:14px">
+            <span style="width:30px;height:16px;border-radius:8px;background:{{ secretBtn.track }};position:relative;flex:none"><span style="position:absolute;top:2px;left:{{ secretBtn.knob }};width:12px;height:12px;border-radius:50%;background:#f3e6c4;transition:left .2s"></span></span>Secret — visible par le MJ uniquement
+          </button>
+        </sc-if>
+        <button onClick="{{ submit }}" style="font-family:'Cinzel',serif;font-size:12px;letter-spacing:.18em;color:#f3e6c4;background:linear-gradient(180deg,#4a2a4e,#211426);border:1px solid #c9a96a;border-radius:4px;padding:13px;cursor:pointer;opacity:{{ submitO }};box-shadow:inset 0 0 0 2px #120c18,inset 0 0 0 3px rgba(201,169,106,.3)">INSCRIRE DANS LA CHRONIQUE</button>
+      </div>
+    </sc-if>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;mj&quot;,&quot;joueur&quot;],&quot;default&quot;:&quot;mj&quot;,&quot;tsType&quot;:&quot;'mj'|'joueur'&quot;},&quot;campaign&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Les Cendres de Valombre&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const TYPES=[['Lieu','#b9a4e0'],['Rencontre','#7cc6ff'],['Découverte','#e8d3a0'],['Quête','#c9a96a'],['Combat','#e07aa8'],['Mort','#b0306a']];
+const TC=Object.fromEntries(TYPES);
+const CHARS=['Elowen','Brakk','Sœur Ilda'];
+const EV=[
+ {id:'e1',s:1,type:'Lieu',title:'Arrivée à Valombre',by:'Vous (MJ)',chars:['Elowen','Brakk','Sœur Ilda'],text:"Le groupe atteint la cité sous une pluie de cendres tièdes. Les cloches de la tour sont muettes depuis des années."},
+ {id:'e2',s:1,type:'Rencontre',title:'Maëlis Brumefer',by:'Tomas',chars:['Brakk'],text:"La forgeronne naine accepte de réparer la hache de Brakk en échange d'un service : retrouver le marteau de son clan."},
+ {id:'e3',s:1,type:'Découverte',title:'La cloche qui sonne seule',by:'Lyra',chars:['Elowen'],text:"À minuit, la cloche de la tour a sonné trois coups. Personne n'était dans le clocher."},
+ {id:'e4',s:2,type:'Combat',title:'Embuscade sur la route des cendres',by:'Sam',chars:['Elowen','Brakk','Sœur Ilda'],text:"Six gobelins attaquent la caravane. Ilda tombe à terre puis se relève grâce à une potion."},
+ {id:'e5',s:2,type:'Quête',title:'Le marteau volé',by:'Tomas',chars:['Brakk'],text:"Les gobelins portaient l'emblème du clan Brumefer. Le marteau est passé entre leurs mains."},
+ {id:'e6',s:2,type:'Découverte',title:'Carte de la crypte',by:'Lyra',chars:['Elowen'],text:"Sur le chef gobelin : une carte annotée de la Crypte des Murmures, sous le volcan."},
+ {id:'e7',s:3,type:'Lieu',title:'Le marché noir de Corbeval',by:'Sam',chars:['Sœur Ilda','Elowen'],text:"Un dédale de caves sous la halle aux grains, où l'on vend tout ce qui brûle."},
+ {id:'e8',s:3,type:'Rencontre',title:'Pacte avec le contrebandier',by:'Lyra',chars:['Elowen'],text:"Fendrel Corbeval guidera le groupe jusqu'à la crypte contre un tiers du trésor."},
+ {id:'e9',s:3,type:'Mort',title:'Mort de Garrick',by:'Vous (MJ)',chars:['Brakk'],text:"Le capitaine de la garde est retrouvé calciné. Il avait parlé au groupe la veille."},
+ {id:'e10',s:4,type:'Lieu',title:'La Crypte des Murmures',by:'Sam',chars:['Elowen','Brakk','Sœur Ilda'],text:"Des milliers de voix chuchotent dans la pierre. Les torches brûlent bleu."},
+ {id:'e11',s:4,type:'Combat',title:'Le Hibours gardien',by:'Tomas',chars:['Brakk','Elowen'],text:"Brakk retient la bête pendant qu'Elowen la crible de flèches. Victoire de justesse."},
+ {id:'e12',s:4,type:'Découverte',title:'Les murmures nomment Elowen',by:'Lyra',chars:['Elowen'],text:"Au cœur de la crypte, les voix prononcent son vrai nom — que personne ne connaît."},
+ {id:'e13',s:5,type:'Rencontre',title:'Maëlis avoue',by:'Tomas',chars:['Brakk'],text:"La forgeronne a vendu elle-même le marteau pour payer une dette. Brakk ne lui pardonne pas."},
+ {id:'e14',s:5,type:'Découverte',title:'Le phylactère sous le volcan',by:'Vous (MJ)',chars:[],secret:true,text:"Le marteau sert de sceau au phylactère d'une liche endormie. Le briser la réveillera."},
+ {id:'e15',s:6,type:'Quête',title:'Le volcan se réveille',by:'Vous (MJ)',chars:['Elowen','Brakk','Sœur Ilda'],text:"La terre tremble, la cloche sonne sans arrêt. Valombre doit être évacuée avant l'aube."},
+ {id:'e16',s:6,type:'Combat',title:'Duel contre le capitaine des cendres',by:'Sam',chars:['Sœur Ilda','Brakk'],text:"Le meurtrier de Garrick se révèle : un chevalier de cendre au service de la liche."}
+];
+const LINKS=[['e1','e2'],['e2','e5'],['e3','e12'],['e4','e5'],['e4','e6'],['e6','e10'],['e5','e13'],['e7','e8'],['e8','e9'],['e9','e16'],['e10','e11'],['e11','e12'],['e12','e14'],['e13','e14'],['e14','e15'],['e15','e16'],['e3','e15'],['e8','e10'],['e1','e3']];
+const chip=(on,c)=>on?{bg:'rgba(201,169,106,.18)',bd:c||'#c9a96a',col:'#f3e6c4'}:{bg:'transparent',bd:'rgba(201,169,106,.28)',col:'#a79c8a'};
+const blankForm=s=>({title:'',s,type:'Découverte',chars:[],text:'',links:[],secret:false});
+class Component extends DCLogic {
+  state={events:EV,links:LINKS,yaw:-0.6,pitch:0.28,zoom:1,W:900,H:600,auto:true,sel:null,hover:null,mode:'overview',linking:null,q:'',types:[],chars:[],form:blankForm(6)};
+  stageRef=React.createRef();
+  componentDidMount(){
+    const el=this.stageRef.current;
+    if(el&&window.ResizeObserver){this._ro=new ResizeObserver(()=>{const r=el.getBoundingClientRect();this.setState({W:r.width,H:r.height});});this._ro.observe(el);}
+    const tick=()=>{if(this.state.auto&&!this._drag&&!this.state.sel&&!this.state.hover)this.setState(s=>({yaw:s.yaw+0.0018}));this._raf=requestAnimationFrame(tick);};
+    this._raf=requestAnimationFrame(tick);
+    this._mv=e=>{const d=this._drag;if(!d)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;if(Math.abs(dx)+Math.abs(dy)>4)this._moved=true;this.setState({yaw:d.yaw+dx*0.006,pitch:Math.max(-1.3,Math.min(1.3,d.pitch+dy*0.005))});};
+    this._up=()=>{this._drag=null;};
+    this._key=e=>{if(e.key==='Escape')this.setState({linking:null});};
+    window.addEventListener('pointermove',this._mv);window.addEventListener('pointerup',this._up);window.addEventListener('keydown',this._key);
+  }
+  componentWillUnmount(){cancelAnimationFrame(this._raf);this._ro&&this._ro.disconnect();window.removeEventListener('pointermove',this._mv);window.removeEventListener('pointerup',this._up);window.removeEventListener('keydown',this._key);}
+  toggleLink(a,b){if(a===b)return;this.setState(s=>{const has=s.links.some(([x,y])=>(x===a&&y===b)||(x===b&&y===a));return{links:has?s.links.filter(([x,y])=>!((x===a&&y===b)||(x===b&&y===a))):[...s.links,[a,b]]};});}
+  renderVals(){
+    const s=this.state,isMJ=(this.props.role??'mj')==='mj';
+    const evs=s.events.filter(e=>isMJ||!e.secret);
+    const S=Math.max(...evs.map(e=>e.s));
+    const by={};evs.forEach(e=>(by[e.s]=by[e.s]||[]).push(e));
+    const pos={};
+    Object.entries(by).forEach(([ss,arr])=>arr.forEach((e,k)=>{const a=k/arr.length*Math.PI*2+ss*0.9;pos[e.id]={x:(ss-(S+1)/2)*250,y:Math.sin(a)*155,z:Math.cos(a)*155};}));
+    const cy=Math.cos(s.yaw),sy=Math.sin(s.yaw),cp=Math.cos(s.pitch),sp=Math.sin(s.pitch),D=1200;
+    const f=0.82*s.W*D/((S-1)*250+380)*s.zoom;
+    const P=p=>{const x1=p.x*cy-p.z*sy,z1=p.x*sy+p.z*cy,y1=p.y*cp-z1*sp,z2=p.y*sp+z1*cp;const k=f/(D+z2);return{x:s.W/2+x1*k,y:s.H/2+y1*k,z:z2,k:k/(f/D)};};
+    const proj={};Object.entries(pos).forEach(([id,p])=>proj[id]=P(p));
+    const u=s.q.trim().toLowerCase();
+    const match=e=>(!s.types.length||s.types.includes(e.type))&&(!s.chars.length||e.chars.some(c=>s.chars.includes(c)))&&(!u||e.title.toLowerCase().includes(u)||e.text.toLowerCase().includes(u));
+    const ok={};evs.forEach(e=>ok[e.id]=match(e));
+    const focusId=s.hover||s.sel;
+    const visLinks=s.links.filter(([a,b])=>proj[a]&&proj[b]);
+    const nb=new Set();if(focusId){nb.add(focusId);visLinks.forEach(([a,b])=>{if(a===focusId)nb.add(b);if(b===focusId)nb.add(a);});}
+    const line=(p,q,c,w,o,glow)=>{const dx=q.x-p.x,dy=q.y-p.y;return{x:p.x,y:p.y,len:Math.hypot(dx,dy),a:Math.atan2(dy,dx),c,w,mt:-w/2,o,glow:glow||'none'};};
+    const lines=[];
+    const axP=[];for(let i=1;i<=S;i++)axP.push(P({x:(i-(S+1)/2)*250,y:0,z:0}));
+    for(let i=0;i<axP.length-1;i++)lines.push(line(axP[i],axP[i+1],'#c9a96a',1.5,.55));
+    evs.forEach(e=>lines.push(line(axP[e.s-1],proj[e.id],'#c9a96a',1,ok[e.id]?.16:.04)));
+    visLinks.forEach(([a,b])=>{const hot=focusId&&(a===focusId||b===focusId);const dim=!(ok[a]&&ok[b]);const dk=Math.max(.15,Math.min(1,(proj[a].k+proj[b].k)/2-.35));
+      lines.push(hot?line(proj[a],proj[b],'#7cc6ff',2,.95,'0 0 8px rgba(79,179,255,.85)'):line(proj[a],proj[b],'#d8b3e0',1,dim?.05:(focusId?.12:.32*dk)));});
+    const nodes=evs.map(e=>{const p=proj[e.id],c=TC[e.type],sel=s.sel===e.id,hov=s.hover===e.id,inF=nb.has(e.id),m=ok[e.id];
+      const sc=Math.max(.55,Math.min(1.45,p.k));const dimByFocus=focusId&&!inF;
+      return{title:e.title,x:p.x,y:p.y,z:Math.round(2000-p.z)+(sel||hov?2000:0),s:sel?sc*1.25:hov?sc*1.12:sc,
+        o:!m?.12:dimByFocus?.35:Math.max(.45,Math.min(1,.35+p.k*.6)),color:c,fill:sel||hov?c:'#0b0912',
+        glow:sel?`0 0 0 4px rgba(11,9,18,.8),0 0 22px ${c}`:inF?`0 0 14px ${c}`:`0 0 8px ${c}55`,
+        lblO:sel||hov||inF?1:Math.max(.0,Math.min(.9,(p.k-.75)*2.2)),lblBd:sel?c:'rgba(201,169,106,.25)',lblCol:sel?'#f3e6c4':'#d8cbb0',
+        enter:()=>this.setState({hover:e.id}),leave:()=>this.setState(st=>st.hover===e.id?{hover:null}:null),
+        click:ev=>{ev.stopPropagation();if(this._moved){this._moved=false;return;}if(s.linking){this.toggleLink(s.linking,e.id);return;}this.setState({sel:e.id,mode:'detail'});}};});
+    const axis=axP.map((p,i)=>({x:p.x,y:p.y+28,z:Math.round(2000-p.z),o:.85,label:'SESSION '+(i+1)}));
+    const sel=evs.find(e=>e.id===s.sel);
+    const linked=sel?visLinks.filter(([a,b])=>a===sel.id||b===sel.id).map(([a,b])=>evs.find(x=>x.id===(a===sel.id?b:a))).filter(Boolean).sort((a,b)=>a.s-b.s):[];
+    const F=s.form,setF=o=>this.setState(st=>({form:{...st.form,...o}}));
+    const tog=(arr,v)=>arr.includes(v)?arr.filter(x=>x!==v):[...arr,v];
+    const lk=s.linking&&evs.find(e=>e.id===s.linking);
+    return{
+      stageRef:this.stageRef,lines,nodes,axis,campaign:this.props.campaign??'Les Cendres de Valombre',isMJ,
+      cursor:s.linking?'crosshair':this._drag?'grabbing':'grab',
+      onDown:e=>{this._drag={x:e.clientX,y:e.clientY,yaw:s.yaw,pitch:s.pitch};this._moved=false;},
+      onStageClick:e=>{if(this._moved){this._moved=false;return;}if(!s.linking&&s.mode==='detail')this.setState({sel:null,mode:'overview'});},
+      onWheel:e=>{const z=Math.max(.45,Math.min(2.6,s.zoom*(e.deltaY>0?.92:1.08)));this.setState({zoom:z});},
+      q:s.q,onQ:e=>this.setState({q:e.target.value}),
+      typeChips:TYPES.map(([t,c])=>({label:t,dot:c,on:()=>this.setState(st=>({types:tog(st.types,t)})),...chip(s.types.includes(t),c)})),
+      charChips:CHARS.map(c=>({label:c,on:()=>this.setState(st=>({chars:tog(st.chars,c)})),...chip(s.chars.includes(c),'#7cc6ff')})),
+      autoBtn:s.auto?{bd:'#4fb3ff',bg:'rgba(79,179,255,.14)',col:'#bfe4ff'}:{bd:'rgba(201,169,106,.4)',bg:'rgba(17,12,23,.88)',col:'#a79c8a'},
+      toggleAuto:()=>this.setState({auto:!s.auto}),recenter:()=>this.setState({yaw:-0.6,pitch:0.28,zoom:1}),flat:()=>this.setState({yaw:0,pitch:0,zoom:1,auto:false}),
+      zoomIn:()=>this.setState({zoom:Math.min(2.6,s.zoom*1.15)}),zoomOut:()=>this.setState({zoom:Math.max(.45,s.zoom/1.15)}),
+      linkingOn:!!lk,linkingTitle:lk?lk.title:'',stopLinking:()=>this.setState({linking:null}),
+      isOverview:s.mode==='overview',isDetail:s.mode==='detail'&&!!sel,isAdd:s.mode==='add',
+      stats:[{k:'ÉVÉNEMENTS',v:evs.length},{k:'SESSIONS',v:S},{k:'LIENS',v:visLinks.length}],
+      recent:[...evs].reverse().slice(0,6).map(e=>({title:e.title,s:e.s,by:e.by,color:TC[e.type],on:()=>this.setState({sel:e.id,mode:'detail'})})),
+      ev:sel?{...sel,color:TC[sel.type],typeUp:sel.type.toUpperCase(),initial:sel.by[0],secret:!!sel.secret,linkCount:linked.length,
+        linked:linked.map(x=>({title:x.title,s:x.s,color:TC[x.type],on:()=>this.setState({sel:x.id}),remove:()=>this.toggleLink(sel.id,x.id)}))}:{chars:[],linked:[]},
+      closeDetail:()=>this.setState({sel:null,mode:'overview',linking:null}),
+      startLinking:()=>this.setState({linking:s.sel}),
+      openAdd:()=>this.setState({mode:'add',linking:null,form:{...blankForm(sel?sel.s:S),links:sel?[sel.id]:[]}}),
+      form:F,onTitle:e=>setF({title:e.target.value}),onText:e=>setF({text:e.target.value}),
+      sessionChips:Array.from({length:S+1},(_,i)=>i+1).map(n=>({label:n>S?'+ '+n:String(n),on:()=>setF({s:n}),...chip(F.s===n)})),
+      formTypes:TYPES.map(([t,c])=>({label:t,dot:c,on:()=>setF({type:t}),...chip(F.type===t,c)})),
+      formChars:CHARS.map(c=>({label:c,on:()=>setF({chars:tog(F.chars,c)}),...chip(F.chars.includes(c),'#7cc6ff')})),
+      formLinkCount:F.links.length,
+      formLinks:[...evs].sort((a,b)=>b.s-a.s).map(e=>{const on=F.links.includes(e.id);return{label:e.title,s:e.s,bg:on?'rgba(79,179,255,.08)':'transparent',bd:on?'#4fb3ff':'rgba(201,169,106,.4)',fill:on?'#4fb3ff':'transparent',on:()=>setF({links:tog(F.links,e.id)})};}),
+      secretBtn:F.secret?{bd:'rgba(176,48,106,.7)',track:'#b0306a',knob:'16px'}:{bd:'rgba(201,169,106,.25)',track:'#2b2233',knob:'2px'},toggleSecret:()=>setF({secret:!F.secret}),
+      submitO:F.title.trim()?1:.45,
+      submit:()=>{if(!F.title.trim())return;const id='n'+Date.now();
+        this.setState(st=>({events:[...st.events,{id,s:F.s,type:F.type,title:F.title.trim(),by:isMJ?'Vous (MJ)':'Vous',chars:F.chars,text:F.text||'—',secret:F.secret}],links:[...st.links,...F.links.map(l=>[l,id])],sel:id,mode:'detail',form:blankForm(F.s)}));}
+    };
+  }
+}
+</script>
+</body>
+</html>

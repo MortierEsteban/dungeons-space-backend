@@ -1,0 +1,16 @@
+{
+  "name": "@ds/rules",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Moteur de règles pur (sans I/O) : dés, rulesets (D&D 5e SRD 5.1), combat event-sourcé.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  }
+}

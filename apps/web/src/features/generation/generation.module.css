@@ -1,0 +1,20 @@
+.forge { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); gap: 22px; align-items: start; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.stat { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 6px; background: var(--ink-deep); border: 1px solid rgba(201,169,106,.3); border-radius: 4px; min-width: 0; }
+.stat strong { font-family: var(--font-title); font-weight: 500; font-size: 28px; color: var(--text-strong); line-height: 1; }
+.mod { font-size: 13px; color: var(--arcane-light); }
+.preview { position: sticky; top: calc(var(--topbar-height) + 16px); }
+.npc { display: grid; grid-template-columns: minmax(240px, 340px) minmax(0, 1fr); gap: 22px; align-items: start; }
+.npcName { font-family: var(--font-title); font-size: 28px; color: var(--gold-light); background: transparent; border-width: 0 0 1px; border-radius: 0; padding-left: 0; }
+.npcCards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.npcCard { padding: 14px; background: var(--ink-deep); border: 1px solid var(--gold-a25); border-radius: 4px; }
+.npcCard p { margin: 6px 0 0; }
+.loot { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.lootItem { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; background: var(--ink-deep); border: 1px solid; border-radius: 4px; animation: ds-rise .3s ease-out both; }
+.lootItem strong { font-family: var(--font-title); font-weight: 500; color: var(--text-strong); }
+@media (max-width: 900px) {
+  .forge, .npc { grid-template-columns: minmax(0, 1fr); }
+  .preview { position: static; }
+  .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
