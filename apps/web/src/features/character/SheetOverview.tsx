@@ -1,10 +1,123 @@
-import { ABILITY_KEYS, ABILITY_LABELS, type AbilityKey } from '@ds/rules';
+import { ABILITY_KEYS, ABILITY_LABELS, describeEffect, type AbilityKey, type DerivedTrait, type Effect } from '@ds/rules';
 import type { CharacterDto } from '@ds/shared';
 import { useState } from 'react';
 import { signed } from '../../shared/format';
-import { Button, cx, Panel, PanelTitle, Select, Stepper } from '../../shared/ui/components';
+import { Button, cx, Input, Panel, PanelTitle, Select, Stepper, Tag } from '../../shared/ui/components';
+import { EffectsEditor } from './EffectsEditor';
 import { useSheet } from './useSheet';
 import s from './character.module.css';
+
+/** Ressources de classe et d'espèce (rage, ki, conduit divin…) : cases à cocher ou réserve. */
+function Resources({ character }: { character: CharacterDto }) {
+  const sh = useSheet(character);
+  const d = character.derived!;
+  if (d.resources.length === 0) return null;
+  return (
+    <Panel className={s.span2}>
+      <PanelTitle>Ressources</PanelTitle>
+      <div className={s.resources}>
+        {d.resources.map((r) => (
+          <div key={r.id} className={s.resource}>
+            <span className="ds-grow">
+              <strong>{r.name}</strong>
+              <span className="ds-help">
+                {' '}
+                · {r.source} · {r.recharge === 'short' ? 'repos court' : r.recharge === 'long' ? 'repos long' : 'recharge manuelle'}
+              </span>
+            </span>
+            {r.pool || r.max > 10 ? (
+              <strong className={s.hpValue} style={{ fontSize: 20 }}>
+                {r.max - r.used} <span className="ds-muted">/ {r.max}</span>
+              </strong>
+            ) : (
+              Array.from({ length: r.max }, (_, i) => <span key={i} className={cx(s.resourcePip, i < r.max - r.used && s.resourcePipOn)} />)
+            )}
+            {sh.canEdit && (
+              <>
+                <Button size="sm" variant="ghost" disabled={r.used >= r.max} onClick={() => sh.act({ type: 'use_resource', resourceId: r.id, amount: r.pool ? Math.min(5, r.max - r.used) : 1 })}>
+                  {r.pool ? '−5' : 'Utiliser'}
+                </Button>
+                {r.pool && (
+                  <Button size="sm" variant="ghost" disabled={r.used >= r.max} onClick={() => sh.act({ type: 'use_resource', resourceId: r.id, amount: 1 })}>
+                    −1
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" disabled={r.used <= 0} onClick={() => sh.act({ type: 'use_resource', resourceId: r.id, amount: -r.used })}>
+                  Restaurer
+                </Button>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
+/** Traits et aptitudes, avec leurs passifs ; en mode « Ajuster », les passifs se modifient et on ajoute des traits (dons, bénédictions…). */
+function Traits({ character, adjust }: { character: CharacterDto; adjust: boolean }) {
+  const sh = useSheet(character);
+  const d = character.derived!;
+  const [name, setName] = useState('');
+  const save = (t: DerivedTrait, effects: Effect[]) =>
+    sh.edit((x) => {
+      const i = x.traits.findIndex((y) => y.name === t.name && y.source === t.source);
+      if (i >= 0) x.traits[i] = { ...x.traits[i]!, effects };
+      else x.traits.push({ name: t.name, source: t.source, description: t.description, effects });
+    });
+  const remove = (t: DerivedTrait) => sh.edit((x) => void (x.traits = x.traits.filter((y) => !(y.name === t.name && y.source === t.source))));
+  return (
+    <Panel className={s.span2}>
+      <PanelTitle>Capacités & traits</PanelTitle>
+      <div className={s.traits}>
+        {d.traits.map((t, i) => (
+          <div key={`${t.name}${i}`} className={s.trait}>
+            <div className="ds-row">
+              <strong className="ds-grow">{t.name}</strong>
+              <span className="ds-help">{t.source}</span>
+              {adjust && sh.canEdit && !t.fromCatalog && !t.source.includes(' ') && t.source !== character.sheet!.species && (
+                <Button size="sm" variant="link" onClick={() => remove(t)}>
+                  Retirer
+                </Button>
+              )}
+            </div>
+            {t.description && <p>{t.description}</p>}
+            {adjust && sh.canEdit ? (
+              <EffectsEditor effects={t.effects} onChange={(effects) => save(t, effects)} />
+            ) : (
+              t.effects.length > 0 && (
+                <div className={s.effectTags}>
+                  {t.effects.map((e, k) => (
+                    <Tag key={k} color="var(--arcane-light)">
+                      {describeEffect(e)}
+                    </Tag>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        ))}
+        {d.traits.length === 0 && <p className="ds-help">Aucun trait consigné.</p>}
+      </div>
+      {adjust && sh.canEdit && (
+        <div className="ds-row" style={{ marginTop: 12 }}>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nouveau trait (don, bénédiction, malédiction…)" aria-label="Nom du trait" style={{ flex: 1 }} />
+          <Button
+            size="sm"
+            disabled={!name.trim()}
+            onClick={() => {
+              sh.edit((x) => void x.traits.push({ name: name.trim(), source: 'Personnel', description: '', effects: [] }));
+              setName('');
+            }}
+          >
+            Ajouter
+          </Button>
+        </div>
+      )}
+      {adjust && <p className="ds-help">Les passifs (résistances, avantages, CA, vitesse…) sont appliqués automatiquement sur la fiche et en combat.</p>}
+    </Panel>
+  );
+}
 
 const PROF_LABEL = { 0: 'Non maîtrisée', 0.5: 'Touche-à-tout', 1: 'Maîtrise', 2: 'Expertise' } as const;
 
@@ -57,9 +170,12 @@ export function SheetOverview({ character, onRoll }: { character: CharacterDto; 
         <PanelTitle>Jets de sauvegarde</PanelTitle>
         <div className={s.saves}>
           {ABILITY_KEYS.map((k) => (
-            <button key={k} type="button" className={s.lineBtn} onClick={() => onRoll(`Sauvegarde de ${ABILITY_LABELS[k].short}`, d.saves[k].value)}>
+            <button key={k} type="button" className={s.lineBtn} onClick={() => onRoll(`Sauvegarde de ${ABILITY_LABELS[k].short}`, d.saves[k].value)} title={d.saves[k].advantages?.length ? `Avantage : ${d.saves[k].advantages.join(' ; ')}` : undefined}>
               <span className={cx(s.profDot, d.saves[k].proficient && s.profOn)} />
-              <span className="ds-grow">{ABILITY_LABELS[k].short}</span>
+              <span className="ds-grow">
+                {ABILITY_LABELS[k].short}
+                {d.saves[k].advantages?.length ? <span className={s.catalogTag}> · avantage</span> : null}
+              </span>
               <strong>{signed(d.saves[k].value)}</strong>
             </button>
           ))}
@@ -70,12 +186,24 @@ export function SheetOverview({ character, onRoll }: { character: CharacterDto; 
         <PanelTitle>Défenses & survie</PanelTitle>
         <dl className={s.defs}>
           <dt className="ds-label">Résistances</dt>
-          <dd>{sheet.defenses.resistances.join(', ') || '—'}</dd>
+          <dd>{d.resistances?.map((r) => `${r.damage}${r.when ? ` (${r.when})` : ''}`).join(', ') || '—'}</dd>
           <dt className="ds-label">Immunités</dt>
-          <dd>{sheet.defenses.immunities.join(', ') || '—'}</dd>
+          <dd>{[...(d.immunities ?? []).map((r) => r.damage), ...(d.conditionImmunities ?? []).map((r) => r.condition)].join(', ') || '—'}</dd>
+          {d.vulnerabilities?.length > 0 && (
+            <>
+              <dt className="ds-label">Vulnérabilités</dt>
+              <dd>{d.vulnerabilities.map((r) => r.damage).join(', ')}</dd>
+            </>
+          )}
+          {d.advantages?.length > 0 && (
+            <>
+              <dt className="ds-label">Avantages</dt>
+              <dd>{d.advantages.map((a) => a.label).join(' · ')}</dd>
+            </>
+          )}
           <dt className="ds-label">Sens</dt>
           <dd>
-            {[sheet.defenses.senses, `Perception passive ${d.passivePerception}`].filter(Boolean).join(' · ')}
+            {[d.senses ?? sheet.defenses.senses, `Perception passive ${d.passivePerception}`].filter(Boolean).join(' · ')}
           </dd>
           <dt className="ds-label">Dés de vie</dt>
           <dd className="ds-row" style={{ gap: 4 }}>
@@ -137,21 +265,8 @@ export function SheetOverview({ character, onRoll }: { character: CharacterDto; 
         </div>
       </Panel>
 
-      <Panel className={s.span2}>
-        <PanelTitle>Capacités & traits</PanelTitle>
-        <div className={s.traits}>
-          {sheet.traits.map((t, i) => (
-            <div key={`${t.name}${i}`} className={s.trait}>
-              <div className="ds-row">
-                <strong className="ds-grow">{t.name}</strong>
-                <span className="ds-help">{t.source}</span>
-              </div>
-              {t.description && <p>{t.description}</p>}
-            </div>
-          ))}
-          {sheet.traits.length === 0 && <p className="ds-help">Aucun trait consigné.</p>}
-        </div>
-      </Panel>
+      <Resources character={character} />
+      <Traits character={character} adjust={adjust} />
     </div>
   );
 }

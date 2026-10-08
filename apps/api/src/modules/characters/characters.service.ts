@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   abilityModifier,
+  applyCustomClass,
   applyDamage,
   applyHealing,
   getRuleset,
@@ -9,21 +10,24 @@ import {
   rollDice,
   setTempHp,
   shortRest,
+  spendResource,
   systemRng,
+  type ClassDef,
   type DerivedSheet,
   type Dnd5eSheet,
 } from '@ds/rules';
-import type {
-  characterActionSchema,
-  CharacterDto,
-  CharacterSummaryDto,
-  createCharacterSchema,
-  noteSchema,
-  NoteDto,
-  NpcData,
-  updateCharacterSchema,
+import {
+  creationToClass,
+  type characterActionSchema,
+  type CharacterDto,
+  type CharacterSummaryDto,
+  type createCharacterSchema,
+  type noteSchema,
+  type NoteDto,
+  type NpcData,
+  type updateCharacterSchema,
 } from '@ds/shared';
-import { and, desc, eq, inArray, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Db } from '../../infra/db/client';
 import type { Realtime } from '../../infra/realtime';
@@ -32,6 +36,7 @@ import { isUuid, type CampaignAccess, type SessionClock, type Viewer } from '../
 import { campaigns, memberships } from '../campaigns/campaigns.tables';
 import type { AppendEvent, ChronicleService } from '../chronicle/chronicle.service';
 import type { ConstellationService } from '../constellation/constellation.service';
+import { creations } from '../compendium/compendium.tables';
 import { users } from '../identity/identity.tables';
 import { characters, notes } from './characters.tables';
 
@@ -183,9 +188,11 @@ export class CharactersService {
       if (!(await this.access.roleOf(campaignId, input.ownerId))) throw badRequest("Ce joueur n'est pas membre de la campagne.");
       ownerId = input.ownerId;
     }
+    const customClass = input.classRef ? await this.homebrewClass(campaignId, viewer.userId, input.classRef) : undefined;
     const sheet = ruleset.createSheet({
       species: input.species,
-      className: input.className,
+      className: customClass?.name ?? input.className,
+      ...(customClass ? { customClass, classRef: input.classRef } : {}),
       level: input.level ?? campaign.settings.startLevel,
       background: input.background,
       alignment: input.alignment,
@@ -209,6 +216,30 @@ export class CharactersService {
     });
     this.realtime.changed(campaignId, 'characters', row!.id);
     return this.dto(row!, viewer);
+  }
+
+  /** Classe de la Forge utilisable dans cette campagne : la sienne, ou une création rattachée à la campagne. */
+  private async homebrewClass(campaignId: string, userId: string, creationId: string): Promise<ClassDef> {
+    const row = isUuid(creationId)
+      ? await this.db.query.creations.findFirst({ where: and(eq(creations.id, creationId), eq(creations.kind, 'Classe'), or(eq(creations.ownerId, userId), eq(creations.campaignId, campaignId))) })
+      : undefined;
+    const def = row && creationToClass({ ...row.data, id: row.id });
+    if (!def) throw badRequest('Classe personnalisée introuvable ou incomplète.');
+    return def;
+  }
+
+  /** Une classe de la Forge a changé : chaque fiche qui la suit reçoit la nouvelle définition. */
+  async syncCustomClass(creationId: string, def: ClassDef): Promise<void> {
+    const rows = await this.db.select().from(characters).where(sql`${characters.sheet}->>'classRef' = ${creationId}`);
+    for (const row of rows) {
+      const sheet = this.sheetOf(row);
+      if (!sheet) continue;
+      await this.db
+        .update(characters)
+        .set({ sheet: applyCustomClass(sheet, def) as unknown as Record<string, unknown>, updatedAt: new Date() })
+        .where(eq(characters.id, row.id));
+      this.realtime.changed(row.campaignId, 'characters', row.id);
+    }
   }
 
   async update(id: string, userId: string, patch: z.infer<typeof updateCharacterSchema>): Promise<CharacterDto> {
@@ -337,6 +368,13 @@ export class CharactersService {
         if (!slot || slot.used >= slot.max) throw badRequest("Plus d'emplacement disponible pour ce sort.");
         const next = { ...sheet, spellcasting: { ...sc, slots: { ...sc.slots, [String(level)]: { ...slot, used: slot.used + 1 } } } };
         return { next, event: { type: 'character.spell_cast', title: `${name} lance ${spell.name}${level > spell.level ? ` (niveau ${level})` : ''}`, payload: { spell: spell.name, level } } };
+      }
+      case 'use_resource': {
+        const d = getRuleset('dnd5e-srd51').derive(sheet) as DerivedSheet;
+        const res = d.resources.find((r) => r.id === action.resourceId);
+        if (!res) throw notFound('Ressource inconnue.');
+        if (action.amount > 0 && res.used + action.amount > res.max) throw badRequest(`Plus assez de « ${res.name} » (${res.max - res.used} restant).`);
+        return { next: spendResource(sheet, action.resourceId, action.amount), event: null };
       }
       case 'death_save': {
         const ds = { ...sheet.deathSaves };

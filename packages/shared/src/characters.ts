@@ -14,6 +14,8 @@ export const createPcSchema = z.object({
   abilities: abilityScores,
   skills: z.array(z.enum(SKILL_KEYS as [string, ...string[]])).max(8).default([]),
   portraitUrl: z.string().max(2000).optional(),
+  /** Classe homebrew : identifiant d'une création « Classe » de la Forge (remplace `className`). */
+  classRef: z.string().max(64).optional(),
   /** Le MJ peut créer un PJ pour un joueur. */
   ownerId: z.string().optional(),
 });
@@ -72,6 +74,8 @@ export const characterActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('add_spell'), spell: knownSpellSchema.omit({ id: true }) }),
   z.object({ type: z.literal('cast_spell'), spellId: z.string(), slotLevel: z.number().int().min(0).max(9) }),
   z.object({ type: z.literal('death_save'), success: z.boolean() }),
+  /** Dépense (montant positif) ou récupération (négatif) d'une ressource : rage, ki, conduit divin… */
+  z.object({ type: z.literal('use_resource'), resourceId: z.string().min(1).max(40), amount: z.number().int().min(-999).max(999).default(1) }),
 ]);
 export type CharacterAction = z.input<typeof characterActionSchema>;
 

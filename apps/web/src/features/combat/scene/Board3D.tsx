@@ -46,7 +46,7 @@ export default function Board3D(props: BoardProps & { effects: AttackFx[] }) {
   return (
     <div className={s.boardWrap}>
       <div
-        className={cx(s.viewport3d, s[`amb_${prefs.ambiance}`], (props.tool !== 'select' || props.targeting) && s.crosshair)}
+        className={cx(s.viewport3d, s[`amb_${prefs.ambiance}`], (props.tool !== 'select' || props.targeting || !!props.aim) && s.crosshair)}
         role="application"
         aria-label={`Carte de bataille en 3D, ${props.state.map.cols} × ${props.state.map.rows} cases`}
         onContextMenu={(e) => e.preventDefault()}

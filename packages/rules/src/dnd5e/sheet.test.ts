@@ -49,7 +49,7 @@ describe('fiche D&D 5e', () => {
   it('dérive sauvegardes, compétences et perception passive', () => {
     const d = deriveSheet(elowen());
     expect(d.proficiencyBonus).toBe(3);
-    expect(d.saves.dex).toEqual({ value: 7, proficient: true });
+    expect(d.saves.dex).toMatchObject({ value: 7, proficient: true });
     expect(d.skills.find((s) => s.key === 'stealth')?.value).toBe(7);
     expect(d.passivePerception).toBe(16);
     expect(d.spellSaveDc).toBe(14);

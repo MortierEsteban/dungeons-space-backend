@@ -7,3 +7,4 @@ export * from './reducer';
 export * from './types';
 export * from './describe';
 export * from './vision';
+export * from './spells';

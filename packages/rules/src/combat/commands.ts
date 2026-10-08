@@ -1,11 +1,14 @@
 import { z } from 'zod';
-import { OBJECT_KINDS, TERRAIN_KINDS, ZONE_SHAPES } from './types';
+import { ABILITY_KEYS } from '../dnd5e/abilities';
+import { OBJECT_KINDS, TERRAIN_KINDS, ZONE_SHAPES, type Zone } from './types';
 
 /** Seuls les modèles téléversés sur l'instance sont acceptés (jamais d'URL externe arbitraire). */
 export const modelUrlSchema = z.string().regex(/^\/uploads\/[A-Za-z0-9-]+\.glb$/, 'Modèle 3D invalide (fichier .glb téléversé attendu).');
 
 const cell = z.object({ x: z.number().int().min(0).max(199), y: z.number().int().min(0).max(199) });
 const id = z.string().min(1).max(64);
+const damageDefense = z.array(z.object({ damage: z.string().min(1).max(30), when: z.string().max(60).optional() })).max(20).default([]);
+const defenses = z.object({ resistances: damageDefense, immunities: damageDefense, vulnerabilities: damageDefense });
 const quickAttack = z.object({
   name: z.string().min(1).max(60),
   bonus: z.number().int().min(-10).max(30),
@@ -33,6 +36,8 @@ export const combatantSpecSchema = z.object({
   attack: quickAttack.nullable().default(null),
   portraitUrl: z.string().max(2000).nullable().default(null),
   modelUrl: modelUrlSchema.nullable().default(null),
+  saves: z.record(z.enum(ABILITY_KEYS), z.number().int().min(-10).max(30)).optional(),
+  defenses: defenses.optional(),
 });
 export type CombatantSpec = z.infer<typeof combatantSpecSchema>;
 
@@ -59,6 +64,22 @@ export const combatCommandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('remove_combatant'), combatantId: id }),
   /** Apparence 3D : le propriétaire (ou le MJ) remplace le jeton par un modèle, ou revient au jeton (null). */
   z.object({ type: z.literal('set_model'), combatantId: id, modelUrl: modelUrlSchema.nullable() }),
+  /** Portrait affiché sur le jeton et dans l'initiative (image téléversée). */
+  z.object({ type: z.literal('set_portrait'), combatantId: id, portraitUrl: z.string().max(2000).nullable() }),
+  /**
+   * Lancer un sort du grimoire d'un PJ : le serveur consomme l'emplacement sur la fiche, lit les mécaniques
+   * (gabarit, sauvegarde, dégâts…) et le résout en `resolve_spell`. `aim` = point visé pour un gabarit.
+   */
+  z.object({
+    type: z.literal('cast_spell'),
+    casterId: id,
+    spellId: id,
+    slotLevel: z.number().int().min(0).max(9),
+    targetIds: z.array(id).max(10).default([]),
+    aim: cell.optional(),
+    /** Garder le gabarit sur la carte (sorts qui durent : toile, nuée de dagues…). */
+    keepZone: z.boolean().default(false),
+  }),
   z.object({ type: z.literal('set_initiative'), combatantId: id, value: z.number().int().min(-10).max(50) }),
   z.object({ type: z.literal('roll_initiative'), combatantIds: z.array(id).optional() }),
   z.object({ type: z.literal('start') }),
@@ -115,3 +136,22 @@ export const combatCommandSchema = z.discriminatedUnion('type', [
 ]);
 export type CombatCommand = z.infer<typeof combatCommandSchema>;
 export type CombatCommandType = CombatCommand['type'];
+
+/** Sort entièrement résolu par le serveur (jamais accepté tel quel d'un client). */
+export interface ResolvedSpell {
+  type: 'resolve_spell';
+  casterId: string;
+  name: string;
+  level: number;
+  /** Cibles, dans l'ordre (une même cible peut revenir : plusieurs rayons). */
+  targetIds: string[];
+  zone?: Omit<Zone, 'id'>;
+  keepZone: boolean;
+  attack?: { bonus: number };
+  save?: { ability: (typeof ABILITY_KEYS)[number]; dc: number; half: boolean };
+  damage?: { notation: string; type?: string };
+  heal?: { notation: string };
+  condition?: string;
+  concentration: boolean;
+  cost: 'action' | 'bonus' | 'reaction' | 'none';
+}

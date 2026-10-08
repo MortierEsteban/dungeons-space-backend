@@ -89,7 +89,7 @@ function PcSheet({ character }: { character: CharacterDto }) {
           <div className={s.statRow}>
             <Stat label="CA" value={d.armorClass} overridden={d.overridden.includes('armorClass')} />
             <Stat label="Initiative" value={signed(d.initiative)} accent onClick={() => roll('Initiative', d.initiative)} title="Lancer l'initiative" />
-            <Stat label="Vitesse" value={`${num(sheet.speed)} m`} />
+            <Stat label="Vitesse" value={`${num(d.speed ?? sheet.speed)} m`} />
             <Stat label="Maîtrise" value={signed(d.proficiencyBonus)} />
             <Stat
               label="Inspiration"

@@ -65,3 +65,22 @@
 @media (max-width: 520px) {
   .mechGrid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ── Bibliothèque partagée ── */
+.shared { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr); gap: 22px; align-items: start; }
+.importBar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 12px; background: var(--ink-deep); border: 1px solid var(--gold-a35); border-radius: 4px; }
+.sharedList { display: flex; flex-direction: column; border: 1px solid rgba(201,169,106,.3); border-radius: 4px; max-height: 62dvh; overflow-y: auto; }
+.sharedRow { display: flex; align-items: center; gap: 10px; padding: 0 0 0 14px; border-bottom: 1px solid rgba(201,169,106,.14); }
+.sharedRow input { accent-color: var(--gold); width: 16px; height: 16px; flex: none; }
+.sharedMain { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 12px 14px 12px 0; background: none; border: none; color: var(--parchment); text-align: left; font-size: 13px; }
+.sharedMain strong { font-family: var(--font-title); font-weight: 500; font-size: 15px; color: var(--text-strong); }
+.sharedRow:hover { background: rgba(201,169,106,.06); }
+
+/* ── Éditeur de classe ── */
+.featureEdit { gap: 8px; padding: 8px 12px; }
+.featureLevel { flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--gold); transform: rotate(45deg); font-family: var(--font-title); font-size: 12px; color: var(--gold-light); }
+.featureLevel { line-height: 1; }
+.featureTitle { flex: 1; min-width: 0; padding: 4px 0; background: none; border: none; color: var(--text-strong); font-family: var(--font-title); font-size: 14px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 860px) {
+  .shared { grid-template-columns: minmax(0, 1fr); }
+}

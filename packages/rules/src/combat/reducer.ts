@@ -113,6 +113,8 @@ function reduce(state: CombatState, event: CombatEvent): CombatState {
       return updateCombatant(state, event.payload.id, (c) => ({ ...c, resources: { ...c.resources, [event.payload.resource]: true } }));
     case 'combat.attack_rolled':
     case 'combat.dice_rolled':
+    case 'combat.spell_cast':
+    case 'combat.save_rolled':
       return state;
     case 'combat.map_resized':
       return { ...state, map: { ...state.map, cols: event.payload.cols, rows: event.payload.rows } };

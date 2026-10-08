@@ -12,8 +12,8 @@ const spell = (s: S): SpellEntry => ({
   ...s,
 });
 
-/** Sélection de sorts du SRD 5.1 — mécaniques du SRD, résumés rédigés pour DungeonSpace. */
-export const SPELLS: SpellEntry[] = [
+/** Sorts du SRD 5.1 tels que résumés (sans leurs mécaniques de combat, ajoutées plus bas). */
+const BASE: SpellEntry[] = [
   spell({ id: 'fire-bolt', name: 'Trait de feu', level: 0, school: 'Évocation', castingTime: '1 action', range: '36 m', duration: 'Instantanée', classes: ['Ensorceleur', 'Magicien'], summary: 'Un trait enflammé frappe une créature ou un objet à distance.', roll: '1d10', damageType: 'feu' }),
   spell({ id: 'sacred-flame', name: 'Flamme sacrée', level: 0, school: 'Évocation', castingTime: '1 action', range: '18 m', duration: 'Instantanée', classes: ['Clerc'], summary: 'Une lueur radiante descend sur la cible, qui doit réussir un JS de Dextérité.', roll: '1d8', damageType: 'radiant', save: 'dex' }),
   spell({ id: 'eldritch-blast', name: 'Décharge occulte', level: 0, school: 'Évocation', castingTime: '1 action', range: '36 m', duration: 'Instantanée', classes: ['Occultiste'], summary: "Un rayon d'énergie crépitante ; plusieurs rayons aux niveaux supérieurs.", roll: '1d10', damageType: 'force' }),
@@ -60,3 +60,39 @@ export const SPELLS: SpellEntry[] = [
   spell({ id: 'finger-of-death', name: 'Doigt de mort', level: 7, school: 'Nécromancie', castingTime: '1 action', range: '18 m', duration: 'Instantanée', classes: ['Ensorceleur', 'Magicien', 'Occultiste'], summary: "Une énergie négative dévastatrice ; JS de Constitution pour moitié.", roll: '7d8+30', damageType: 'nécrotique', save: 'con' }),
   spell({ id: 'wish', name: 'Souhait', level: 9, school: 'Invocation', castingTime: '1 action', range: 'Personnelle', duration: 'Instantanée', classes: ['Ensorceleur', 'Magicien'], summary: 'Le sort le plus puissant qui soit : reproduit un autre sort ou altère la réalité.', components: ['V'] }),
 ];
+
+/** Mécaniques de résolution en combat (attaque, sauvegarde, état, montée en puissance). */
+const MECHANICS: Record<string, Partial<SpellEntry>> = {
+  'fire-bolt': { attack: true },
+  'eldritch-blast': { attack: true },
+  'ray-of-frost': { attack: true },
+  'scorching-ray': { attack: true, targets: 3 },
+  'spiritual-weapon': { attack: true },
+  'sacred-flame': { half: false },
+  'magic-missile': { upcast: '1d4+1' },
+  'cure-wounds': { heal: true, upcast: '1d8' },
+  'healing-word': { heal: true, upcast: '1d4' },
+  'burning-hands': { half: true, upcast: '1d6' },
+  thunderwave: { half: true, upcast: '1d8' },
+  sleep: { condition: 'Inconscient', upcast: '2d8' },
+  'hunters-mark': { condition: 'Marqué' },
+  bless: { condition: 'Béni', targets: 3 },
+  'charm-person': { condition: 'Charmé' },
+  web: { condition: 'Entravé' },
+  barkskin: { condition: "Peau d'écorce" },
+  'hold-person': { condition: 'Paralysé' },
+  invisibility: { condition: 'Invisible' },
+  shatter: { half: true, upcast: '1d8' },
+  'cloud-of-daggers': { upcast: '2d4' },
+  fireball: { half: true, upcast: '1d6' },
+  'lightning-bolt': { half: true, upcast: '1d6' },
+  'spirit-guardians': { half: true, upcast: '1d8' },
+  'wall-of-fire': { half: true, upcast: '1d8' },
+  banishment: { condition: 'Neutralisé' },
+  'cone-of-cold': { half: true, upcast: '1d8' },
+  disintegrate: { half: false, upcast: '3d6' },
+  'finger-of-death': { half: true },
+};
+
+/** Sélection de sorts du SRD 5.1 — mécaniques du SRD, résumés rédigés pour DungeonSpace. */
+export const SPELLS: SpellEntry[] = BASE.map((s) => ({ ...s, ...MECHANICS[s.id] }));

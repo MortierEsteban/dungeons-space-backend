@@ -9,6 +9,7 @@ import {
   type CombatState,
   type ObjectKind,
   type TerrainKind,
+  type Zone,
   type ZoneShape,
 } from '@ds/rules';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
@@ -57,6 +58,19 @@ export const TERRAIN_META: Record<TerrainKind, { label: string; bg: string }> = 
 
 const CELL = 46;
 
+/** Sort de zone en cours de visée : le gabarit suit le curseur, puis reste épinglé au clic. */
+export interface SpellAim {
+  zoneAt(cell: Cell): Omit<Zone, 'id'> | null;
+  pinned: Omit<Zone, 'id'> | null;
+  onAim(cell: Cell): void;
+}
+
+/** Éclat d'un sort de zone qui vient d'être lancé. */
+export interface SpellFlash {
+  id: number;
+  zone: Omit<Zone, 'id'>;
+}
+
 /** Contrat commun aux plateaux 2D et 3D. */
 export interface BoardProps {
   state: CombatState;
@@ -74,6 +88,11 @@ export interface BoardProps {
   floats: FloatText[];
   /** Brouillard de guerre de l'utilisateur (absent : tout est visible). */
   fog?: FogCells | null;
+  /** Visée d'un sort de zone. */
+  aim?: SpellAim | null;
+  /** Créatures retenues comme cibles d'un sort : mises en évidence. */
+  markedIds?: string[];
+  flashes?: SpellFlash[];
   readOnly?: boolean;
   send(cmd: CommandInput): void;
 }
@@ -94,7 +113,7 @@ function FogCanvas({ fog }: { fog: FogCells }) {
   return <canvas ref={ref} className={s.fog2d} width={fog.cols} height={fog.rows} aria-hidden />;
 }
 
-export function Board({ state, isGm, userId, tool, options, selectedId, selectedObjectId, onSelect, onSelectObject, targeting, onTarget, floats, fog, readOnly, send }: BoardProps) {
+export function Board({ state, isGm, userId, tool, options, selectedId, selectedObjectId, onSelect, onSelectObject, targeting, onTarget, floats, fog, readOnly, send, aim, markedIds = [], flashes = [] }: BoardProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ x: 40, y: 40, zoom: 1 });
   const [hover, setHover] = useState<Cell | null>(null);
@@ -152,7 +171,9 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
     () => state.map.zones.map((z) => ({ zone: z, cells: zoneCells(z, cols, rows) })),
     [state.map.zones, cols, rows],
   );
-  const previewZone = tool === 'zone' && hover && inside(hover) && !readOnly ? zoneCells({ id: 'preview', ...options.zone, origin: hover }, cols, rows) : [];
+  const previewZone = !aim && tool === 'zone' && hover && inside(hover) && !readOnly ? zoneCells({ id: 'preview', ...options.zone, origin: hover }, cols, rows) : [];
+  const aimZone = aim ? (aim.pinned ?? (hover && inside(hover) ? aim.zoneAt(hover) : null)) : null;
+  const aimCells = aimZone ? zoneCells({ ...aimZone, id: 'aim' }, cols, rows) : [];
 
   const zoomAt = (factor: number, cx?: number, cy?: number) => {
     userMoved.current = true;
@@ -190,6 +211,13 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
     const target = (e.target as HTMLElement).closest<HTMLElement>('[data-token],[data-object]');
     const base = { startX: e.clientX, startY: e.clientY, viewX: view.x, viewY: view.y };
 
+    if (aim && inside(cell)) {
+      // Visée d'un sort de zone : le clic (même sur un pion) épingle le gabarit.
+      const tokenCell = target?.dataset.token ? state.combatants[target.dataset.token]?.position : null;
+      aim.onAim(tokenCell ?? cell);
+      gesture.current = { kind: 'pan', ...base };
+      return;
+    }
     if (target?.dataset.token) {
       const id = target.dataset.token;
       if (targeting) {
@@ -279,7 +307,7 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
     <div className={s.boardWrap}>
       <div
         ref={viewport}
-        className={cx(s.viewport, (tool !== 'select' || targeting) && s.crosshair)}
+        className={cx(s.viewport, (tool !== 'select' || targeting || !!aim) && s.crosshair)}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -321,6 +349,19 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
               )}
             </div>
           ))}
+          {aimCells.map((c) => (
+            <div key={`az${cellKey(c)}`} className={cx(s.zoneCell, aim?.pinned && s.zonePinned)} style={{ left: c.x * size, top: c.y * size, width: size, height: size, background: `${aimZone!.color}${aim?.pinned ? '55' : '30'}`, borderColor: `${aimZone!.color}cc` }} />
+          ))}
+          {aimZone && (
+            <div className={s.zoneLabel} style={{ left: (aimZone.origin.x + 0.5) * size, top: (aimZone.origin.y + 0.5) * size, borderColor: aimZone.color }}>
+              {aimZone.label}
+            </div>
+          )}
+          {flashes.map((f) =>
+            zoneCells({ ...f.zone, id: 'flash' }, cols, rows).map((c) => (
+              <div key={`fl${f.id}${cellKey(c)}`} className={s.zoneFlash} style={{ left: c.x * size, top: c.y * size, width: size, height: size, background: f.zone.color }} />
+            )),
+          )}
           {previewZone.map((c) => (
             <div key={`pz${cellKey(c)}`} className={s.zoneCell} style={{ left: c.x * size, top: c.y * size, width: size, height: size, background: `${options.zone.color}22`, borderColor: `${options.zone.color}66` }} />
           ))}
@@ -357,7 +398,7 @@ export function Board({ state, isGm, userId, tool, options, selectedId, selected
               <div
                 key={c.id}
                 data-token={c.id}
-                className={cx(s.token, selectedId === c.id && s.tokenSelected, active && s.tokenActive, dead && s.tokenDead, c.hidden && isGm && s.tokenHidden, targeting && s.tokenTarget, ghost?.id === c.id && s.tokenDragging)}
+                className={cx(s.token, selectedId === c.id && s.tokenSelected, active && s.tokenActive, dead && s.tokenDead, c.hidden && isGm && s.tokenHidden, targeting && s.tokenTarget, markedIds.includes(c.id) && s.tokenMarked, ghost?.id === c.id && s.tokenDragging)}
                 style={{ left: pos.x * size, top: pos.y * size, width: c.size * size, height: c.size * size, '--ring': ring } as CSSProperties}
                 title={`${c.name}${c.hp !== null ? ` · ${c.hp}/${c.maxHp} PV` : ` · ${c.hpBand}`}${c.ac !== null ? ` · CA ${c.ac}` : ''}`}
               >

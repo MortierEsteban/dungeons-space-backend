@@ -127,3 +127,47 @@
     border-radius: 0;
   }
 }
+.refs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+.refs > :first-child {
+  width: 100%;
+}
+.refLink {
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--arcane-light);
+  text-decoration: underline dotted;
+}
+.refLink:hover {
+  color: var(--arcane-pale);
+}
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legendItem i {
+  display: inline-block;
+  flex: none;
+}
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.gem {
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg);
+}
+.line {
+  width: 16px;
+  height: 2px;
+}

@@ -1,7 +1,7 @@
 import { eventTypeDef, NARRATIVE_TYPES, type EventDto } from '@ds/shared';
 import { useMemo, useState } from 'react';
 import { Graph3D, type AxisMark, type GraphEdge, type GraphNode } from '../../shared/graph/Graph3D';
-import { useDebounced } from '../../shared/hooks';
+import { useDebounced, useLocalPref } from '../../shared/hooks';
 import { Button, Chip, Input, Loading, Panel, Rule } from '../../shared/ui/components';
 import { useCampaign } from '../campaigns/api';
 import { useCurrentCampaign } from '../campaigns/CampaignContext';
@@ -52,6 +52,7 @@ export function ChronicleView() {
   const [types, setTypes] = useState<string[]>([]);
   const [chars, setChars] = useState<string[]>([]);
   const query = useDebounced(q, 150);
+  const [flat, setFlat] = useLocalPref('chronicleFlat', false);
   const mutations = useChronicleMutations(campaignId ?? '');
 
   /** En mode liaison, cliquer un événement crée (ou retire) le lien avec l'événement ouvert. */
@@ -111,6 +112,8 @@ export function ChronicleView() {
           axis={axis}
           selectedId={selected}
           linking={!!linking}
+          flat={flat}
+          onToggleFlat={() => setFlat(!flat)}
           onSelect={(id) => {
             if (linking && id && id !== linking) {
               toggleLink(linking, id);

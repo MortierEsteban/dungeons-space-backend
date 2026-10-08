@@ -27,8 +27,8 @@ const monster = ({ stats, traits, ...m }: M): MonsterEntry => ({
   provenance: SRD_PROVENANCE,
 });
 
-/** Bestiaire du SRD 5.1 (statistiques du SRD, descriptions originales). */
-export const MONSTERS: MonsterEntry[] = [
+/** Bestiaire tel que résumé (défenses aux dégâts ajoutées plus bas). */
+const BASE: MonsterEntry[] = [
   monster({ id: 'giant-rat', name: 'Rat géant', type: 'Bête', size: 'P', cr: '1/8', ac: 12, hp: 7, hpDice: '2d6', speed: 9, stats: [7, 15, 11, 2, 10, 4], attacks: [atk('Morsure', 4, '1d4+2', 'perforant')], traits: ['Tactique de groupe'], summary: 'Vermine énorme et affamée qui grouille dans les égouts.' }),
   monster({ id: 'kobold', name: 'Kobold', type: 'Humanoïde', size: 'P', cr: '1/8', ac: 12, hp: 5, hpDice: '2d6-2', speed: 9, stats: [7, 15, 9, 8, 7, 8], attacks: [atk('Dague', 4, '1d4+2', 'perforant')], traits: ['Sensibilité au soleil', 'Tactique de groupe'], summary: 'Petit reptilien couard, redoutable en nombre et dans ses tunnels piégés.' }),
   monster({ id: 'bandit', name: 'Bandit', type: 'Humanoïde', size: 'M', cr: '1/8', ac: 12, hp: 11, hpDice: '2d8+2', speed: 9, stats: [11, 12, 12, 10, 10, 10], attacks: [atk('Cimeterre', 3, '1d6+1', 'tranchant')], summary: 'Détrousseur de grand chemin, plus courageux en bande que seul.' }),
@@ -53,3 +53,20 @@ export const MONSTERS: MonsterEntry[] = [
   monster({ id: 'young-red-dragon', name: 'Jeune dragon rouge', type: 'Dragon', size: 'G', cr: '10', ac: 18, hp: 178, hpDice: '17d10+85', speed: 12, stats: [23, 10, 21, 14, 11, 19], attacks: [atk('Morsure', 10, '2d10+6', 'perforant', 'allonge 3 m'), atk('Griffes', 10, '2d6+6', 'tranchant')], traits: ['Souffle de feu (cône 9 m, 16d6)', 'Immunité au feu'], summary: 'Orgueilleux et cupide, il fait de son antre volcanique un sanctuaire à sa propre gloire.' }),
   monster({ id: 'lich', name: 'Liche', type: 'Mort-vivant', size: 'M', cr: '21', ac: 17, hp: 135, hpDice: '18d8+54', speed: 9, stats: [11, 16, 16, 20, 14, 16], attacks: [atk('Contact paralysant', 12, '3d6', 'froid')], traits: ['Résistance légendaire (3/jour)', 'Rajeunissement', 'Incantation de niveau 18'], summary: 'Un mage ayant scellé son âme dans un phylactère pour échapper à la mort.' }),
 ];
+
+const PHYSICAL = ['contondant', 'perforant', 'tranchant'];
+
+/** Résistances, immunités et vulnérabilités du SRD (appliquées automatiquement en combat). */
+const DEFENSES: Record<string, MonsterEntry['defenses']> = {
+  skeleton: { vulnerabilities: ['contondant'], immunities: ['poison'] },
+  zombie: { immunities: ['poison'] },
+  ghoul: { immunities: ['poison'] },
+  gargoyle: { resistances: PHYSICAL, immunities: ['poison'] },
+  wight: { resistances: ['nécrotique', ...PHYSICAL], immunities: ['poison'] },
+  'flesh-golem': { immunities: ['foudre', 'poison', ...PHYSICAL] },
+  'young-red-dragon': { immunities: ['feu'] },
+  lich: { resistances: ['froid', 'foudre', 'nécrotique'], immunities: ['poison', ...PHYSICAL] },
+};
+
+/** Bestiaire du SRD 5.1 (statistiques du SRD, descriptions originales). */
+export const MONSTERS: MonsterEntry[] = BASE.map((m) => (DEFENSES[m.id] ? { ...m, defenses: DEFENSES[m.id] } : m));

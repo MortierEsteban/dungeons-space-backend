@@ -1,4 +1,4 @@
-import { creationSchema, giveCreationSchema } from '@ds/shared';
+import { creationSchema, giveCreationSchema, importCreationsSchema, sharedQuerySchema } from '@ds/shared';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireUser } from '../../kernel/auth';
@@ -25,6 +25,17 @@ export async function compendiumRoutes(app: FastifyInstance, { compendium }: { c
   });
 
   app.get('/creations', async (request) => ({ creations: await compendium.listCreations(requireUser(request)) }));
+
+  /** Bibliothèque partagée : créations publiées par les membres de toutes les tables. */
+  app.get('/creations/shared', async (request) => {
+    const { q, kind } = parse(sharedQuerySchema, request.query);
+    return { creations: await compendium.shared(requireUser(request), q, kind) };
+  });
+
+  app.post('/creations/import', async (request, reply) => {
+    const { ids, campaignId } = parse(importCreationsSchema, request.body);
+    return reply.status(201).send({ creations: await compendium.importShared(requireUser(request), ids, campaignId) });
+  });
 
   app.post('/creations', async (request, reply) => {
     const creation = await compendium.create(requireUser(request), parse(creationSchema, request.body));

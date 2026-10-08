@@ -1,15 +1,94 @@
-import { LINK_TYPES, NODE_KIND_META, NODE_KINDS, type LinkDto, type NodeDto, type NodeKind } from '@ds/shared';
-import { useMemo, useState } from 'react';
+import { eventTypeDef, LINK_TYPES, NODE_KIND_META, NODE_KINDS, type EventDto, type LinkDto, type NodeDto, type NodeKind } from '@ds/shared';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { errorMessage } from '../../shared/api/client';
-import { Graph3D, type GraphEdge, type GraphNode } from '../../shared/graph/Graph3D';
-import { useDebounced } from '../../shared/hooks';
+import { Graph3D, type GraphEdge, type GraphHandle, type GraphNode } from '../../shared/graph/Graph3D';
+import { useDebounced, useLocalPref } from '../../shared/hooks';
 import { Button, Chip, Empty, Field, IconButton, Input, Loading, Panel, Rule, Select, Tag, TextArea, Toggle } from '../../shared/ui/components';
 import { useToast } from '../../shared/ui/toast';
 import { useCurrentCampaign } from '../campaigns/CampaignContext';
+import { useEventLinks, useNarrativeEvents } from '../chronicle/api';
 import { useConstellation, useConstellationMutations, useSuggestions } from './api';
+import { EVENT_PREFIX, eventGraph } from './eventGraph';
 import { forceLayout, valenceColor } from './layout';
 import s from './constellation.module.css';
+
+const normalize = (t: string) => t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
+/** Un événement de la Chronique vu depuis la Constellation : qui, quoi, contre qui. */
+function EventCard({ event, isGm, onClose, onOpen, nodes, onPin }: { event: EventDto; isGm: boolean; onClose(): void; onOpen(id: string): void; nodes: NodeDto[]; onPin(): void }) {
+  const def = eventTypeDef(event.type);
+  const navigate = useNavigate();
+  const nodeOf = (ref: EventDto['actors'][number]) => (ref.kind === 'character' ? nodes.find((n) => n.refType === 'character' && n.refId === ref.id) : ref.kind === 'node' ? nodes.find((n) => n.id === ref.id) : undefined);
+  const Ref = ({ r }: { r: EventDto['actors'][number] }) => {
+    const n = nodeOf(r);
+    return n ? (
+      <button type="button" className={s.refLink} onClick={() => onOpen(n.id)}>
+        {r.name}
+      </button>
+    ) : (
+      <span>{r.name}</span>
+    );
+  };
+  return (
+    <div className="ds-stack" style={{ gap: 12 }}>
+      <div className="ds-row" style={{ alignItems: 'flex-start' }}>
+        <div className="ds-grow">
+          <div className="ds-label" style={{ color: def.color }}>
+            Événement · {def.label} · {event.sessionNo ? `session ${event.sessionNo}` : 'prologue'}
+          </div>
+          <h2 className="ds-h2" style={{ fontSize: 22, color: 'var(--gold-light)' }}>
+            {event.title}
+          </h2>
+        </div>
+        <IconButton label="Fermer" onClick={onClose}>
+          ×
+        </IconButton>
+      </div>
+      <div className="ds-row" style={{ gap: 6 }}>
+        <Tag color={def.color}>Importance {event.importance}</Tag>
+        {event.visibility === 'gm_only' && <Tag color="var(--magenta-light)">MJ seulement</Tag>}
+        {event.inGameDate && <Tag>{event.inGameDate}</Tag>}
+      </div>
+      {event.text && <p className={s.desc}>{event.text}</p>}
+      {event.actors.length > 0 && (
+        <div className={s.refs}>
+          <span className="ds-label">Acteurs</span>
+          {event.actors.map((a, i) => (
+            <Ref key={`a${i}`} r={a} />
+          ))}
+        </div>
+      )}
+      {event.targets.length > 0 && (
+        <div className={s.refs}>
+          <span className="ds-label">Cibles</span>
+          {event.targets.map((t, i) => (
+            <Ref key={`t${i}`} r={t} />
+          ))}
+        </div>
+      )}
+      {event.places.length > 0 && (
+        <div className={s.refs}>
+          <span className="ds-label">Lieux</span>
+          {event.places.map((p) => (
+            <span key={p}>{p}</span>
+          ))}
+        </div>
+      )}
+      <Rule />
+      <div className="ds-row">
+        <Button variant="secondary" size="sm" onClick={() => navigate('/explorer?vue=chronique')}>
+          Ouvrir la Chronique
+        </Button>
+        {isGm && (
+          <Button variant="ghost" size="sm" onClick={onPin} title="En faire un nœud de la Constellation, que l'on peut relier à la main">
+            Épingler comme nœud
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /** Préréglages de lien : choisir un préréglage puis cliquer la cible (≤ 3 interactions, CST-06). */
 const PRESETS = [
@@ -191,25 +270,70 @@ export function ConstellationView() {
   const [minIntensity, setMinIntensity] = useState(0);
   const [q, setQ] = useState('');
   const query = useDebounced(q, 150);
+  const [flat, setFlat] = useLocalPref('constellationFlat', true);
+  const [showEvents, setShowEvents] = useLocalPref('constellationEvents', true);
+  const [eventImportance, setEventImportance] = useLocalPref('constellationEventImportance', 1);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const graph = useRef<GraphHandle>(null);
+  const { data: events = [] } = useNarrativeEvents(showEvents ? campaignId : null);
+  const { data: eventLinks = [] } = useEventLinks(showEvents ? campaignId : null);
 
   const nodes = data?.nodes ?? [];
   const links = data?.links ?? [];
-  const positions = useMemo(() => forceLayout(nodes, links), [nodes, links]);
+  const evGraph = useMemo(() => (showEvents ? eventGraph(nodes, events, eventLinks, eventImportance) : { events: [], edges: [] }), [showEvents, nodes, events, eventLinks, eventImportance]);
+  const positions = useMemo(
+    () => forceLayout([...nodes, ...evGraph.events.map((e) => ({ id: e.id }))], [...links, ...evGraph.edges], flat),
+    [nodes, links, evGraph, flat],
+  );
+  const degree = useMemo(() => {
+    const d = new Map<string, number>();
+    for (const l of [...links, ...evGraph.edges]) for (const k of [l.fromId, l.toId]) d.set(k, (d.get(k) ?? 0) + 1);
+    return d;
+  }, [links, evGraph]);
 
+  const matches = (label: string) => !query || normalize(label).includes(normalize(query));
   const visibleLinks = links.filter((l) => l.intensity >= minIntensity && (polarity === 'all' || (polarity === 'pos' ? l.valence > 0 : l.valence < 0)));
-  const graphNodes: GraphNode[] = nodes.map((n) => ({
-    id: n.id,
-    label: n.label,
-    color: n.color ?? NODE_KIND_META[n.kind].color,
-    position: positions.get(n.id) ?? { x: 0, y: 0, z: 0 },
-    shape: n.kind === 'pc' || n.kind === 'npc' ? 'circle' : 'diamond',
-    muted: (kinds.length > 0 && !kinds.includes(n.kind)) || (!!query && !n.label.toLowerCase().includes(query.toLowerCase())),
-    hint: NODE_KIND_META[n.kind].label,
-  }));
-  const edges: GraphEdge[] = visibleLinks.map((l) => ({ from: l.fromId, to: l.toId, color: valenceColor(l.valence), width: 1 + l.intensity * 0.5, opacity: 0.55, arrow: true, dashed: !l.playerVisible && isGm }));
+  const graphNodes: GraphNode[] = [
+    ...nodes.map((n) => ({
+      id: n.id,
+      label: n.label,
+      color: n.color ?? NODE_KIND_META[n.kind].color,
+      position: positions.get(n.id) ?? { x: 0, y: 0, z: 0 },
+      shape: n.kind === 'pc' || n.kind === 'npc' ? ('circle' as const) : ('diamond' as const),
+      muted: (kinds.length > 0 && !kinds.includes(n.kind)) || !matches(n.label),
+      hint: NODE_KIND_META[n.kind].label,
+      size: 1 + Math.min(0.5, (degree.get(n.id) ?? 0) * 0.05),
+      pinLabel: n.kind === 'pc' || n.kind === 'faction' || (degree.get(n.id) ?? 0) >= 5,
+    })),
+    ...evGraph.events.map(({ id, event }) => ({
+      id,
+      label: event.title,
+      color: eventTypeDef(event.type).color,
+      position: positions.get(id) ?? { x: 0, y: 0, z: 0 },
+      shape: 'diamond' as const,
+      muted: (kinds.length > 0 && !kinds.includes('event')) || !matches(event.title),
+      hint: `${eventTypeDef(event.type).label}, session ${event.sessionNo ?? 0}`,
+      size: 0.7 + event.importance * 0.08,
+      pinLabel: event.importance >= 5,
+    })),
+  ];
+  const edges: GraphEdge[] = [
+    ...visibleLinks.map((l) => ({ from: l.fromId, to: l.toId, color: valenceColor(l.valence), width: 1 + l.intensity * 0.5, opacity: 0.55, arrow: true, dashed: !l.playerVisible && isGm, label: l.type })),
+    ...evGraph.edges.map((e) => ({ from: e.fromId, to: e.toId, color: e.color, width: 1, opacity: 0.3, arrow: e.role !== 'chain', dashed: e.role === 'chain', label: e.role === 'chain' ? 'lié à' : e.role === 'actor' ? `acteur · ${e.label}` : `cible · ${e.label}` })),
+  ];
   const node = nodes.find((n) => n.id === selected) ?? null;
+  const selectedEvent = selected?.startsWith(EVENT_PREFIX) ? (evGraph.events.find((e) => e.id === selected)?.event ?? null) : null;
+
+  const goTo = (id: string) => {
+    onSelect(id);
+    graph.current?.focus(id);
+  };
 
   const onSelect = (id: string | null) => {
+    if (linking && id?.startsWith(EVENT_PREFIX)) {
+      toast('Épinglez d’abord cet événement comme nœud pour le relier.', 'info');
+      return;
+    }
     if (linking && selected && id && id !== selected) {
       const p = PRESETS[preset]!;
       m.createLink.mutate(
@@ -237,23 +361,65 @@ export function ConstellationView() {
       <Panel pad={false} className={s.stagePanel}>
         <Graph3D
           ariaLabel="Constellation des relations"
+          handle={graph}
           nodes={graphNodes}
           edges={edges}
           selectedId={selected}
           onSelect={onSelect}
           linking={linking}
+          flat={flat}
+          onToggleFlat={() => setFlat(!flat)}
+          legend={
+            <>
+              {NODE_KINDS.filter((k) => k !== 'event' || evGraph.events.length || nodes.some((n) => n.kind === 'event')).map((k) => (
+                <span key={k} className={s.legendItem}>
+                  <i style={{ background: NODE_KIND_META[k].color }} className={k === 'pc' || k === 'npc' ? s.dot : s.gem} />
+                  {NODE_KIND_META[k].label}
+                </span>
+              ))}
+              <span className={s.legendItem}>
+                <i className={s.line} style={{ background: '#4fb3ff' }} />
+                Alliance
+              </span>
+              <span className={s.legendItem}>
+                <i className={s.line} style={{ background: '#b0306a' }} />
+                Hostilité
+              </span>
+            </>
+          }
           overlay={
             <div className={s.filters} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-              <Input
-                placeholder="Rechercher un nœud…"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => {
-                  const hit = nodes.find((n) => n.label.toLowerCase().includes(q.toLowerCase()));
-                  if (e.key === 'Enter' && hit) onSelect(hit.id);
-                }}
-                aria-label="Rechercher un nœud (Entrée pour s'y rendre)"
-              />
+              <div className="ds-row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+                <Input
+                  placeholder="Rechercher un nœud ou un événement…"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  onKeyDown={(e) => {
+                    const hit = graphNodes.find((n) => !n.muted && matches(n.label));
+                    if (e.key === 'Enter' && hit) goTo(hit.id);
+                  }}
+                  aria-label="Rechercher (Entrée pour s'y rendre)"
+                />
+                <Button size="sm" variant={filtersOpen ? 'secondary' : 'ghost'} onClick={() => setFiltersOpen(!filtersOpen)} aria-expanded={filtersOpen}>
+                  Filtres{kinds.length || polarity !== 'all' || minIntensity ? ' •' : ''}
+                </Button>
+              </div>
+              <div className="ds-row" style={{ gap: 6 }}>
+                <Toggle checked={showEvents} onChange={setShowEvents}>
+                  Événements de la Chronique{showEvents ? ` · ${evGraph.events.length}` : ''}
+                </Toggle>
+              </div>
+              {filtersOpen && (
+              <>
+              {showEvents && (
+                <Select value={eventImportance} onChange={(e) => setEventImportance(Number(e.target.value))} aria-label="Importance minimale des événements" style={{ minHeight: 32, padding: '4px 30px 4px 10px', fontSize: 13 }}>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <option key={i} value={i}>
+                      {i === 1 ? 'Tous les événements' : `Événements d’importance ≥ ${i}`}
+                    </option>
+                  ))}
+                </Select>
+              )}
               <div className="ds-row" style={{ gap: 6 }}>
                 {NODE_KINDS.map((k) => (
                   <Chip key={k} color={NODE_KIND_META[k].color} active={kinds.includes(k)} onClick={() => setKinds((xs) => (xs.includes(k) ? xs.filter((x) => x !== k) : [...xs, k]))}>
@@ -279,6 +445,8 @@ export function ConstellationView() {
                   ))}
                 </Select>
               </div>
+              </>
+              )}
             </div>
           }
         />
@@ -286,13 +454,27 @@ export function ConstellationView() {
       <Panel className={s.side}>
         {mode === 'add' ? (
           <NodeForm onDone={() => setMode(node ? 'detail' : 'overview')} />
+        ) : selectedEvent ? (
+          <EventCard
+            event={selectedEvent}
+            isGm={isGm}
+            nodes={nodes}
+            onClose={() => onSelect(null)}
+            onOpen={goTo}
+            onPin={() =>
+              m.createNode.mutate(
+                { kind: 'event', label: selectedEvent.title, description: selectedEvent.text, refType: 'event', refId: selectedEvent.id, playerVisible: selectedEvent.visibility !== 'gm_only' },
+                { onSuccess: (n) => (toast('Événement épinglé dans la Constellation.', 'success'), setSelected(n.id)), onError: (e) => toast(errorMessage(e), 'error') },
+              )
+            }
+          />
         ) : node ? (
           <NodeDetail
             node={node}
             nodes={nodes}
             links={links}
             isGm={isGm}
-            onOpen={(id) => setSelected(id)}
+            onOpen={goTo}
             onClose={() => onSelect(null)}
             linking={linking}
             setLinking={setLinking}
@@ -306,7 +488,10 @@ export function ConstellationView() {
               <h2 className="ds-h2" style={{ fontSize: 24, color: 'var(--gold-light)' }}>
                 Qui affecte qui ?
               </h2>
-              <p className="ds-help">Cliquez sur une entité pour voir ce qu’elle affecte et ce qui l’affecte. Liens bleus : alliance ; magenta : hostilité ; pointillés : cachés aux joueurs.</p>
+              <p className="ds-help">
+                Cliquez sur une entité pour voir ce qu’elle affecte et ce qui l’affecte ; double-cliquez pour la centrer. Les losanges roses sont les événements de la Chronique, reliés à
+                leurs acteurs et à leurs cibles. Liens bleus : alliance ; magenta : hostilité ; pointillés : cachés aux joueurs.
+              </p>
             </div>
             <div className={s.stats}>
               <div>
@@ -318,8 +503,8 @@ export function ConstellationView() {
                 <span>Liens</span>
               </div>
               <div>
-                <strong>{links.filter((l) => l.valence < 0).length}</strong>
-                <span>Hostilités</span>
+                <strong>{evGraph.events.length}</strong>
+                <span>Événements</span>
               </div>
             </div>
             {isGm && (

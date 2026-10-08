@@ -1,4 +1,4 @@
-import type { CompendiumEntry, ItemEntry, MonsterEntry, SpellEntry } from '@ds/rules';
+import { knownSpellFromEntry, type CompendiumEntry, type ItemEntry, type MonsterEntry, type SpellEntry } from '@ds/rules';
 import { useState } from 'react';
 import { num, RARITY_COLORS } from '../../shared/format';
 import { useDice } from '../../shared/dice/DiceProvider';
@@ -66,9 +66,9 @@ export function Library() {
   const addToSheet = () => {
     if (!entry || !target) return;
     if (entry.kind === 'item') {
-      give(target, { type: 'add_item', item: { name: entry.name, ref: entry.id, qty: 1, weight: entry.weight, container: 'Sac à dos', equipped: false, rarity: entry.rarity, requiresAttunement: !!entry.requiresAttunement, attuned: false, description: entry.summary } }, `${entry.name} ajouté à l’inventaire.`);
+      give(target, { type: 'add_item', item: { name: entry.name, ref: entry.id, qty: 1, weight: entry.weight, container: 'Sac à dos', equipped: false, rarity: entry.rarity, requiresAttunement: !!entry.requiresAttunement, attuned: false, description: entry.summary, ...(entry.roll ? { roll: entry.roll } : {}) } }, `${entry.name} ajouté à l’inventaire.`);
     } else if (entry.kind === 'spell') {
-      give(target, { type: 'add_spell', spell: { ref: entry.id, name: entry.name, level: entry.level, school: entry.school, castingTime: entry.castingTime, range: entry.range, duration: entry.duration, concentration: entry.concentration, ritual: entry.ritual, prepared: false, favorite: false, description: entry.summary, ...(entry.roll ? { roll: entry.roll } : {}) } }, `${entry.name} rejoint le grimoire.`);
+      give(target, { type: 'add_spell', spell: { ...knownSpellFromEntry(entry), prepared: false } }, `${entry.name} rejoint le grimoire.`);
     } else toast('Un monstre ne se range pas dans une fiche : ajoutez-le depuis un combat.', 'info');
   };
 

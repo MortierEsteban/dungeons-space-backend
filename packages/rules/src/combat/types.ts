@@ -1,3 +1,5 @@
+import type { CombatDefenses } from '../ruleset';
+
 export type CombatantKind = 'pc' | 'npc' | 'monster';
 export type Side = 'ally' | 'enemy' | 'neutral';
 
@@ -61,6 +63,10 @@ export interface Combatant {
   portraitUrl?: string | null;
   /** Modèle 3D (glTF binaire) importé par le joueur ou le MJ ; absent = jeton simple. */
   modelUrl?: string | null;
+  /** Modificateurs de sauvegarde (str…cha) ; absents des combats antérieurs (= 0). */
+  saves?: Partial<Record<'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha', number>>;
+  /** Résistances, immunités, vulnérabilités aux dégâts, appliquées automatiquement. */
+  defenses?: CombatDefenses;
 }
 
 export const TERRAIN_KINDS = ['wall', 'difficult', 'water', 'lava', 'vegetation'] as const;

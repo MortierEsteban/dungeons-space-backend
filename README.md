@@ -69,10 +69,10 @@ tracker de combat « théâtre de l'esprit » pour le téléphone.
 | Rubrique | Contenu |
 |---|---|
 | Accueil | Accueil immersif (grand écran) ou classique, prochaine session |
-| Explorer | Chronique 3D par sessions, frise filtrable, Constellation (focus, liens qualifiés, suggestions), campagnes publiques |
-| Combattre | Plateau **2D ou 3D isométrique** (terrain en relief, zones, objets éclairés, mesures, portée, attaques animées), modèles 3D .glb importés par les joueurs (jeton simple par défaut), **brouillard de guerre** par joueur piloté par le MJ, initiative, actions, PV masqués, tracker mobile, **replay** |
-| Sanctuaire | Bibliothèque SRD et Forge des créations personnalisées |
-| Personnage | Fiche complète (sorts, inventaire, harmonisation, notes privées/partagées, événements), PNJ |
+| Explorer | Chronique 3D par sessions, frise filtrable, Constellation (vue à plat ou en relief, événements de la Chronique reliés à leurs acteurs, déplacement au clic molette, liens qualifiés, suggestions), campagnes publiques |
+| Combattre | Plateau **2D ou 3D isométrique** (terrain en relief, zones, objets éclairés, mesures, portée, attaques animées), modèles 3D .glb importés par les joueurs (jeton simple par défaut), **brouillard de guerre** par joueur piloté par le MJ, initiative avec la créature active mise en avant, **fiche en combat** (sorts lancés avec leur gabarit, objets, ressources), jets de sauvegarde et résistances automatiques, PV masqués, tracker mobile, **replay** |
+| Sanctuaire | Bibliothèque SRD, **bibliothèque partagée** (import en masse des créations des autres tables) et Forge (objets, sorts, créatures, **classes homebrew** avec ressources et passifs) |
+| Personnage | Fiche complète (passifs d'espèce, de classe et d'objets appliqués, ressources, sorts, inventaire, harmonisation, notes privées/partagées, événements), PNJ |
 | Génération | Création guidée de PJ, PNJ et trésors |
 | Campagne | Sessions et récapitulatifs, code d'invitation, membres, réglages |
 

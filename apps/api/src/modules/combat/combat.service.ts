@@ -1,28 +1,36 @@
 import { randomUUID } from 'node:crypto';
 import {
+  abilityModifier,
+  ABILITY_KEYS,
   applyCombatEvent,
   combatCommandSchema,
   combatEventImportance,
   createCombatEvent,
   describeCombatEvent,
   decideCombat,
+  formatModifier,
   getRuleset,
   MONSTERS,
   redactCombatEventForPlayer,
+  scaledRoll,
   SIZE_CELLS,
+  spellMechanics,
+  spellTargets,
+  spellZone,
   systemRng,
   type CombatantSpec,
   type CombatCommand,
   type CombatEvent,
   type CombatState,
   type Dnd5eSheet,
+  type ResolvedSpell,
 } from '@ds/rules';
 import type { CombatEventEnvelope, createEncounterSchema, EncounterDto, EncounterSummaryDto, EntityRef } from '@ds/shared';
 import { and, asc, desc, eq, like } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Db } from '../../infra/db/client';
 import type { Realtime } from '../../infra/realtime';
-import { badRequest, notFound } from '../../kernel/errors';
+import { badRequest, forbidden, notFound } from '../../kernel/errors';
 import { isUuid, type CampaignAccess, type Viewer } from '../campaigns/access';
 import { campaigns } from '../campaigns/campaigns.tables';
 import type { AppendEvent, ChronicleService, EventRow } from '../chronicle/chronicle.service';
@@ -198,7 +206,7 @@ export class CombatService {
       const produced: CombatEvent[] = [];
       const ctx = { rng: systemRng, newId: () => randomUUID() };
       for (const command of commands) {
-        for (const resolved of await this.resolve(row.campaignId, working, command)) {
+        for (const resolved of await this.resolve(row.campaignId, working, command, viewer)) {
           for (const e of decideCombat(working, resolved, viewer, ctx)) {
             produced.push(e);
             working = applyCombatEvent(working, e);
@@ -210,8 +218,56 @@ export class CombatService {
     });
   }
 
-  /** Remplace les références (fiche, bestiaire) par des créatures entièrement spécifiées. */
-  private async resolve(campaignId: string, state: CombatState, command: CombatCommand): Promise<Exclude<CombatCommand, { type: 'add_character' | 'add_monster' }>[]> {
+  /**
+   * Sort du grimoire d'un PJ : l'emplacement est dépensé sur la fiche (événement de Chronique),
+   * puis le sort est entièrement spécifié (DD, attaque, dégâts à l'échelle, gabarit, cibles).
+   */
+  private async resolveSpell(state: CombatState, command: Extract<CombatCommand, { type: 'cast_spell' }>, viewer: Viewer): Promise<ResolvedSpell> {
+    if (state.status === 'ended') throw badRequest('Ce combat est terminé.');
+    const caster = state.combatants[command.casterId];
+    if (!caster) throw notFound('Créature introuvable dans ce combat.');
+    if (!caster.characterId) throw badRequest('Seuls les personnages lancent des sorts de leur grimoire.');
+    if (viewer.role !== 'gm' && caster.ownerUserId !== viewer.userId) throw forbidden(`Vous ne contrôlez pas ${caster.name}.`);
+    const character = await this.characters.act(caster.characterId, viewer.userId, { type: 'cast_spell', spellId: command.spellId, slotLevel: command.slotLevel });
+    const sheet = character.sheet!;
+    const derived = character.derived!;
+    const spell = sheet.spellcasting?.spells.find((s) => s.id === command.spellId);
+    if (!spell || !sheet.spellcasting) throw notFound('Sort introuvable.');
+    const m = spellMechanics(spell);
+    const level = Math.max(spell.level, command.slotLevel);
+    const roll = scaledRoll(m, level, sheet.level);
+    const mod = derived.modifiers[sheet.spellcasting.ability];
+    const aim = command.aim ?? (m.selfOrigin ? caster.position : null);
+    const zone = m.area && aim ? spellZone(m, caster.position, aim, state.map.cellMeters) : null;
+    let targetIds = command.targetIds.filter((id) => state.combatants[id]);
+    if (zone) {
+      // Gabarit : toutes les créatures touchées, ou celles retenues par le lanceur parmi elles.
+      const inZone = spellTargets(state, zone, caster.id, m.selfOrigin);
+      targetIds = targetIds.length ? inZone.filter((id) => targetIds.includes(id)) : inZone;
+    } else {
+      targetIds = (m.attack ? targetIds : [...new Set(targetIds)]).slice(0, m.targets);
+    }
+    return {
+      type: 'resolve_spell',
+      casterId: caster.id,
+      name: spell.name,
+      level,
+      targetIds,
+      ...(zone ? { zone } : {}),
+      keepZone: !!zone && command.keepZone,
+      ...(m.attack && derived.spellAttack !== null ? { attack: { bonus: derived.spellAttack } } : {}),
+      ...(m.save && derived.spellSaveDc !== null ? { save: { ability: m.save, dc: derived.spellSaveDc, half: m.half } } : {}),
+      ...(roll && !m.heal ? { damage: { notation: roll, ...(m.damageType ? { type: m.damageType } : {}) } } : {}),
+      ...(roll && m.heal ? { heal: { notation: `${roll}${formatModifier(mod)}` } } : {}),
+      ...(m.condition ? { condition: m.condition } : {}),
+      concentration: m.concentration,
+      cost: m.cost,
+    };
+  }
+
+  /** Remplace les références (fiche, bestiaire, grimoire) par des commandes entièrement spécifiées. */
+  private async resolve(campaignId: string, state: CombatState, command: CombatCommand, viewer: Viewer): Promise<(Exclude<CombatCommand, { type: 'add_character' | 'add_monster' | 'cast_spell' }> | ResolvedSpell)[]> {
+    if (command.type === 'cast_spell') return [await this.resolveSpell(state, command, viewer)];
     if (command.type === 'add_character') {
       const [c] = await this.characters.rowsByIds([command.characterId]);
       if (!c || c.campaignId !== campaignId || c.kind !== 'pc' || !c.sheet) throw notFound('Personnage introuvable dans cette campagne.');
@@ -237,6 +293,12 @@ export class CombatService {
           kind: 'monster' as const, side: 'enemy' as const, hp: m.hp, maxHp: m.hp, ac: m.ac, initiativeMod: dexMod,
           speed: m.speed, size: SIZE_CELLS[m.size], position: i === 0 ? (command.position ?? null) : null,
           characterId: null, monsterId: m.id, ownerUserId: null, attack, portraitUrl: null, modelUrl: null,
+          saves: Object.fromEntries(ABILITY_KEYS.map((k) => [k, abilityModifier(m.abilities[k])])),
+          defenses: {
+            resistances: (m.defenses?.resistances ?? []).map((damage) => ({ damage })),
+            immunities: (m.defenses?.immunities ?? []).map((damage) => ({ damage })),
+            vulnerabilities: (m.defenses?.vulnerabilities ?? []).map((damage) => ({ damage })),
+          },
         },
       }));
     }

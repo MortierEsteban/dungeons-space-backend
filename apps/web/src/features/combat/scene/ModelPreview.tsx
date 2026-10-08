@@ -7,12 +7,12 @@ import { FittedModel, ModelBoundary, type ModelPose } from './model';
 import { Coin } from './Pieces';
 
 /** Vitrine du modèle 3D d'un personnage : il tourne lentement sur son jeton. */
-export default function ModelPreview({ url, name, side = 'ally' }: { url: string | null; name: string; side?: 'ally' | 'enemy' | 'neutral' }) {
+export default function ModelPreview({ url, name, side = 'ally', height, still }: { url: string | null; name: string; side?: 'ally' | 'enemy' | 'neutral'; height?: number; still?: boolean }) {
   const [pose, setPose] = useState<ModelPose>('idle');
   const short = name.slice(0, 2).toUpperCase();
   const coin = <Coin c={{ short, side, size: 1, portraitUrl: null }} />;
   return (
-    <div className={s.modelPreview} onPointerEnter={() => setPose('walk')} onPointerLeave={() => setPose('idle')}>
+    <div className={s.modelPreview} style={height ? { height } : undefined} onPointerEnter={() => setPose('walk')} onPointerLeave={() => setPose('idle')}>
       <Canvas
         shadows
         dpr={[1, 2]}
@@ -35,9 +35,9 @@ export default function ModelPreview({ url, name, side = 'ally' }: { url: string
           )}
           <ContactShadows opacity={0.6} scale={3} blur={2.4} far={2} />
         </group>
-        <OrbitControls autoRotate autoRotateSpeed={1.6} enablePan={false} minDistance={1.4} maxDistance={6} target={[0, 0.1, 0]} />
+        <OrbitControls autoRotate autoRotateSpeed={1.6} enablePan={false} enableZoom={!still} enableRotate={!still} minDistance={1.4} maxDistance={6} target={[0, 0.1, 0]} />
       </Canvas>
-      {!url && <span className={s.modelPreviewMsg} style={{ alignItems: 'flex-end' }}>Jeton par défaut</span>}
+      {!url && !still && <span className={s.modelPreviewMsg} style={{ alignItems: 'flex-end' }}>Jeton par défaut</span>}
     </div>
   );
 }

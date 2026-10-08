@@ -217,6 +217,7 @@ export async function seedDemo(s: Services, db: Db): Promise<boolean> {
     ],
     lore: 'Forgée dans la lave du volcan de Valombre, elle murmure le nom de son premier porteur quand on la dégaine.',
     campaignId: cid,
+    shared: true,
   });
   await s.compendium.create(u.gm.id, {
     kind: 'Objet merveilleux', name: 'Cloche de Valombre', rarity: 'Très rare', attune: true, weight: 2, price: 8000,
@@ -224,6 +225,7 @@ export async function seedDemo(s: Services, db: Db): Promise<boolean> {
     effects: [{ id: 'f3', mode: 'Actif', trigger: 'Action', kind: 'Condition infligée', value: 'Effrayé, JS Sag DD 15', charges: 1, recharge: 'Aube', desc: 'Tous les morts-vivants à 9 m doivent fuir.' }],
     lore: 'Elle sonne seule à minuit, trois coups.',
     campaignId: cid,
+    shared: true,
   });
 
   // ── Notes d'Elowen ──
@@ -235,9 +237,41 @@ export async function seedDemo(s: Services, db: Db): Promise<boolean> {
     s.campaigns.create(owner.id, { name, synopsis, tone, rulesetId: 'dnd5e-srd51', coverUrl: null, visibility: 'public', recruiting, settings: { startLevel: level, statMethod: 'point_buy', variants: {}, diagonalRule: 'simple', playerConstellation: false }, invites: [] });
   const lucioles = await other(u.orsane, 'La Forêt des Lucioles', 'Un bois enchanté où les sentiers changent à chaque lune.', 'Mystère', true, 1);
   await s.campaigns.joinByCode(lucioles.joinCode!, u.lyra);
-  await other(u.kael, 'Le Trône de Givre', 'Intrigues de cour dans un royaume figé par un hiver sans fin.', 'Héroïque', true, 3);
+  const givre = await other(u.kael, 'Le Trône de Givre', 'Intrigues de cour dans un royaume figé par un hiver sans fin.', 'Héroïque', true, 3);
   const encre = await other(u.orsane, "Sous la Mer d'Encre", "L'expédition qui a réveillé le Léviathan.", 'Sombre', false, 12);
   await s.campaigns.update(encre.id, { userId: u.orsane.id, role: 'gm' }, { status: 'finished' });
+
+  // ── Bibliothèque partagée : créations publiées depuis d'autres tables ──
+  const share = (owner: UserDto, campaignId: string, c: Omit<Parameters<typeof s.compendium.create>[1], 'campaignId' | 'shared' | 'frame' | 'halo' | 'tint' | 'imageUrl' | 'attune' | 'weight' | 'price' | 'rarity' | 'lore' | 'effects'> & Partial<Parameters<typeof s.compendium.create>[1]>) =>
+    s.compendium.create(owner.id, { rarity: 'Peu commun', attune: false, weight: 0, price: 0, frame: 'Runique', halo: false, tint: null, imageUrl: null, effects: [], lore: '', ...c, campaignId, shared: true });
+  await share(u.orsane, lucioles.id, {
+    kind: 'Classe', name: 'Lame runique', lore: 'Des guerriers qui gravent la magie du givre dans leur propre chair.',
+    mech: {
+      hitDie: 10, primary: ['str', 'int'], saves: ['str', 'int'], caster: 'third', spellAbility: 'int',
+      skillChoices: { count: 2, from: ['arcana', 'athletics', 'history', 'intimidation', 'perception'] },
+      features: [
+        { level: 1, name: 'Peau de rune', summary: 'Vos runes vous protègent du froid.', effects: [{ type: 'resistance', damage: 'froid' }] },
+        { level: 1, name: 'Frappe runique', summary: 'Dépensez une charge runique : +1d6 dégâts de froid sur un coup au but.' },
+        { level: 2, name: 'Garde de givre', summary: 'Tant que vous portez une armure, +1 à la CA.', effects: [{ type: 'ac_bonus', value: 1 }] },
+        { level: 5, name: 'Attaque supplémentaire', summary: "Deux attaques lorsque vous effectuez l'action Attaquer." },
+      ],
+      resources: [{ id: 'runes', name: 'Charges runiques', max: 'pb', recharge: 'short', fromLevel: 1, pool: false }],
+    },
+  });
+  await share(u.orsane, lucioles.id, {
+    kind: 'Potion', name: 'Rosée de luciole', rarity: 'Commun', weight: 0.5, price: 60, mech: { n: 2, f: 4, mod: 2, ptype: 'Soins' },
+    lore: 'Une goutte de lumière qui referme les plaies.',
+  });
+  await share(u.orsane, lucioles.id, {
+    kind: 'Objet merveilleux', name: 'Cape des sous-bois', rarity: 'Rare', attune: true, weight: 1, price: 1200, mech: { slot: 'Épaules', conso: false },
+    effects: [{ id: 'c1', mode: 'Passif', trigger: 'Quand harmonisé', kind: 'Résistance', value: 'Poison', charges: 0, recharge: 'Aube', desc: '' }],
+    lore: 'Tissée de mousse et de fils d’araignée.',
+  });
+  await share(u.kael, givre.id, {
+    kind: 'Sort', name: 'Vague d’encre', rarity: 'Rare',
+    mech: { lvl: 2, school: 'Invocation', cast: '1 action', range: '18 m', dur: 'Instantanée', comps: ['V', 'S'], conc: false, ritual: false, dice: '3d8', dtype: 'nécrotique', save: 'con', half: true, area: 'sphere', areaSize: 3, condition: 'Aveuglé' },
+    lore: 'Une marée noire jaillit et aveugle ceux qu’elle touche.',
+  });
   return true;
 }
 

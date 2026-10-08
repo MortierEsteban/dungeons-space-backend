@@ -32,17 +32,18 @@ export function hasWebGL(): boolean {
 }
 
 /**
- * Le modèle d'un PJ suit sa fiche en direct (même s'il est déjà engagé dans un combat) ;
- * les autres créatures gardent celui choisi dans le combat. Renvoie le même objet si rien ne change.
+ * Le modèle (et le portrait) d'un PJ suivent sa fiche en direct (même s'il est déjà engagé dans un combat) ;
+ * les autres créatures gardent ceux choisis dans le combat. Renvoie le même objet si rien ne change.
  */
-export function withCharacterModels(state: CombatState, models: ReadonlyMap<string, string | null>): CombatState {
+export function withCharacterModels(state: CombatState, models: ReadonlyMap<string, string | null>, portraits?: ReadonlyMap<string, string | null>): CombatState {
   let combatants: CombatState['combatants'] | null = null;
   for (const c of Object.values(state.combatants)) {
     if (!c.characterId || !models.has(c.characterId)) continue;
     const modelUrl = models.get(c.characterId) ?? c.modelUrl ?? null;
-    if (modelUrl === (c.modelUrl ?? null)) continue;
+    const portraitUrl = portraits?.get(c.characterId) ?? c.portraitUrl ?? null;
+    if (modelUrl === (c.modelUrl ?? null) && portraitUrl === (c.portraitUrl ?? null)) continue;
     combatants ??= { ...state.combatants };
-    combatants[c.id] = { ...c, modelUrl };
+    combatants[c.id] = { ...c, modelUrl, portraitUrl };
   }
   return combatants ? { ...state, combatants } : state;
 }

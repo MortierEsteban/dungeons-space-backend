@@ -54,6 +54,8 @@ export function spellSlotsFor(caster: CasterType, level: number): Record<number,
       return toRecord(FULL_CASTER[lvl - 1] ?? []);
     case 'half':
       return lvl < 2 ? {} : toRecord(FULL_CASTER[Math.ceil(lvl / 2) - 1] ?? []);
+    case 'third':
+      return lvl < 3 ? {} : toRecord(FULL_CASTER[Math.ceil(lvl / 3) - 1] ?? []);
     case 'pact': {
       const [count, slotLevel] = pactSlots(lvl);
       return { [slotLevel]: count };

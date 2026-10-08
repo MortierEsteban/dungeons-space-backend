@@ -240,3 +240,82 @@ describe('sanctuaire', () => {
     expect(r.attribution).toMatch(/System Reference Document 5\.1/);
   });
 });
+
+describe('bibliothèque partagée et classes homebrew', () => {
+  const classe = {
+    kind: 'Classe', name: 'Lame runique', shared: true,
+    mech: {
+      hitDie: 10, primary: ['str'], saves: ['str', 'int'], caster: null,
+      skillChoices: { count: 2, from: ['arcana', 'athletics'] },
+      features: [{ level: 1, name: 'Peau de rune', summary: 'Résistance au froid.', effects: [{ type: 'resistance', damage: 'froid' }] }],
+      resources: [{ id: 'runes', name: 'Charges runiques', max: 'pb', recharge: 'short' }],
+    },
+  };
+
+  it('publie, liste et importe en masse sans dupliquer', async () => {
+    const a = (await outsider.post('/creations', classe)).json().creation;
+    const b = (await outsider.post('/creations', { kind: 'Potion', name: 'Rosée de luciole', shared: true })).json().creation;
+    await outsider.post('/creations', { kind: 'Potion', name: 'Secret bien gardé' });
+    const lib = (await player.get('/creations/shared')).json().creations;
+    expect(lib.map((c: { name: string }) => c.name)).toEqual(expect.arrayContaining(['Lame runique', 'Rosée de luciole']));
+    expect(lib.some((c: { name: string }) => c.name === 'Secret bien gardé')).toBe(false);
+    expect((await player.get('/creations/shared?kind=Classe')).json().creations.every((c: { kind: string }) => c.kind === 'Classe')).toBe(true);
+
+    const imported = (await gm.post('/creations/import', { ids: [a.id, b.id], campaignId })).json().creations;
+    expect(imported).toHaveLength(2);
+    expect(imported.every((c: { sourceId: string; campaignId: string; shared: boolean }) => c.sourceId && c.campaignId === campaignId && !c.shared)).toBe(true);
+    expect((await gm.post('/creations/import', { ids: [a.id], campaignId })).json().creations).toHaveLength(0);
+    const again = (await gm.get('/creations/shared')).json().creations.find((c: { id: string }) => c.id === a.id);
+    expect(again).toMatchObject({ owned: true, imports: 1, ownerName: 'Intrus' });
+  });
+
+  it('crée un personnage d’une classe homebrew et suit ses modifications', async () => {
+    const mine = (await gm.get('/creations')).json().creations.find((c: { name: string; sourceId: string | null }) => c.name === 'Lame runique' && c.sourceId);
+    const res = await player.post(`/campaigns/${campaignId}/characters`, {
+      kind: 'pc', name: 'Runa', species: 'Nain', className: 'ignoré', classRef: mine.id, level: 2,
+      abilities: { str: 15, dex: 12, con: 14, int: 13, wis: 10, cha: 8 },
+    });
+    expect(res.statusCode).toBe(201);
+    const runa = res.json().character;
+    expect(runa.sheet.className).toBe('Lame runique');
+    expect(runa.derived.resistances.map((r: { damage: string }) => r.damage).sort()).toEqual(['froid', 'poison']);
+    expect(runa.derived.resources[0]).toMatchObject({ id: 'runes', max: 2 });
+    const spent = (await player.post(`/characters/${runa.id}/actions`, { type: 'use_resource', resourceId: 'runes', amount: 2 })).json().character;
+    expect(spent.derived.resources[0].used).toBe(2);
+    expect((await player.post(`/characters/${runa.id}/actions`, { type: 'use_resource', resourceId: 'runes' })).statusCode).toBe(400);
+
+    await gm.put(`/creations/${mine.id}`, { ...mine, name: 'Lame des glaces', mech: { ...mine.mech, hitDie: 12 } });
+    const after = (await player.get(`/characters/${runa.id}`)).json().character;
+    expect(after.sheet.className).toBe('Lame des glaces');
+    expect(after.sheet.hitDice.die).toBe(12);
+  });
+});
+
+describe('sorts en combat', () => {
+  it('lance une boule de feu : emplacement dépensé, gabarit résolu, sauvegardes par cible', async () => {
+    const mage = (
+      await player.post(`/campaigns/${campaignId}/characters`, { kind: 'pc', name: 'Ysolde', species: 'Elfe', className: 'Magicien', level: 5, abilities: { str: 8, dex: 14, con: 12, int: 16, wis: 12, cha: 10 } })
+    ).json().character;
+    const learned = (await player.post(`/characters/${mage.id}/actions`, { type: 'add_spell', spell: { ref: 'fireball', name: 'Boule de feu', level: 3, prepared: true } })).json().character;
+    const spellId = learned.sheet.spellcasting.spells[0].id;
+
+    const enc = (await gm.post(`/campaigns/${campaignId}/encounters`, { name: 'Brasier', cols: 20, rows: 10, includeParty: false })).json().encounter;
+    await gm.post(`/encounters/${enc.id}/commands`, { type: 'add_character', characterId: mage.id, position: { x: 1, y: 1 } });
+    await gm.post(`/encounters/${enc.id}/commands`, { type: 'add_monster', monsterId: 'goblin', count: 2, position: { x: 12, y: 5 } });
+    const state = (await gm.get(`/encounters/${enc.id}`)).json().encounter.state;
+    const caster = Object.values(state.combatants).find((c: any) => c.characterId === mage.id) as any;
+    const gobs = Object.values(state.combatants).filter((c: any) => c.monsterId === 'goblin') as any[];
+    expect(gobs[0].saves.dex).toBe(2);
+    await gm.post(`/encounters/${enc.id}/commands`, { type: 'move', combatantId: gobs[1].id, to: { x: 13, y: 5 } });
+
+    const res = await player.post(`/encounters/${enc.id}/commands`, { type: 'cast_spell', casterId: caster.id, spellId, slotLevel: 3, aim: { x: 12, y: 5 } });
+    expect(res.statusCode).toBe(200);
+    const types = res.json().events.map((e: any) => e.event.type);
+    expect(types[0]).toBe('combat.spell_cast');
+    expect(types.filter((t: string) => t === 'combat.save_rolled')).toHaveLength(2);
+    const sheet = (await player.get(`/characters/${mage.id}`)).json().character.sheet;
+    expect(sheet.spellcasting.slots['3'].used).toBe(1);
+    // Un non-membre ne voit même pas la rencontre.
+    expect((await outsider.post(`/encounters/${enc.id}/commands`, { type: 'cast_spell', casterId: caster.id, spellId, slotLevel: 3, aim: { x: 12, y: 5 } })).statusCode).toBe(404);
+  });
+});

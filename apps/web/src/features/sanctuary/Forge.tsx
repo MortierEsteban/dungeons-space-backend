@@ -1,4 +1,4 @@
-import { RARITIES } from '@ds/rules';
+import { ABILITY_KEYS, ABILITY_LABELS, CONDITIONS, DAMAGE_TYPES, RARITIES } from '@ds/rules';
 import { CREATION_KINDS, type Creation, type CreationDto, type CreationEffect, type CreationKind } from '@ds/shared';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { errorMessage } from '../../shared/api/client';
@@ -9,6 +9,7 @@ import { useToast } from '../../shared/ui/toast';
 import { useCurrentCampaign } from '../campaigns/CampaignContext';
 import { useCampaignCharacters } from '../character/api';
 import { useCreationMutations, useCreations } from './api';
+import { CLASS_MECH0, ClassEditor, type ClassMech } from './ClassEditor';
 import s from './sanctuary.module.css';
 
 const KIND_HINT: Record<CreationKind, string> = {
@@ -18,6 +19,7 @@ const KIND_HINT: Record<CreationKind, string> = {
   Potion: 'Consommables',
   Sort: 'Magie personnalisée',
   Créature: 'PNJ et monstres',
+  Classe: 'Classes homebrew',
 };
 const MECH0: Record<CreationKind, Record<string, unknown>> = {
   Arme: { n: 1, f: 8, dtype: 'Tranchant', bonus: 1, props: ['Polyvalente'] },
@@ -26,7 +28,17 @@ const MECH0: Record<CreationKind, Record<string, unknown>> = {
   Potion: { n: 2, f: 4, mod: 2, ptype: 'Soins' },
   Sort: { lvl: 3, school: 'Évocation', cast: '1 action', range: '45 m', dur: 'Instantanée', comps: ['V', 'S'], conc: false, ritual: false },
   Créature: { cr: '2', ac: 13, hp: 45, spd: '9 m', stats: [16, 12, 14, 8, 10, 6] },
+  Classe: CLASS_MECH0 as unknown as Record<string, unknown>,
 };
+const AREAS = [
+  ['', 'Aucune (cibles)'],
+  ['sphere', 'Sphère'],
+  ['cube', 'Cube'],
+  ['cone', 'Cône'],
+  ['line', 'Ligne'],
+  ['cylinder', 'Cylindre'],
+] as const;
+const CASTER_LABEL: Record<string, string> = { full: 'Lanceur complet', half: 'Demi-lanceur', third: 'Tiers de lanceur', pact: 'Magie de pacte' };
 const DTYPES = ['Tranchant', 'Perforant', 'Contondant', 'Feu', 'Froid', 'Foudre', 'Nécrotique', 'Radiant', 'Force', 'Poison', 'Psychique', 'Acide', 'Tonnerre'];
 const WEAPON_PROPS = ['Finesse', 'Légère', 'Lourde', 'Polyvalente', 'À deux mains', 'Lancer', 'Allonge', 'Munitions'];
 const TRIG_P = ['Toujours', 'Quand équipé', 'Quand harmonisé', 'En présence de morts-vivants', 'En dessous de la moitié des PV'];
@@ -38,7 +50,7 @@ const STAT_KEYS = ['FOR', 'DEX', 'CON', 'INT', 'SAG', 'CHA'];
 
 const blank = (kind: CreationKind, campaignId: string | null): Creation => ({
   kind, name: '', rarity: 'Peu commun', attune: false, weight: 1, price: 100, mech: structuredClone(MECH0[kind]),
-  frame: 'Runique', halo: false, tint: null, imageUrl: null, effects: [], lore: '', campaignId,
+  frame: 'Runique', halo: false, tint: null, imageUrl: null, effects: [], lore: '', campaignId, shared: false,
 });
 
 const hexA = (h: string, a: number) => {
@@ -76,7 +88,17 @@ export function CreationCard({ d }: { d: Creation }) {
     stat = m.lvl === 0 ? `Tour de magie · ${m.school}` : `Niveau ${m.lvl} · ${m.school}`;
     sub = `Sort ${String(m.school).toLowerCase()}`;
     lines.push({ k: 'Incantation', v: m.cast }, { k: 'Portée', v: m.range }, { k: 'Durée', v: `${m.conc ? 'Concentration, ' : ''}${m.dur}` }, { k: 'Composantes', v: (m.comps as string[]).join(', ') || '—' });
-    if (m.ritual) tags = ['Rituel'];
+    if (m.dice) lines.push({ k: m.heal ? 'Soins' : 'Dégâts', v: `${m.dice}${m.dtype && !m.heal ? ` ${m.dtype}` : ''}` });
+    if (m.save) lines.push({ k: 'Sauvegarde', v: `${ABILITY_LABELS[m.save as keyof typeof ABILITY_LABELS]?.name ?? m.save}${m.half ? ', moitié sur réussite' : ''}` });
+    if (m.area) lines.push({ k: 'Zone', v: `${AREAS.find((a) => a[0] === m.area)?.[1]} de ${String(m.areaSize ?? 6).replace('.', ',')} m` });
+    if (m.condition) lines.push({ k: 'État', v: m.condition });
+    tags = [...(m.ritual ? ['Rituel'] : []), ...(m.attack ? ['Attaque de sort'] : [])];
+  } else if (d.kind === 'Classe') {
+    const c = m as ClassMech;
+    stat = `d${c.hitDie} · ${(c.saves ?? []).map((k) => ABILITY_LABELS[k].short).join(' + ')}`;
+    sub = `Classe homebrew${c.caster ? ` · ${CASTER_LABEL[c.caster]}` : ''}`;
+    for (const r of c.resources ?? []) lines.push({ k: r.name, v: `${r.max} · ${r.recharge === 'short' ? 'repos court' : r.recharge === 'long' ? 'repos long' : 'manuelle'}` });
+    for (const f of [...(c.features ?? [])].sort((a, b) => a.level - b.level).slice(0, 8)) lines.push({ k: `Niv ${f.level}`, v: f.name });
   } else {
     stat = `CA ${m.ac} · ${m.hp} PV · ${m.spd}`;
     sub = `Créature, FP ${m.cr}`;
@@ -130,7 +152,7 @@ export function CreationCard({ d }: { d: Creation }) {
         </div>
       ))}
       {d.lore && <p className={s.cardLore}>{d.lore}</p>}
-      {d.kind !== 'Sort' && d.kind !== 'Créature' && (
+      {d.kind !== 'Sort' && d.kind !== 'Créature' && d.kind !== 'Classe' && (
         <div className={s.cardFoot}>
           <span>{num(d.weight)} kg</span>
           <span>{num(d.price)} po</span>
@@ -143,7 +165,7 @@ export function CreationCard({ d }: { d: Creation }) {
 function Mechanics({ draft, set }: { draft: Creation; set: (fn: (d: Creation) => void) => void }) {
   const m = draft.mech as Record<string, any>;
   const mech = (key: string, value: unknown) => set((d) => void ((d.mech as Record<string, unknown>)[key] = value));
-  const num2 = (key: string, label: string, min = 0, max = 99) => <Field label={label}><Stepper label={label} value={Number(m[key])} min={min} max={max} onChange={(v) => mech(key, v)} /></Field>;
+  const num2 = (key: string, label: string, min = 0, max = 99) => <Field label={label}><Stepper label={label} value={Number(m[key] ?? min)} min={min} max={max} onChange={(v) => mech(key, v)} /></Field>;
   switch (draft.kind) {
     case 'Arme':
       return (
@@ -235,8 +257,43 @@ function Mechanics({ draft, set }: { draft: Creation; set: (fn: (d: Creation) =>
           </div>
           <Toggle checked={!!m.conc} onChange={(v) => mech('conc', v)}>Concentration</Toggle>
           <Toggle checked={!!m.ritual} onChange={(v) => mech('ritual', v)}>Rituel</Toggle>
+          <div className={s.span2}>
+            <span className="ds-label">En combat</span>
+          </div>
+          <Field label="Jet (dégâts ou soins)"><Input value={m.dice ?? ''} onChange={(e) => mech('dice', e.target.value)} placeholder="8d6" /></Field>
+          <Field label="Type de dégâts">
+            <Select value={m.dtype ?? ''} onChange={(e) => mech('dtype', e.target.value)}>
+              <option value="">—</option>
+              {DAMAGE_TYPES.map((t) => <option key={t}>{t}</option>)}
+            </Select>
+          </Field>
+          <Field label="Sauvegarde de la cible">
+            <Select value={m.save ?? ''} onChange={(e) => mech('save', e.target.value)}>
+              <option value="">Aucune</option>
+              {ABILITY_KEYS.map((k) => <option key={k} value={k}>{ABILITY_LABELS[k].name}</option>)}
+            </Select>
+          </Field>
+          <Field label="Zone">
+            <Select value={m.area ?? ''} onChange={(e) => mech('area', e.target.value)}>
+              {AREAS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </Select>
+          </Field>
+          {m.area && <Field label="Taille de la zone (m)"><Stepper label="Taille de la zone" value={Number(m.areaSize ?? 6)} step={1.5} min={1.5} max={60} onChange={(v) => mech('areaSize', v)} /></Field>}
+          <Field label="État infligé ou accordé">
+            <Select value={m.condition ?? ''} onChange={(e) => mech('condition', e.target.value)}>
+              <option value="">Aucun</option>
+              {CONDITIONS.map((c) => <option key={c.id}>{c.name}</option>)}
+            </Select>
+          </Field>
+          {num2('targets', 'Cibles (rayons…)', 1, 10)}
+          <Field label="Dés par niveau supérieur"><Input value={m.upcast ?? ''} onChange={(e) => mech('upcast', e.target.value)} placeholder="1d6" /></Field>
+          <Toggle checked={!!m.attack} onChange={(v) => mech('attack', v)}>Attaque de sort (contre la CA)</Toggle>
+          <Toggle checked={!!m.half} onChange={(v) => mech('half', v)}>Moitié des dégâts sur une sauvegarde réussie</Toggle>
+          <Toggle checked={!!m.heal} onChange={(v) => mech('heal', v)}>Le jet soigne</Toggle>
         </div>
       );
+    case 'Classe':
+      return <ClassEditor mech={draft.mech as unknown as ClassMech} set={(fn) => set((d) => fn(d.mech as unknown as ClassMech))} />;
     case 'Créature':
       return (
         <div className={s.mechGrid}>
@@ -295,7 +352,8 @@ export function Forge() {
   const addEffect = () =>
     set((d) => void d.effects.push({ id: `f${Date.now()}`, mode: 'Passif', trigger: 'Quand équipé', kind: 'Bonus de CA', value: '+1', charges: 0, recharge: 'Aube', desc: '' }));
   const effect = (id: string, patch: Partial<CreationEffect>) => set((d) => Object.assign(d.effects.find((e) => e.id === id)!, patch));
-  const giveable = editingId && !dirty && draft.kind !== 'Créature';
+  const giveable = editingId && !dirty && draft.kind !== 'Créature' && draft.kind !== 'Classe';
+  const physical = draft.kind !== 'Sort' && draft.kind !== 'Créature' && draft.kind !== 'Classe';
 
   return (
     <div className={s.forge}>
@@ -335,15 +393,19 @@ export function Forge() {
             <span className={s.roman}>I</span> Identité
           </h3>
           <Input className={s.bigName} value={draft.name} onChange={(e) => set((d) => void (d.name = e.target.value))} placeholder="Lame des Cendres" aria-label="Nom" />
-          <span className="ds-label">Rareté</span>
-          <div className="ds-row" style={{ gap: 6 }}>
-            {RARITIES.map((r) => (
-              <Chip key={r} color={RARITY_COLORS[r]} active={draft.rarity === r} onClick={() => set((d) => void (d.rarity = r))}>
-                {r}
-              </Chip>
-            ))}
-          </div>
-          {draft.kind !== 'Sort' && draft.kind !== 'Créature' && (
+          {draft.kind !== 'Classe' && (
+            <>
+              <span className="ds-label">Rareté</span>
+              <div className="ds-row" style={{ gap: 6 }}>
+                {RARITIES.map((r) => (
+                  <Chip key={r} color={RARITY_COLORS[r]} active={draft.rarity === r} onClick={() => set((d) => void (d.rarity = r))}>
+                    {r}
+                  </Chip>
+                ))}
+              </div>
+            </>
+          )}
+          {physical && (
             <div className={s.mechGrid}>
               <Field label="Poids">
                 <Stepper label="Poids" value={draft.weight} step={0.5} min={0} max={1000} format={(v) => `${num(v)} kg`} onChange={(v) => set((d) => void (d.weight = v))} />
@@ -363,6 +425,7 @@ export function Forge() {
           </h3>
           <Mechanics draft={draft} set={set} />
         </Panel>
+        {draft.kind !== 'Classe' && (
         <Panel className="ds-stack" style={{ gap: 12 }}>
           <div className="ds-row">
             <h3 className="ds-h3 ds-grow">
@@ -418,7 +481,9 @@ export function Forge() {
             </div>
           ))}
           {draft.effects.length === 0 && <span className="ds-help">Aucun effet : un objet peut être simplement beau.</span>}
+          <span className="ds-help">Les effets passifs « Résistance », « Immunité », « Bonus de CA », « Vitesse » et « Avantage » s’appliquent à la fiche de qui porte l’objet (équipé, ou harmonisé s’il l’exige).</span>
         </Panel>
+        )}
         <Panel className="ds-stack" style={{ gap: 12 }}>
           <h3 className="ds-h3">
             <span className={s.roman}>IV</span> Apparence & légende
@@ -455,9 +520,14 @@ export function Forge() {
         <span className="ds-help" style={{ color: dirty ? 'var(--gold-light)' : 'var(--arcane-light)' }}>
           {dirty ? '◇ Modifications non enregistrées' : editingId ? '◆ Enregistré' : ''}
         </span>
+        <Toggle checked={draft.shared} onChange={(v) => set((d) => void (d.shared = v))}>
+          Partager dans la bibliothèque commune
+        </Toggle>
+        <span className="ds-help">{draft.shared ? 'Toutes les tables pourront l’importer (une copie, vos modifications restent les vôtres).' : 'Visible de vous et de votre campagne seulement.'}</span>
         <Button variant="primary" size="lg" block onClick={save} disabled={m.create.isPending || m.update.isPending}>
           Enregistrer dans le Sanctuaire
         </Button>
+        {draft.kind === 'Classe' && editingId && !dirty && <span className="ds-help">Choisissez cette classe dans la Génération pour créer un personnage ; les fiches qui la suivent sont mises à jour à chaque enregistrement.</span>}
         <div className="ds-row">
           <Button variant="ghost" onClick={() => (setEditingId(null), set((d) => void (d.name = `${d.name} (copie)`)))} disabled={!editingId}>
             Dupliquer

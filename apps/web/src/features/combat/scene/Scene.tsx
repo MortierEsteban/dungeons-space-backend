@@ -126,7 +126,7 @@ interface SceneProps extends BoardProps {
 
 /** Tout ce qui vit dans le canevas WebGL : décor, pions, superpositions et gestes. */
 export function Scene(p: SceneProps) {
-  const { state, isGm, userId, tool, options, selectedId, selectedObjectId, onSelect, onSelectObject, targeting, onTarget, floats, fog, readOnly, send, effects, prefs, measure, setMeasure } = p;
+  const { state, isGm, userId, tool, options, selectedId, selectedObjectId, onSelect, onSelectObject, targeting, onTarget, floats, fog, readOnly, send, effects, prefs, measure, setMeasure, aim, markedIds = [], flashes = [] } = p;
   const frame = useMemo<Frame>(() => ({ cols: state.map.cols, rows: state.map.rows }), [state.map.cols, state.map.rows]);
   const camera = useThree((s) => s.camera);
   const gl = useThree((s) => s.gl);
@@ -176,9 +176,12 @@ export function Scene(p: SceneProps) {
 
   const zones = useMemo(() => state.map.zones.map((z) => ({ zone: z, cells: zoneCells(z, frame.cols, frame.rows) })), [state.map.zones, frame]);
   const preview = useMemo(
-    () => (tool === 'zone' && hover && inside(frame, hover) && !readOnly ? zoneCells({ id: 'preview', ...options.zone, origin: hover }, frame.cols, frame.rows) : []),
-    [tool, hover, frame, readOnly, options.zone],
+    () => (!aim && tool === 'zone' && hover && inside(frame, hover) && !readOnly ? zoneCells({ id: 'preview', ...options.zone, origin: hover }, frame.cols, frame.rows) : []),
+    [aim, tool, hover, frame, readOnly, options.zone],
   );
+  // Visée d'un sort de zone : gabarit sous le curseur, ou épinglé.
+  const aimZone = aim ? (aim.pinned ?? (hover && inside(frame, hover) ? aim.zoneAt(hover) : null)) : null;
+  const aimCells = useMemo(() => (aimZone ? zoneCells({ ...aimZone, id: 'aim' }, frame.cols, frame.rows) : []), [aimZone?.origin.x, aimZone?.origin.y, aimZone?.direction, aimZone?.size, aimZone?.shape, frame]);
 
   // Gestes : le pointeur est suivi au niveau du document pour ne jamais « perdre » un glisser.
   const latest = useRef({ state, ghost, stroke, dragObject, tool, options, send });
@@ -247,6 +250,8 @@ export function Scene(p: SceneProps) {
   }, [gl, camera, frame]);
 
   const onTokenDown = (e: ThreeEvent<PointerEvent>, id: string) => {
+    const at = state.combatants[id]?.position;
+    if (aim && at) return aim.onAim(at);
     if (targeting) return onTarget(id);
     onSelect(id);
     onSelectObject(null);
@@ -270,6 +275,7 @@ export function Scene(p: SceneProps) {
     if (e.button !== 0) return;
     const { clientX, clientY } = e.nativeEvent;
     const cell = cellFromClient(clientX, clientY);
+    if (aim && cell && inside(frame, cell)) return aim.onAim(cell);
     if (readOnly || tool === 'select' || !cell || !inside(frame, cell)) {
       // Glisser = déplacer la vue (contrôles caméra) ; simple clic = désélection.
       if (tool === 'select') gesture.current = { kind: 'click', x: clientX, y: clientY };
@@ -343,6 +349,14 @@ export function Scene(p: SceneProps) {
         <ZoneField key={zone.id} frame={frame} zone={zone} cells={cells} />
       ))}
       {preview.length > 0 && <CellField frame={frame} cells={preview} color={options.zone.color} fill={0.12} curtain={0.5} strength={0.6} />}
+      {aimZone && aimCells.length > 0 && <ZoneField frame={frame} zone={{ ...aimZone, id: 'aim' }} cells={aimCells} />}
+      {flashes.map((f) => (
+        <CellField key={f.id} frame={frame} cells={zoneCells({ ...f.zone, id: 'flash' }, frame.cols, frame.rows)} color={f.zone.color} fill={0.55} curtain={1.6} strength={1.4} />
+      ))}
+      {markedIds.map((id, i) => {
+        const c = state.combatants[id];
+        return c?.position ? <HoverCell key={`m${id}${i}`} frame={frame} cell={c.position} color="#f2b3cf" /> : null;
+      })}
       {hover && !readOnly && (tool === 'terrain' || tool === 'fog' || tool === 'object' || tool === 'zone') && <HoverCell frame={frame} cell={hover} color={tool === 'terrain' || tool === 'fog' ? strokeColor : '#e8d3a0'} />}
       {dragObject && <HoverCell frame={frame} cell={dragObject} color="#7cc6ff" />}
 

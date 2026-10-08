@@ -1,4 +1,4 @@
-import type { SpellEntry } from '@ds/rules';
+import { knownSpellFromEntry, type SpellEntry } from '@ds/rules';
 import type { CharacterDto } from '@ds/shared';
 import { useState } from 'react';
 import { useDice } from '../../shared/dice/DiceProvider';
@@ -37,13 +37,7 @@ function AddSpell({ character, open, onClose }: { character: CharacterDto; open:
                 disabled={known.has(sp.id)}
                 onClick={() =>
                   sh.act(
-                    {
-                      type: 'add_spell',
-                      spell: {
-                        ref: sp.id, name: sp.name, level: sp.level, school: sp.school, castingTime: sp.castingTime, range: sp.range, duration: sp.duration,
-                        concentration: sp.concentration, ritual: sp.ritual, prepared: sp.level === 0, favorite: false, description: sp.summary, ...(sp.roll ? { roll: sp.roll } : {}),
-                      },
-                    },
+                    { type: 'add_spell', spell: knownSpellFromEntry(sp) },
                     `${sp.name} rejoint le grimoire.`,
                   )
                 }

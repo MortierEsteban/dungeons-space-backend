@@ -1,4 +1,5 @@
 import {
+  ABILITY_LABELS,
   CONDITIONS,
   describeCombatEvent,
   fogOf,
@@ -13,10 +14,10 @@ import {
 } from '@ds/rules';
 import type { CharacterSummaryDto, CombatEventEnvelope } from '@ds/shared';
 import { useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { errorMessage, http, qk } from '../../shared/api/client';
-import { num } from '../../shared/format';
-import { Bar, Button, Chip, cx, IconButton, Input, Select, Stepper, Toggle } from '../../shared/ui/components';
+import { num, signed } from '../../shared/format';
+import { Bar, Button, Chip, cx, IconButton, Input, Select, Stepper, Tag, Toggle } from '../../shared/ui/components';
 import { ImageDrop } from '../../shared/ui/ImageDrop';
 import { useToast } from '../../shared/ui/toast';
 import { useCurrentCampaign } from '../campaigns/CampaignContext';
@@ -27,28 +28,76 @@ import s from './combat.module.css';
 
 type Send = (cmd: CommandInput) => void;
 
+const ModelPreview = lazy(() => import('./scene/ModelPreview'));
+
+/** Jeton d'initiative : portrait si la créature en a un, sinon son abréviation. */
+function Disc({ c, size = 38 }: { c: Combatant; size?: number }) {
+  return (
+    <span className={s.initDisc} style={{ borderColor: c.side === 'ally' ? 'var(--arcane)' : 'var(--magenta)', background: c.side === 'ally' ? '#1d2f4a' : '#3a1428', width: size, height: size }}>
+      {c.portraitUrl ? <img src={c.portraitUrl} alt="" className={s.initPortrait} draggable={false} /> : c.short}
+      <em>{c.initiative ?? '·'}</em>
+    </span>
+  );
+}
+
+/**
+ * Carte de la créature dont c'est le tour : portrait, ou son modèle 3D qui tourne sur son socle,
+ * PV, CA et états — chacun sait d'un coup d'œil qui agit.
+ */
+function ActiveCard({ c, webgl, onSelect }: { c: Combatant; webgl: boolean; onSelect(id: string): void }) {
+  const pct = pctOf(c);
+  return (
+    <button type="button" className={s.activeCard} onClick={() => onSelect(c.id)} title={`Sélectionner ${c.name}`} style={{ borderColor: c.side === 'ally' ? 'var(--arcane)' : 'var(--magenta)' }}>
+      <span className={s.activeArt}>
+        {c.portraitUrl ? (
+          <img src={c.portraitUrl} alt="" draggable={false} />
+        ) : c.modelUrl && webgl ? (
+          <Suspense fallback={<span className={s.activeShort}>{c.short}</span>}>
+            <ModelPreview url={c.modelUrl} name={c.name} side={c.side} height={92} still />
+          </Suspense>
+        ) : (
+          <span className={s.activeShort}>{c.short}</span>
+        )}
+      </span>
+      <span className={s.activeInfo}>
+        <span className="ds-label" style={{ color: 'var(--arcane-light)' }}>
+          À son tour
+        </span>
+        <strong>{c.name}</strong>
+        <span className={s.activeHp}>
+          <span style={{ width: `${pct * 100}%`, background: pct < 0.34 ? 'var(--magenta-light)' : c.side === 'ally' ? 'var(--arcane)' : 'var(--gold)' }} />
+        </span>
+        <span className="ds-help">
+          {hpText(c)}
+          {c.ac !== null ? ` · CA ${c.ac}` : ''}
+          {c.conditions.length ? ` · ${c.conditions.map((x) => x.name).join(', ')}` : ''}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 export const hpText = (c: Combatant) => (c.hp !== null ? `${c.hp} / ${c.maxHp}` : c.hpBand);
 const pctOf = (c: Combatant) => (c.hp !== null && c.maxHp ? c.hp / c.maxHp : { Indemne: 1, Blessé: 0.7, Sanglant: 0.45, Agonisant: 0.2, 'À terre': 0 }[c.hpBand]);
 
 // ───────────────────────────── Barre d'initiative ─────────────────────────────
 
-export function InitiativeBar({ state, isGm, canEndTurn, onSelect, send }: { state: CombatState; isGm: boolean; canEndTurn: boolean; onSelect(id: string): void; send: Send }) {
+export function InitiativeBar({ state, isGm, canEndTurn, onSelect, send, webgl = false }: { state: CombatState; isGm: boolean; canEndTurn: boolean; onSelect(id: string): void; send: Send; webgl?: boolean }) {
   const order = initiativeOrder(state);
+  const active = state.activeId ? state.combatants[state.activeId] : undefined;
   return (
     <div className={s.initBar}>
       <div className={s.round}>
         <span className="ds-label">Round</span>
         <strong>{state.round || '—'}</strong>
       </div>
+      {active && state.status === 'active' && <ActiveCard c={active} webgl={webgl} onSelect={onSelect} />}
       <div className={s.initList}>
         {order.map((c) => {
-          const active = c.id === state.activeId;
+          const isActive = c.id === state.activeId;
           return (
-            <button key={c.id} type="button" className={cx(s.initItem, active && s.initActive, c.hpBand === 'À terre' && s.tokenDead)} onClick={() => onSelect(c.id)} title={`${c.name} · initiative ${c.initiative ?? '—'}`}>
-              <span className={s.initDisc} style={{ borderColor: c.side === 'ally' ? 'var(--arcane)' : 'var(--magenta)', background: c.side === 'ally' ? '#1d2f4a' : '#3a1428' }}>
-                {c.short}
-                <em>{c.initiative ?? '·'}</em>
-              </span>
+            <button key={c.id} type="button" className={cx(s.initItem, isActive && s.initActive, c.hpBand === 'À terre' && s.tokenDead)} onClick={() => onSelect(c.id)} title={`${c.name} · initiative ${c.initiative ?? '—'}`}>
+              <Disc c={c} />
               <span className={s.initName}>{c.name}</span>
               <span className={s.initHp}>
                 <span style={{ width: `${pctOf(c) * 100}%`, background: pctOf(c) < 0.34 ? 'var(--magenta-light)' : c.side === 'ally' ? 'var(--arcane)' : 'var(--gold)' }} />
@@ -153,6 +202,31 @@ export function Inspector({ state, combatantId, objectId, isGm, userId, players 
         {cc.tempHp > 0 && <span className="ds-help">+{cc.tempHp} temp.</span>}
       </div>
       <Bar value={pctOf(cc)} max={1} color={pctOf(cc) < 0.34 ? 'var(--magenta)' : cc.side === 'ally' ? 'var(--arcane)' : 'var(--gold)'} label={`PV de ${cc.name}`} />
+      {(isGm || !cc.hidden) && cc.saves && (
+        <div className={s.savesRow} aria-label="Jets de sauvegarde">
+          {(['str', 'dex', 'con', 'int', 'wis', 'cha'] as const).map((k) => (
+            <span key={k}>
+              <span className="ds-label">{ABILITY_LABELS[k].short}</span>
+              {signed(cc.saves?.[k] ?? 0)}
+            </span>
+          ))}
+        </div>
+      )}
+      {(isGm || !cc.hidden) && cc.defenses && (cc.defenses.resistances.length + cc.defenses.immunities.length + cc.defenses.vulnerabilities.length > 0) && (
+        <div className={s.conditions}>
+          {cc.defenses.resistances.map((d) => (
+            <Tag key={`r${d.damage}${d.when ?? ''}`} color={d.when && !cc.conditions.some((x) => x.name === d.when) ? 'var(--ash)' : 'var(--arcane-light)'}>
+              {`Résiste : ${d.damage}${d.when ? ` (${d.when})` : ''}`}
+            </Tag>
+          ))}
+          {cc.defenses.immunities.map((d) => (
+            <Tag key={`i${d.damage}`} color="var(--gold-light)">{`Immunisé : ${d.damage}`}</Tag>
+          ))}
+          {cc.defenses.vulnerabilities.map((d) => (
+            <Tag key={`v${d.damage}`} color="var(--magenta-light)">{`Vulnérable : ${d.damage}`}</Tag>
+          ))}
+        </div>
+      )}
       {mine && (
         <div className={s.hpControls}>
           <Button variant="damage" onClick={() => send({ type: 'change_hp', combatantId: cc.id, amount, mode: 'damage' })}>
@@ -185,6 +259,12 @@ export function Inspector({ state, combatantId, objectId, isGm, userId, players 
           })}
         </div>
       </div>
+      {mine && !cc.characterId && (
+        <details className={s.appearance}>
+          <summary className="ds-label">Portrait {cc.portraitUrl ? '· importé' : ''}</summary>
+          <ImageDrop value={cc.portraitUrl ?? null} onChange={(url) => send({ type: 'set_portrait', combatantId: cc.id, portraitUrl: url })} label="Portrait (initiative et jeton)" height={110} />
+        </details>
+      )}
       {mine && (
         <details className={s.appearance}>
           <summary className="ds-label">Apparence 3D {cc.modelUrl ? '· modèle importé' : '· jeton'}</summary>
@@ -537,7 +617,7 @@ export function GmSetup({ state, party, send }: { state: CombatState; party: Cha
 
 // ───────────────────────────── Barre d'actions (joueur / créature active) ─────────────────────────────
 
-export function ActionBar({ state, combatant, isGm, send, onAttack, onRoll }: { state: CombatState; combatant: Combatant; isGm: boolean; send: Send; onAttack(): void; onRoll(): void }) {
+export function ActionBar({ state, combatant, isGm, send, onAttack, onRoll, onSheet }: { state: CombatState; combatant: Combatant; isGm: boolean; send: Send; onAttack(): void; onRoll(): void; onSheet?(): void }) {
   const r = combatant.resources;
   const myTurn = state.activeId === combatant.id && state.status === 'active';
   const movement = Math.max(0, combatant.speed - r.movementUsed);
@@ -556,10 +636,16 @@ export function ActionBar({ state, combatant, isGm, send, onAttack, onRoll }: { 
           <strong>{num(movement)} m</strong>
         </span>
       </div>
+      <span className={s.actorName}>{combatant.name}</span>
       <div className={s.actions}>
         <Button variant="secondary" size="sm" disabled={!combatant.attack} onClick={onAttack}>
           Attaquer
         </Button>
+        {onSheet && (
+          <Button variant="secondary" size="sm" onClick={onSheet} title="Sorts, objets et aptitudes du personnage">
+            Sorts & objets
+          </Button>
+        )}
         <Button variant="ghost" size="sm" disabled={r.action} onClick={quick('Esquiver', 'action', 'Esquive')}>
           Esquiver
         </Button>

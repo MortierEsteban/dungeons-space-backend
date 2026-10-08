@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { ABILITY_KEYS, abilityModifier, type AbilityKey, type AbilityScores } from './abilities';
-import { CLASSES, getClass } from './classes';
+import { CLASSES, classDefSchema, getClass, type ClassDef, type ClassFeature } from './classes';
+import { ITEMS } from './content/items';
+import { describeEffect, effectSchema, tryFormula, type Effect, type Recharge, type ResourceDef, type SourcedEffect } from './effects';
 import { clampLevel, levelForXp, maxHpFor, proficiencyBonus, spellSlotsFor, xpForNextLevel } from './progression';
 import { SKILLS, proficiencyContribution, type ProficiencyLevel, type SkillKey } from './skills';
 import { getSpecies } from './species';
@@ -24,8 +26,17 @@ export const inventoryItemSchema = z.object({
   /** Référence vers une entrée du compendium ou une création du Sanctuaire. */
   ref: z.string().optional(),
   description: z.string().max(4000).optional(),
+  /** Passifs de l'objet (actifs quand il est équipé, ou harmonisé s'il l'exige). */
+  effects: z.array(effectSchema).max(12).optional(),
+  /** Jet associé (potion : soins ; arme personnalisée : dégâts), en notation de dés. */
+  roll: z.string().max(40).optional(),
+  /** Arme personnalisée : bonus magique et type de dégâts. */
+  attackBonus: z.number().int().min(-5).max(10).optional(),
+  damageType: z.string().max(30).optional(),
 });
 export type InventoryItem = z.infer<typeof inventoryItemSchema>;
+
+export const AREA_SHAPES = ['cone', 'sphere', 'line', 'cube', 'cylinder'] as const;
 
 export const knownSpellSchema = z.object({
   id: z.string(),
@@ -43,6 +54,16 @@ export const knownSpellSchema = z.object({
   description: z.string().max(4000).optional(),
   /** Jet associé (dégâts ou soins), en notation de dés. */
   roll: z.string().max(40).optional(),
+  // Mécaniques de combat (copiées du compendium ou de la Forge ; sinon retrouvées via `ref`).
+  area: z.object({ shape: z.enum(AREA_SHAPES), size: z.number().min(0).max(200) }).optional(),
+  save: abilityKey.optional(),
+  half: z.boolean().optional(),
+  attack: z.boolean().optional(),
+  heal: z.boolean().optional(),
+  damageType: z.string().max(30).optional(),
+  condition: z.string().max(40).optional(),
+  targets: z.number().int().min(1).max(10).optional(),
+  upcast: z.string().max(20).optional(),
 });
 export type KnownSpell = z.infer<typeof knownSpellSchema>;
 
@@ -52,11 +73,24 @@ export const coinsSchema = z.object({
 });
 export type Coins = z.infer<typeof coinsSchema>;
 
+export const traitSchema = z.object({
+  name: z.string(),
+  source: z.string().default(''),
+  description: z.string().default(''),
+  /** Passifs explicites ; absent = ceux du catalogue (espèce, classe) pour ce trait. */
+  effects: z.array(effectSchema).max(12).optional(),
+});
+export type Trait = z.infer<typeof traitSchema>;
+
 /** Fiche D&D 5e. Les valeurs dérivées ne sont pas stockées : voir `deriveSheet`. */
 export const dnd5eSheetSchema = z.object({
   species: z.string().max(60),
   className: z.string().max(60),
   subclass: z.string().max(60).optional(),
+  /** Classe homebrew (Forge) : définition embarquée, tenue à jour quand la création change. */
+  customClass: classDefSchema.optional(),
+  /** Identifiant de la création (Forge) dont provient la classe homebrew. */
+  classRef: z.string().max(64).optional(),
   background: z.string().max(60).default(''),
   alignment: z.string().max(40).default(''),
   level: z.number().int().min(1).max(20),
@@ -80,9 +114,11 @@ export const dnd5eSheetSchema = z.object({
     .nullable(),
   inventory: z.array(inventoryItemSchema),
   coins: coinsSchema,
-  traits: z.array(z.object({ name: z.string(), source: z.string().default(''), description: z.string().default('') })),
+  traits: z.array(traitSchema),
   defenses: z.object({ resistances: z.array(z.string()), immunities: z.array(z.string()), senses: z.string().default('') }),
   conditions: z.array(z.string()).default([]),
+  /** Usages dépensés des ressources de classe et d'espèce (rage, ki…), par identifiant. */
+  resources: z.record(z.string(), z.object({ used: z.number().int().min(0) })).default({}),
   /** Valeurs forcées par le MJ/joueur (« l'outil assiste, ne bloque pas »), affichées avec un marqueur. */
   overrides: z.record(z.string(), z.number()).default({}),
   portraitUrl: z.string().max(2000).optional(),
@@ -99,10 +135,25 @@ export interface CreateCharacterInput {
   /** Scores AVANT bonus d'espèce. */
   abilities: AbilityScores;
   skills?: SkillKey[];
+  /** Classe homebrew : remplace la classe du SRD. */
+  customClass?: ClassDef;
+  classRef?: string;
+}
+
+/** Classe de la fiche : la classe homebrew embarquée, sinon celle du SRD. */
+export function classOf(sheet: Pick<Dnd5eSheet, 'className' | 'customClass'>): ClassDef | undefined {
+  return sheet.customClass ? { ...sheet.customClass, homebrew: true } : getClass(sheet.className);
+}
+
+const featureTrait = (cls: ClassDef, f: ClassFeature): Trait => ({ name: f.name, source: `${cls.name} ${f.level}`, description: f.summary, ...(f.effects ? { effects: f.effects } : {}) });
+
+/** Passifs des aptitudes de classe acquises à ce niveau. */
+function classEffects(cls: ClassDef | undefined, level: number): Effect[] {
+  return (cls?.features ?? []).filter((f) => f.level <= level).flatMap((f) => f.effects ?? []);
 }
 
 export function createDnd5eSheet(input: CreateCharacterInput): Dnd5eSheet {
-  const cls = getClass(input.className) ?? CLASSES[5]!;
+  const cls = input.customClass ?? getClass(input.className) ?? CLASSES[5]!;
   const species = getSpecies(input.species);
   const level = clampLevel(input.level ?? 1);
   const abilities = { ...input.abilities };
@@ -110,18 +161,22 @@ export function createDnd5eSheet(input: CreateCharacterInput): Dnd5eSheet {
     abilities[k as AbilityKey] = Math.min(20, abilities[k as AbilityKey] + (bonus ?? 0));
   }
   const conMod = abilityModifier(abilities.con);
-  const maxHp = maxHpFor(cls.hitDie, level, conMod);
+  const startEffects = [...classEffects(cls, level), ...(species?.traits.flatMap((t) => t.effects ?? []) ?? [])];
+  const hpPerLevel = startEffects.reduce((a, e) => a + (e.type === 'hp_per_level' ? e.value : 0), 0);
+  const maxHp = maxHpFor(cls.hitDie, level, conMod) + hpPerLevel * level;
   const slots = spellSlotsFor(cls.caster, level);
   const skillLevels: Record<string, ProficiencyLevel> = {};
   for (const s of input.skills ?? []) skillLevels[s] = 1;
   const dexMod = abilityModifier(abilities.dex);
+  // CA de départ : la meilleure défense sans armure de la classe, sinon 10 + DEX.
   let armorClass = 10 + dexMod;
-  if (cls.id === 'barbarian') armorClass += conMod;
-  if (cls.id === 'monk') armorClass += abilityModifier(abilities.wis);
+  for (const e of startEffects) if (e.type === 'unarmored_ac') armorClass = Math.max(armorClass, e.base + e.abilities.reduce((a, k) => a + abilityModifier(abilities[k]), 0));
 
   return {
     species: species?.name ?? input.species,
     className: cls.name,
+    ...(input.customClass ? { customClass: { ...input.customClass, homebrew: true } } : {}),
+    ...(input.classRef ? { classRef: input.classRef } : {}),
     background: input.background ?? '',
     alignment: input.alignment ?? '',
     level,
@@ -145,8 +200,8 @@ export function createDnd5eSheet(input: CreateCharacterInput): Dnd5eSheet {
     inventory: [],
     coins: { pc: 0, pa: 0, pe: 0, po: 10, pp: 0 },
     traits: [
-      ...(species?.traits.map((t) => ({ name: t.name, source: species.name, description: t.summary })) ?? []),
-      ...cls.features.filter((f) => f.level <= level).map((f) => ({ name: f.name, source: `${cls.name} ${f.level}`, description: f.summary })),
+      ...(species?.traits.map((t) => ({ name: t.name, source: species.name, description: t.summary, ...(t.effects ? { effects: t.effects } : {}) })) ?? []),
+      ...cls.features.filter((f) => f.level <= level).map((f) => featureTrait(cls, f)),
     ],
     defenses: {
       resistances: [],
@@ -154,19 +209,125 @@ export function createDnd5eSheet(input: CreateCharacterInput): Dnd5eSheet {
       senses: species?.darkvision ? `Vision dans le noir ${species.darkvision} m` : '',
     },
     conditions: [],
+    resources: {},
     overrides: {},
     biography: '',
   };
 }
 
+// ───────────────────────────── Traits & passifs ─────────────────────────────
+
+export interface DerivedTrait extends Trait {
+  /** Passifs effectivement appliqués (explicites ou issus du catalogue). */
+  effects: Effect[];
+  /** Trait du catalogue (espèce, classe) absent de la fiche : ajouté automatiquement. */
+  fromCatalog: boolean;
+}
+
+/**
+ * Traits de la fiche fusionnés avec le catalogue (espèce + aptitudes de classe acquises) :
+ * une fiche ancienne ou incomplète reçoit quand même ses passifs ; un trait modifié sur la fiche
+ * (ex. ascendance draconique) l'emporte sur le catalogue.
+ */
+export function sheetTraits(sheet: Dnd5eSheet): DerivedTrait[] {
+  const species = getSpecies(sheet.species);
+  const cls = classOf(sheet);
+  const catalog: Trait[] = [
+    ...(species?.traits.map((t) => ({ name: t.name, source: species.name, description: t.summary, effects: t.effects ?? [] })) ?? []),
+    ...(cls?.features.filter((f) => f.level <= sheet.level).map((f) => ({ ...featureTrait(cls, f), effects: f.effects ?? [] })) ?? []),
+  ];
+  const sameOrigin = (a: Trait, b: Trait) => a.name.toLowerCase() === b.name.toLowerCase() && (a.source.split(' ')[0] ?? '') === (b.source.split(' ')[0] ?? '');
+  const out: DerivedTrait[] = sheet.traits.map((t) => {
+    const ref = catalog.find((c) => sameOrigin(c, t));
+    return { ...t, effects: t.effects ?? ref?.effects ?? [], fromCatalog: false };
+  });
+  for (const c of catalog) if (!sheet.traits.some((t) => sameOrigin(c, t))) out.push({ ...c, effects: c.effects ?? [], fromCatalog: true });
+  return out;
+}
+
+/** Objet actif : équipé, et harmonisé s'il l'exige. */
+export const itemActive = (i: InventoryItem) => i.equipped && (!i.requiresAttunement || i.attuned);
+
+/** Tous les passifs de la fiche, avec leur provenance. */
+export function sheetEffects(sheet: Dnd5eSheet): SourcedEffect[] {
+  return [
+    ...sheetTraits(sheet).flatMap((t) => t.effects.map((e) => ({ ...e, source: t.source || t.name }))),
+    ...sheet.inventory.filter((i) => itemActive(i) && i.effects?.length).flatMap((i) => i.effects!.map((e) => ({ ...e, source: i.name }))),
+  ];
+}
+
+const BODY_ARMOR = new Set(ITEMS.filter((i) => i.category === 'Armure' && !i.armorClass?.startsWith('+')).map((i) => i.id));
+const SHIELDS = new Set(ITEMS.filter((i) => i.category === 'Armure' && i.armorClass?.startsWith('+')).map((i) => i.id));
+
+/** Armure portée (et bouclier) : la défense sans armure ne s'applique qu'en leur absence. */
+function wornArmor(sheet: Dnd5eSheet): { armor: boolean; shield: boolean } {
+  const worn = sheet.inventory.filter((i) => i.equipped);
+  const is = (set: Set<string>, i: InventoryItem) => (i.ref ? set.has(i.ref) : ITEMS.some((e) => set.has(e.id) && e.name.toLowerCase() === i.name.toLowerCase()));
+  return { armor: worn.some((i) => is(BODY_ARMOR, i)), shield: worn.some((i) => is(SHIELDS, i)) };
+}
+
+// ───────────────────────────── Ressources ─────────────────────────────
+
+export interface DerivedResource {
+  id: string;
+  name: string;
+  max: number;
+  used: number;
+  recharge: Recharge;
+  pool: boolean;
+  source: string;
+}
+
+/** Ressources de la classe (selon le niveau) et de l'espèce. */
+export function resourceDefs(sheet: Dnd5eSheet): (ResourceDef & { source: string })[] {
+  const cls = classOf(sheet);
+  const species = getSpecies(sheet.species);
+  return [
+    ...(cls?.resources ?? []).filter((r) => r.fromLevel <= sheet.level).map((r) => ({ ...r, source: cls!.name })),
+    ...(species?.resources ?? []).map((r) => ({ ...r, source: species!.name })),
+  ];
+}
+
+function deriveResources(sheet: Dnd5eSheet, mods: Record<AbilityKey, number>, pb: number): DerivedResource[] {
+  return resourceDefs(sheet).map((r) => {
+    const max = tryFormula(r.max, { level: sheet.level, pb, mods }) ?? 0;
+    return { id: r.id, name: r.name, max, used: Math.min(max, sheet.resources?.[r.id]?.used ?? 0), recharge: r.recharge, pool: r.pool, source: r.source };
+  });
+}
+
+/** Récupère les ressources selon le repos : le repos long recharge tout, le court seulement les « repos court ». */
+function rechargeResources(sheet: Dnd5eSheet, rest: 'short' | 'long'): Dnd5eSheet['resources'] {
+  const defs = resourceDefs(sheet);
+  const next: Dnd5eSheet['resources'] = {};
+  for (const [id, r] of Object.entries(sheet.resources ?? {})) {
+    const def = defs.find((d) => d.id === id);
+    const reset = def && (def.recharge === 'short' || (rest === 'long' && def.recharge === 'long'));
+    if (!reset && r.used > 0) next[id] = r;
+  }
+  return next;
+}
+
+/** Dépense (ou rend) des usages d'une ressource, bornés par son maximum. */
+export function spendResource(sheet: Dnd5eSheet, id: string, amount: number): Dnd5eSheet {
+  const d = deriveSheet(sheet).resources.find((r) => r.id === id);
+  if (!d) throw new Error('Ressource inconnue.');
+  const used = Math.max(0, Math.min(d.max, d.used + amount));
+  return { ...sheet, resources: { ...sheet.resources, [id]: { used } } };
+}
+
+// ───────────────────────────── Valeurs dérivées ─────────────────────────────
+
 export interface DerivedSheet {
   proficiencyBonus: number;
   modifiers: Record<AbilityKey, number>;
-  saves: Record<AbilityKey, { value: number; proficient: boolean }>;
-  skills: { key: SkillKey; name: string; ability: AbilityKey; value: number; level: ProficiencyLevel }[];
+  saves: Record<AbilityKey, { value: number; proficient: boolean; advantages: string[] }>;
+  skills: { key: SkillKey; name: string; ability: AbilityKey; value: number; level: ProficiencyLevel; advantages: string[] }[];
   initiative: number;
   passivePerception: number;
   armorClass: number;
+  /** Vitesse en mètres, bonus des passifs compris. */
+  speed: number;
+  senses: string;
   spellSaveDc: number | null;
   spellAttack: number | null;
   carried: number;
@@ -177,34 +338,81 @@ export interface DerivedSheet {
   levelFromXp: number;
   /** Clés dérivées remplacées par une valeur forcée. */
   overridden: string[];
+  /** Défenses consolidées (saisies à la main + passifs). `when` : seulement sous cette condition. */
+  resistances: { damage: string; source: string; when?: string }[];
+  immunities: { damage: string; source: string; when?: string }[];
+  vulnerabilities: { damage: string; source: string; when?: string }[];
+  conditionImmunities: { condition: string; source: string; when?: string }[];
+  /** Avantages situationnels, en clair. */
+  advantages: { label: string; source: string; when?: string }[];
+  traits: DerivedTrait[];
+  resources: DerivedResource[];
 }
 
 export function deriveSheet(sheet: Dnd5eSheet): DerivedSheet {
   const pb = proficiencyBonus(sheet.level);
   const modifiers = Object.fromEntries(ABILITY_KEYS.map((k) => [k, abilityModifier(sheet.abilities[k])])) as Record<AbilityKey, number>;
+  const traits = sheetTraits(sheet);
+  const effects = sheetEffects(sheet);
+  const permanent = effects.filter((e) => !('when' in e && e.when));
+  const advantages = effects.flatMap((e) => (e.type === 'advantage' ? [{ label: describeEffect(e), source: e.source, ...(e.when ? { when: e.when } : {}) }] : []));
+  const advFor = (pred: (e: Extract<Effect, { type: 'advantage' }>) => boolean) =>
+    effects.flatMap((e) => (e.type === 'advantage' && pred(e) ? [`${e.against ?? 'toujours'}${e.when ? ` (${e.when})` : ''}`] : []));
+
+  const saveProf = new Set([...sheet.saveProficiencies, ...permanent.flatMap((e) => (e.type === 'save_proficiency' ? [e.ability] : []))]);
   const saves = Object.fromEntries(
     ABILITY_KEYS.map((k) => {
-      const proficient = sheet.saveProficiencies.includes(k);
-      return [k, { value: modifiers[k] + (proficient ? pb : 0), proficient }];
+      const proficient = saveProf.has(k);
+      // Seuls les avantages propres à cette caractéristique ; les autres (« contre le charme ») restent dans `advantages`.
+      return [k,{ value: modifiers[k] + (proficient ? pb : 0), proficient, advantages: advFor((e) => e.roll === 'save' && e.ability === k) }];
     }),
   ) as DerivedSheet['saves'];
+
+  const jack = permanent.some((e) => e.type === 'jack_of_all_trades');
   const skills = SKILLS.map((s) => {
-    const level = (sheet.skills[s.key] ?? 0) as ProficiencyLevel;
-    return { key: s.key, name: s.name, ability: s.ability, value: modifiers[s.ability] + proficiencyContribution(level, pb), level };
+    const granted = permanent.reduce<number>((m, e) => (e.type === 'skill' && e.skill === s.key ? Math.max(m, e.level) : m), 0);
+    let level = Math.max((sheet.skills[s.key] ?? 0) as number, granted) as ProficiencyLevel;
+    if (level === 0 && jack) level = 0.5;
+    return {
+      key: s.key, name: s.name, ability: s.ability, value: modifiers[s.ability] + proficiencyContribution(level, pb), level,
+      advantages: advFor((e) => (e.roll === 'skill' && e.skill === s.key) || (e.roll === 'check' && e.ability === s.ability && !e.against)),
+    };
   });
   const perception = skills.find((s) => s.key === 'perception')?.value ?? modifiers.wis;
   const spellAbility = sheet.spellcasting?.ability;
   const o = sheet.overrides;
   const pick = (key: string, value: number) => (o[key] !== undefined ? o[key]! : value);
 
+  // CA : valeur saisie, ou défense sans armure si elle est meilleure et qu'aucune armure n'est portée.
+  const worn = wornArmor(sheet);
+  let ac = sheet.armorClass;
+  if (!worn.armor) {
+    for (const e of permanent) {
+      if (e.type !== 'unarmored_ac' || (!e.shield && worn.shield)) continue;
+      ac = Math.max(ac, e.base + e.abilities.reduce((a, k) => a + modifiers[k], 0) + (worn.shield ? 2 : 0));
+    }
+  }
+  ac += permanent.reduce((a, e) => a + (e.type === 'ac_bonus' ? e.value : 0), 0);
+
+  const speed = sheet.speed + permanent.reduce((a, e) => a + (e.type === 'speed' ? e.bonus : 0), 0);
+  const darkvision = Math.max(getSpecies(sheet.species)?.darkvision ?? 0, ...permanent.map((e) => (e.type === 'darkvision' ? e.range : 0)));
+  const senses = [...new Set([sheet.defenses.senses, darkvision && !/noir/i.test(sheet.defenses.senses) ? `Vision dans le noir ${String(darkvision).replace('.', ',')} m` : ''].filter(Boolean))].join(' · ');
+
+  const typed = <T extends 'resistance' | 'immunity' | 'vulnerability'>(type: T, manual: string[]) => [
+    ...manual.map((damage) => ({ damage, source: 'Fiche' })),
+    ...effects.flatMap((e) => (e.type === type ? [{ damage: (e as { damage: string }).damage, source: e.source, ...(e.when ? { when: e.when } : {}) }] : [])),
+  ];
+
   return {
     proficiencyBonus: pb,
     modifiers,
     saves,
     skills,
-    initiative: pick('initiative', modifiers.dex),
+    initiative: pick('initiative', modifiers.dex + permanent.reduce((a, e) => a + (e.type === 'initiative' ? e.bonus : 0), 0)),
     passivePerception: pick('passivePerception', 10 + perception),
-    armorClass: pick('armorClass', sheet.armorClass),
+    armorClass: pick('armorClass', ac),
+    speed: pick('speed', speed),
+    senses,
     spellSaveDc: spellAbility ? pick('spellSaveDc', 8 + pb + modifiers[spellAbility]) : null,
     spellAttack: spellAbility ? pick('spellAttack', pb + modifiers[spellAbility]) : null,
     carried: Math.round(sheet.inventory.reduce((acc, i) => acc + i.qty * i.weight, 0) * 100) / 100,
@@ -213,6 +421,13 @@ export function deriveSheet(sheet: Dnd5eSheet): DerivedSheet {
     xpNext: xpForNextLevel(sheet.level),
     levelFromXp: levelForXp(sheet.xp),
     overridden: Object.keys(o),
+    resistances: typed('resistance', sheet.defenses.resistances),
+    immunities: typed('immunity', sheet.defenses.immunities),
+    vulnerabilities: typed('vulnerability', []),
+    conditionImmunities: effects.flatMap((e) => (e.type === 'condition_immunity' ? [{ condition: e.condition, source: e.source, ...(e.when ? { when: e.when } : {}) }] : [])),
+    advantages,
+    traits,
+    resources: deriveResources(sheet, modifiers, pb),
   };
 }
 
@@ -241,7 +456,7 @@ export function setTempHp(sheet: Dnd5eSheet, amount: number): Dnd5eSheet {
   return { ...sheet, hp: { ...sheet.hp, temp: Math.max(sheet.hp.temp, Math.max(0, Math.trunc(amount))) } };
 }
 
-/** Repos long : PV max, emplacements, moitié des dés de vie (au moins 1). */
+/** Repos long : PV max, emplacements, ressources, moitié des dés de vie (au moins 1). */
 export function longRest(sheet: Dnd5eSheet): Dnd5eSheet {
   const recovered = Math.max(1, Math.floor(sheet.hitDice.total / 2));
   return {
@@ -249,6 +464,7 @@ export function longRest(sheet: Dnd5eSheet): Dnd5eSheet {
     hp: { ...sheet.hp, current: sheet.hp.max, temp: 0 },
     hitDice: { ...sheet.hitDice, used: Math.max(0, sheet.hitDice.used - recovered) },
     deathSaves: { successes: 0, failures: 0 },
+    resources: rechargeResources(sheet, 'long'),
     spellcasting: sheet.spellcasting
       ? {
           ...sheet.spellcasting,
@@ -262,10 +478,11 @@ export function longRest(sheet: Dnd5eSheet): Dnd5eSheet {
 export function shortRest(sheet: Dnd5eSheet, hitDiceSpent: number, healed: number): Dnd5eSheet {
   const spend = Math.max(0, Math.min(hitDiceSpent, sheet.hitDice.total - sheet.hitDice.used));
   const next = applyHealing(sheet, healed);
-  const isPact = getClass(sheet.className)?.caster === 'pact';
+  const isPact = classOf(sheet)?.caster === 'pact';
   return {
     ...next,
     hitDice: { ...sheet.hitDice, used: sheet.hitDice.used + spend },
+    resources: rechargeResources(sheet, 'short'),
     spellcasting:
       next.spellcasting && isPact
         ? { ...next.spellcasting, slots: Object.fromEntries(Object.entries(next.spellcasting.slots).map(([k, s]) => [k, { ...s, used: 0 }])) }
@@ -279,11 +496,12 @@ export function shortRest(sheet: Dnd5eSheet, hitDiceSpent: number, healed: numbe
  */
 export function levelUp(sheet: Dnd5eSheet, hpGain?: number): Dnd5eSheet | null {
   if (sheet.level >= 20) return null;
-  const cls = getClass(sheet.className);
+  const cls = classOf(sheet);
   const level = sheet.level + 1;
   const conMod = abilityModifier(sheet.abilities.con);
   const die = cls?.hitDie ?? sheet.hitDice.die;
-  const gain = Math.max(1, hpGain ?? die / 2 + 1 + conMod);
+  const perLevel = sheetEffects(sheet).reduce((a, e) => a + (e.type === 'hp_per_level' ? e.value : 0), 0);
+  const gain = Math.max(1, (hpGain ?? die / 2 + 1 + conMod) + perLevel);
   const slots = spellSlotsFor(cls?.caster ?? null, level);
   const newFeatures = (cls?.features ?? []).filter((f) => f.level === level);
   return {
@@ -300,6 +518,31 @@ export function levelUp(sheet: Dnd5eSheet, hpGain?: number): Dnd5eSheet | null {
           ),
         }
       : null,
-    traits: [...sheet.traits, ...newFeatures.map((f) => ({ name: f.name, source: `${cls!.name} ${f.level}`, description: f.summary }))],
+    traits: [...sheet.traits, ...newFeatures.map((f) => featureTrait(cls!, f))],
+  };
+}
+
+/**
+ * Remplace la classe homebrew embarquée (la création a été modifiée dans la Forge) :
+ * emplacements recalculés, aptitudes de la classe remplacées par les nouvelles.
+ */
+export function applyCustomClass(sheet: Dnd5eSheet, def: ClassDef): Dnd5eSheet {
+  const old = classOf(sheet);
+  const isOldFeature = (t: Trait) => !!old && t.source.startsWith(`${old.name} `) && old.features.some((f) => f.name === t.name);
+  const slots = spellSlotsFor(def.caster, sheet.level);
+  return {
+    ...sheet,
+    className: def.name,
+    customClass: { ...def, homebrew: true },
+    saveProficiencies: [...def.saves],
+    hitDice: { ...sheet.hitDice, die: def.hitDie },
+    traits: [...sheet.traits.filter((t) => !isOldFeature(t)), ...def.features.filter((f) => f.level <= sheet.level).map((f) => featureTrait(def, f))],
+    spellcasting: def.caster
+      ? {
+          ability: def.spellAbility ?? sheet.spellcasting?.ability ?? 'int',
+          slots: Object.fromEntries(Object.entries(slots).map(([lvl, max]) => [lvl, { max, used: Math.min(max, sheet.spellcasting?.slots[lvl]?.used ?? 0) }])),
+          spells: sheet.spellcasting?.spells ?? [],
+        }
+      : null,
   };
 }
