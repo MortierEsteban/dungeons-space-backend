@@ -1,0 +1,135 @@
+/* ── Liste des personnages ── */
+.roster { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rosterChip { gap: 8px; padding: 5px 14px 5px 5px; }
+.rosterInit { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--gold-a50); display: inline-flex; align-items: center; justify-content: center; font-size: 9px; }
+
+/* ── En-tête ── */
+.header { display: grid; grid-template-columns: 150px minmax(0, 1fr) minmax(260px, 320px); gap: 22px; align-items: start; }
+.portraitCol { min-width: 0; }
+.identity { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.name, .nameInput { margin: 0; font-family: var(--font-title); font-weight: 500; font-size: clamp(24px, 3vw, 32px); color: var(--gold-light); }
+.nameInput { width: 100%; background: transparent; border: none; border-bottom: 1px dashed var(--gold-a35); padding: 2px 0; outline: none; }
+.nameInput:focus { border-bottom-color: var(--gold); }
+.sub { color: var(--text-soft); }
+.sub em { color: var(--ash); }
+.statRow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; max-width: 520px; }
+.xp { display: flex; align-items: center; gap: 10px; max-width: 520px; }
+.hpPanel { display: flex; flex-direction: column; gap: 12px; padding: 18px; }
+.hpValue { font-family: var(--font-title); font-size: 34px; font-weight: 500; color: var(--text-strong); line-height: 1; }
+.temp { font-family: var(--font-title); color: var(--arcane-light); }
+.hpControls { display: grid; grid-template-columns: 1fr 110px 1fr; gap: 8px; align-items: center; }
+.hpControls > :last-child { grid-column: 1 / -1; }
+
+/* ── Aperçu ── */
+.overview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.span2 { grid-column: 1 / -1; }
+.abilities { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.ability { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.abilityBtn { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 4px 12px; background: var(--ink-deep); border: 1px solid var(--gold-a35); border-radius: 4px; color: inherit; }
+.abilityBtn:hover { box-shadow: 0 0 18px rgba(79,179,255,.3); }
+.abilityBtn strong { font-family: var(--font-title); font-weight: 500; font-size: 28px; color: var(--text-strong); line-height: 1.1; }
+.score { padding: 1px 10px; border: 1px solid var(--gold-a35); border-radius: 999px; font-size: 13px; }
+.adjustRow { display: grid; grid-template-columns: auto 160px auto 160px; gap: 10px; align-items: center; margin-top: 12px; }
+.saves { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
+.lineBtn { display: flex; align-items: center; gap: 10px; padding: 9px 2px; background: none; border: none; border-bottom: 1px solid rgba(201,169,106,.14); color: var(--text-soft); text-align: left; }
+.lineBtn:hover { color: var(--text-strong); }
+.lineBtn strong { color: var(--text-strong); font-weight: 500; }
+.profDot { flex: none; width: 10px; height: 10px; padding: 0; border-radius: 50%; border: 1px solid var(--gold); background: transparent; }
+.profOn { background: var(--gold); }
+.profExpert { background: var(--arcane-light); border-color: var(--arcane-light); box-shadow: 0 0 6px var(--arcane); }
+.defs { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 16px; margin: 0; align-items: center; }
+.defs dd { margin: 0; color: var(--text-soft); }
+.hd { padding: 2px 4px; border: 1px solid var(--gold-a35); border-radius: 2px; font-size: 10px; color: var(--muted); }
+.hdOn { background: var(--gold); color: var(--night); border-color: var(--gold); }
+.death { width: 16px; height: 16px; padding: 0; border-radius: 50%; background: transparent; }
+.deathOk { border: 1px solid var(--arcane-light); }
+.deathKo { border: 1px solid var(--magenta-light); }
+.deathOk.deathOn { background: var(--arcane); }
+.deathKo.deathOn { background: var(--magenta); }
+.rest { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+.skills { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 22px; }
+.skill { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid rgba(201,169,106,.12); }
+.skillName { flex: 1; min-width: 0; background: none; border: none; padding: 0; color: var(--text-soft); text-align: left; }
+.skillName:hover { color: var(--arcane-light); }
+.skill strong { font-weight: 500; color: var(--text-strong); }
+.traits { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.trait { padding: 12px 14px; background: var(--ink-deep); border: 1px solid var(--gold-a25); border-radius: 4px; }
+.trait strong { font-family: var(--font-title); font-weight: 500; color: var(--gold-light); }
+.trait p { margin: 6px 0 0; font-size: 14px; color: var(--text-soft); }
+
+/* ── Sorts ── */
+.slots { display: flex; flex-wrap: wrap; gap: 10px 22px; }
+.slot { width: 16px; height: 16px; padding: 0; transform: rotate(45deg); border: 1px solid var(--arcane-light); background: transparent; }
+.slotOn { background: var(--arcane); box-shadow: 0 0 8px var(--arcane); }
+.spellList { display: flex; flex-direction: column; }
+.spell { border-bottom: 1px solid rgba(201,169,106,.14); }
+.spellRow { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; padding: 9px 2px; }
+.prepDot { width: 16px; height: 16px; padding: 0; border-radius: 50%; border: 1px solid var(--gold); background: transparent; }
+.prepOn { background: var(--gold); }
+.spellName { min-width: 0; background: none; border: none; padding: 0; text-align: left; font-family: var(--font-title); font-size: 15px; }
+.fav { background: none; border: none; color: var(--muted); font-size: 15px; }
+.favOn { color: var(--gold-light); }
+.spellBody { padding: 0 0 12px 32px; display: flex; flex-direction: column; gap: 8px; }
+.spellBody p { margin: 0; color: var(--text-soft); font-size: 14px; }
+.pickList { max-height: 50dvh; overflow-y: auto; border: 1px solid var(--gold-a25); border-radius: 3px; }
+.pickRow { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid rgba(201,169,106,.1); }
+.pickRow strong { font-family: var(--font-title); font-weight: 500; }
+
+/* ── Inventaire ── */
+.inventory { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; align-items: start; }
+.addRow { display: grid; grid-template-columns: minmax(0, 1fr) 140px auto auto; gap: 8px; }
+.container { overflow: hidden; }
+.containerHead { display: flex; align-items: center; padding: 10px 14px; background: rgba(201,169,106,.08); border-bottom: 1px solid var(--gold-a25); }
+.itemRow { display: grid; grid-template-columns: 24px minmax(0, 1fr) 96px 64px 130px 36px; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid rgba(201,169,106,.1); }
+.equip { width: 18px; height: 18px; padding: 0; transform: rotate(45deg); border: 1px solid var(--gold); background: transparent; }
+.equipOn { background: var(--gold); }
+.itemName { min-width: 0; font-family: var(--font-title); font-size: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.attune { padding: 1px 6px; border: 1px solid var(--muted); border-radius: 2px; background: none; color: var(--muted); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
+.attuneOn { border-color: var(--arcane-light); color: var(--arcane-pale); }
+.qty { display: grid; grid-template-columns: 26px 1fr 26px; align-items: center; text-align: center; }
+.qty button { height: 26px; border: 1px solid var(--gold-a35); border-radius: 2px; background: none; color: var(--gold-light); }
+.itemWeight { font-size: 13px; color: var(--ash); text-align: right; }
+.itemContainer { min-height: 32px; padding: 4px 28px 4px 8px; font-size: 13px; }
+.coins { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+.coin { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.coin input { width: 100%; min-width: 0; padding: 8px 2px; text-align: center; background: var(--ink-deep); border: 1px solid var(--gold-a35); border-radius: 3px; color: var(--text-strong); outline: none; }
+.attuneSlot { padding: 10px 12px; border: 1px dashed var(--gold-a35); border-radius: 3px; color: var(--muted); font-size: 14px; }
+.attuneSlotOn { border-style: solid; border-color: rgba(79,179,255,.6); color: var(--arcane-pale); }
+
+/* ── Notes ── */
+.notes { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
+.noteItem { display: flex; flex-direction: column; gap: 2px; padding: 10px; border: 1px solid var(--gold-a25); border-radius: 3px; background: var(--ink-deep); color: inherit; text-align: left; }
+.noteItem strong { font-family: var(--font-title); font-weight: 500; }
+.noteItemOn { border-color: var(--gold); }
+.noteBody { white-space: pre-wrap; color: var(--text-soft); }
+
+/* ── Événements & PNJ ── */
+.eventRow { display: flex; flex-direction: column; gap: 4px; padding: 10px 14px; border-left: 3px solid var(--gold); background: var(--ink-deep); border-radius: 3px; }
+.eventRow strong { font-family: var(--font-title); font-weight: 500; color: var(--text-strong); }
+.eventRow p { margin: 0; color: var(--text-soft); font-size: 14px; }
+.npc { display: grid; grid-template-columns: minmax(240px, 340px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.npcGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+
+@media (max-width: 1100px) {
+  .header { grid-template-columns: 130px minmax(0, 1fr); }
+  .hpPanel { grid-column: 1 / -1; }
+  .skills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) {
+  .inventory, .notes, .npc { grid-template-columns: minmax(0, 1fr); }
+  .overview { grid-template-columns: minmax(0, 1fr); }
+  .abilities { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .itemRow { grid-template-columns: 24px minmax(0, 1fr) 88px 36px; }
+  .itemWeight, .itemContainer { display: none; }
+  .addRow { grid-template-columns: minmax(0, 1fr) auto; }
+  .adjustRow { grid-template-columns: auto minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .roster { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+  .roster > * { flex: none; }
+  .header { grid-template-columns: 96px minmax(0, 1fr); gap: 14px; }
+  .statRow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .skills, .saves, .npcGrid { grid-template-columns: minmax(0, 1fr); }
+  .hpControls { grid-template-columns: 1fr 1fr; }
+  .hpControls > :nth-child(2) { grid-column: 1 / -1; grid-row: 1; }
+}

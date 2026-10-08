@@ -1,0 +1,67 @@
+/* ── Bibliothèque ── */
+.library { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(300px, 1fr); gap: 22px; align-items: start; }
+.search { min-height: 50px; font-size: 16px; }
+.results { display: flex; flex-direction: column; border: 1px solid rgba(201,169,106,.3); border-radius: 4px; overflow: hidden; max-height: 62dvh; overflow-y: auto; }
+.result { display: grid; grid-template-columns: minmax(0, 1fr) 90px 90px; align-items: center; gap: 12px; padding: 12px 16px; border: none; border-bottom: 1px solid rgba(201,169,106,.14); background: transparent; color: var(--parchment); text-align: left; font-size: 13px; }
+.result:hover { background: rgba(201,169,106,.08); }
+.resultOn { background: rgba(201,169,106,.12); }
+.resultName { font-family: var(--font-title); font-size: 15px; color: var(--text-strong); }
+.resultMeta { color: var(--ash); text-align: right; }
+.homebrew { padding: 4px 10px; border: 1px solid; border-radius: 3px; font-family: var(--font-title); font-size: 12px; }
+.detail { position: sticky; top: calc(var(--topbar-height) + 16px); display: flex; flex-direction: column; gap: 12px; }
+.prop { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 10px; font-size: 14px; align-items: baseline; }
+.summary { margin: 4px 0 0; font-size: 15px; line-height: 1.6; color: var(--text-soft); }
+
+/* ── Forge ── */
+.forge { display: grid; grid-template-columns: 220px minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+.creation { display: flex; align-items: center; gap: 4px; padding: 4px 4px 4px 0; border: 1px solid var(--gold-a25); border-radius: 4px; background: var(--ink-deep); }
+.creation > button:first-child { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: none; border: none; color: inherit; text-align: left; }
+.creation strong { font-family: var(--font-title); font-weight: 500; font-size: 13px; }
+.creationOn { border-color: var(--gold); background: var(--gold-a12); }
+.creationGem { flex: none; width: 8px; height: 8px; transform: rotate(45deg); }
+.kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.kind { display: flex; flex-direction: column; gap: 2px; padding: 12px; background: var(--ink-deep); border: 1px solid var(--gold-a25); border-radius: 4px; color: var(--text-soft); text-align: left; }
+.kind strong { font-family: var(--font-title); font-weight: 500; color: var(--text-strong); }
+.kind span { font-size: 12px; color: var(--ash); }
+.kindOn { border-color: var(--gold); background: linear-gradient(180deg, rgba(74,42,78,.5), rgba(17,12,23,.9)); box-shadow: inset 0 0 0 1px rgba(201,169,106,.3); }
+.roman { margin-right: 8px; color: var(--arcane-light); font-size: 14px; }
+.bigName { font-family: var(--font-title); font-size: 22px; color: var(--gold-light); }
+.mechGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.span2 { grid-column: 1 / -1; }
+.statsRow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.effectEdit { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--gold-a25); border-radius: 4px; background: var(--ink-deep); }
+.tint { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; }
+.tintOn { border-color: var(--text-strong); }
+.previewCol { position: sticky; top: calc(var(--topbar-height) + 16px); display: flex; flex-direction: column; gap: 12px; }
+
+/* ── Carte d'objet ── */
+.card { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 8px; background: linear-gradient(180deg, rgba(38,26,46,.97), rgba(17,12,23,.98)); animation: ds-rise .3s ease-out both; }
+.cardGemTop { position: absolute; top: -7px; left: 50%; width: 12px; height: 12px; transform: translateX(-50%) rotate(45deg); background: var(--tint); box-shadow: 0 0 10px var(--tint); }
+.cardArt { position: relative; height: 150px; display: flex; align-items: center; justify-content: center; border: 1px dashed rgba(201,169,106,.35); border-radius: 3px; overflow: hidden; color: var(--ash); font-family: var(--font-title); font-size: 13px; background: repeating-linear-gradient(45deg, rgba(201,169,106,.05) 0 10px, transparent 10px 20px); }
+.cardArt img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cardName { font-family: var(--font-title); font-size: 22px; color: var(--gold-light); }
+.cardSub { margin-top: -8px; font-size: 14px; font-style: italic; color: var(--ash); }
+.cardRule { height: 1px; background: linear-gradient(90deg, var(--tint), transparent); }
+.cardStat { font-family: var(--font-title); font-size: 17px; color: var(--text-strong); }
+.cardLine { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 8px; font-size: 14px; }
+.cardTag { padding: 3px 10px; border: 1px solid var(--gold-a35); border-radius: 999px; font-size: 12px; }
+.effect { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid rgba(201,169,106,.25); background: rgba(201,169,106,.07); border-radius: 3px; font-size: 14px; }
+.effect em { font-size: 13px; color: var(--text-soft); }
+.effectActive { border-color: rgba(79,179,255,.3); background: rgba(79,179,255,.07); }
+.cardLore { margin: 0; font-style: italic; font-size: 14px; line-height: 1.6; color: var(--text-soft); }
+.cardFoot { display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid var(--gold-a25); font-size: 13px; color: var(--ash); }
+
+@media (max-width: 1200px) {
+  .forge { grid-template-columns: minmax(0, 1fr) 300px; }
+  .forge > :first-child { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
+}
+@media (max-width: 860px) {
+  .library, .forge { grid-template-columns: minmax(0, 1fr); }
+  .detail, .previewCol { position: static; }
+  .kinds { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .result { grid-template-columns: minmax(0, 1fr) 70px; }
+  .resultMeta { display: none; }
+}
+@media (max-width: 520px) {
+  .mechGrid { grid-template-columns: minmax(0, 1fr); }
+}

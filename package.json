@@ -1,0 +1,31 @@
+{
+  "name": "dungeonspace",
+  "private": true,
+  "version": "0.1.0",
+  "description": "DungeonSpace — gestion de campagne JdR (Chronique, Combat, Constellation)",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c magenta,cyan \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run dev --workspace @ds/api",
+    "dev:web": "npm run dev --workspace @ds/web",
+    "build": "npm run build --workspace @ds/api && npm run build --workspace @ds/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "npm run db:generate --workspace @ds/api",
+    "seed": "npm run seed --workspace @ds/api"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "concurrently": "^9.2.5",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

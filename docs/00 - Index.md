@@ -33,6 +33,8 @@ created: 2026-10-06
 - [[11 - Estimation et risques]]
 - [[12 - Questions ouvertes]]
 - [[13 - Core mechanics Rust]] — état du crate `dnd_core`
+- [[14 - Application web]] — v0.1 livrée : couverture du PRD, démarrage
+- Décisions d'architecture : `docs/adr/`
 - [[99 - Glossaire]]
 
 ## Conventions de ce vault

@@ -1,0 +1,59 @@
+.tray {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 40;
+  width: 240px;
+  padding: 22px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(180deg, rgba(44, 28, 52, 0.98), rgba(17, 12, 23, 0.98));
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 3px var(--ink-deep), inset 0 0 0 4px rgba(201, 169, 106, 0.3), 0 20px 50px rgba(0, 0, 0, 0.6);
+  animation: ds-rise 0.2s ease-out both;
+}
+.close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  border: none;
+}
+.die {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gem {
+  position: absolute;
+  inset: 14px;
+  border: 2px solid var(--arcane-light);
+  background: linear-gradient(135deg, #1d2f4a, #120c18);
+  box-shadow: 0 0 24px rgba(79, 179, 255, 0.55);
+  transition: transform 0.06s linear;
+}
+.value {
+  position: relative;
+  font-family: var(--font-title);
+  font-size: 30px;
+  font-weight: 600;
+}
+.total {
+  font-family: var(--font-title);
+  font-size: 14px;
+  color: var(--gold-light);
+  text-align: center;
+}
+@media (max-width: 767px) {
+  .tray {
+    right: 50%;
+    transform: translateX(50%);
+    bottom: calc(var(--bottom-nav-height) + 16px + env(safe-area-inset-bottom));
+    animation: none;
+  }
+}
