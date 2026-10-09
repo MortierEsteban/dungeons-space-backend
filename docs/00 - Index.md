@@ -32,7 +32,7 @@ created: 2026-10-06
 - [[10 - Exigences non fonctionnelles]]
 - [[11 - Estimation et risques]]
 - [[12 - Questions ouvertes]]
-- [[13 - Core mechanics Rust]] — état du crate `dnd_core`
+- [[13 - Core mechanics Rust]] — archive : le crate `dnd_core`, retiré du dépôt (ADR 0011)
 - [[14 - Application web]] — v0.1 livrée : couverture du PRD, démarrage
 - Décisions d'architecture : `docs/adr/`
 - [[99 - Glossaire]]
@@ -49,15 +49,6 @@ created: 2026-10-06
 
 ## État de l'existant (repo `dungeons-space-backend`)
 
-Le dépôt contient déjà des fondations — à garder en tête, **sans les considérer comme figées** :
-
-| Dossier | État | Lien PRD |
-|---|---|---|
-| `node_service/` | Go + gRPC : `Node` (nom, description, `PlayerVisible`, `ReferencedId`, `Service`) et `NodeLink` (`Magnitude`, `colour`, `Description`) | [[06 - Épopée Constellation]] |
-| `character_service/` | Go + gRPC : personnages et items, non fonctionnel | [[07 - Épopée Fondations de jeu]] |
-| `refservice/` | Enums Python (classes, sous-classes, stats) | [[09 - Modularité multi-systèmes]] |
-| `event_service/`, `logs_service/`, `places_service/` | Stubs Python vides | [[04 - Épopée Chronique]] |
-| `Docker-Compose.yaml` | Kong Gateway + Postgres | [[10 - Exigences non fonctionnelles]] |
-
-> [!tip] Observation
-> Le champ `Service` + `ReferencedId` sur `Node` est déjà une bonne intuition : un nœud de la Constellation est un **pointeur polymorphe** vers une entité d'un autre service. Voir [[06 - Épopée Constellation]].
+L'application vit dans le monorepo TypeScript (`apps/`, `packages/`) — voir [[14 - Application web]] et `docs/adr/`.
+Les prototypes antérieurs (services Go + gRPC `node_service` / `character_service`, stubs Python, Docker Compose Kong, crate Rust `dnd_core`)
+ont été retirés du dépôt (ADR 0011) ; ils restent consultables dans l'historique git.

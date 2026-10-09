@@ -19,6 +19,6 @@ Le contenu (sorts, monstres, objets) est de la **donnée** avec provenance, et u
 
 ## Conséquences
 - Un seul moteur exécuté côté serveur (autorité) et côté client (replay, aperçus) : aucune divergence possible.
-- `dnd_core` reste la référence la plus complète (mort instantanée, multiclassage, Pact Magic détaillée…). Une évolution possible :
-  compiler `dnd_core` en WASM et l'utiliser comme oracle de tests croisés pour `packages/rules`.
+- `dnd_core` couvrait davantage (mort instantanée, multiclassage, Pact Magic détaillée…) : sa couverture est archivée dans
+  [[13 - Core mechanics Rust]]. Le crate a été retiré du dépôt (ADR 0011) et reste récupérable dans l'historique git.
 - Un second ruleset de démonstration (RUL-06) reste à écrire pour éprouver l'abstraction.

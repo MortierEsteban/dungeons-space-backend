@@ -2,7 +2,6 @@
 title: Épopée Fondations de jeu
 tags: [dungeonspace, prd, epic, fondations, personnages]
 status: draft
-service: character_service
 ---
 
 # 07 — Épopée Fondations de jeu

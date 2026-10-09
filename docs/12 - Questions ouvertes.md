@@ -22,6 +22,6 @@ status: draft
 | Q8 | **Hébergement/public** : démo publique ouverte ou sur invitation ? | Sécurité, coût | Démo publique avec campagne seed en lecture seule | ☐ |
 | Q9 | **Multi-système** : second ruleset de preuve dès le MVP ? (RUL-06) | Valide l'architecture | Oui, minimal | ☐ |
 | Q10 | **Constellation** : polarité/intensité séparées, liens orientés ? ([[06 - Épopée Constellation]]) | Modèle de données | Oui | ☐ |
-| Q11 | **Existant** : on repart de zéro ou on réutilise `node_service` / `character_service` ? | Stack | Réutiliser les concepts, pas forcément le code | ☐ |
+| Q11 | **Existant** : on repart de zéro ou on réutilise `node_service` / `character_service` ? | Stack | Réutiliser les concepts, pas forcément le code | ☑ Concepts repris dans le monorepo TypeScript, code retiré (ADR 0011) |
 | Q12 | **Nom & identité** (« DungeonSpace », « Constellation ») : dispo des noms/domaines, risque de marque ? | Portfolio | À vérifier | ☐ |
 | Q13 | Qui joue le **groupe test** et quand démarre-t-on une vraie campagne dessus ? | Validation produit | Dès M1 | ☐ |

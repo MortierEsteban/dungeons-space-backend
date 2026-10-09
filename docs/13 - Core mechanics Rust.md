@@ -1,14 +1,18 @@
 ---
 title: Core mechanics Rust (dnd_core)
 tags: [dungeonspace, rust, mecaniques, srd]
-status: draft
+status: archived
 ---
 
 # 13 — Core mechanics Rust (`dnd_core`)
 
 ← [[00 - Index]] · Alimente [[05 - Épopée Combat]], [[07 - Épopée Fondations de jeu]], [[09 - Modularité multi-systèmes]]
 
-Crate `dnd_core/` à la racine du repo (workspace Cargo). **SRD 5.1**, bibliothèque pure : aucun I/O, aucune horloge, aucun hasard caché.
+> [!warning] Archive
+> Le crate a été retiré du dépôt (ADR 0011) : l'application utilise `packages/rules` (ADR 0005). Son code reste dans
+> l'historique git (commit `94e5727`). Cette page sert de référence de couverture.
+
+Crate `dnd_core/` (workspace Cargo). **SRD 5.1**, bibliothèque pure : aucun I/O, aucune horloge, aucun hasard caché.
 
 ## Décisions
 

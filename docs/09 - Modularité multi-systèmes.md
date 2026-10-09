@@ -58,4 +58,4 @@ Supporter D&D 5e au MVP **sans fermer la porte** à Pathfinder 2e, Call of Cthul
 > L'abstraction prématurée. **Règle de conduite** : implémenter D&D 5e *via* les interfaces de ruleset dès le début, mais ne généraliser que ce que RUL-06 force à généraliser.
 
 > [!tip] Existant
-> `refservice/enums/` (classes, sous-classes, stats) est un premier jet *en code*. Cible : migrer ces énumérations vers des **données** du ruleset.
+> Le ruleset D&D 5e de `packages/rules` implémente l'interface `Ruleset` et s'enregistre dans un registre ; son contenu SRD est de la **donnée** avec provenance.

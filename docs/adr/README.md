@@ -15,3 +15,4 @@ Chaque décision structurante est consignée ici, en précisant s'il s'agit d'un
 | [0008](0008-brouillard-de-guerre.md) | Brouillard de guerre par utilisateur, calculé côté client | Structurant |
 | [0009](0009-passifs-classes-homebrew-sorts.md) | Passifs typés, classes homebrew, sorts résolus sur le plateau, bibliothèque partagée | Structurant |
 | [0010](0010-enregistrement-des-sessions.md) | Enregistrement permanent des sessions analysé par un modèle de langage, pondération de l'affichage | Structurant |
+| [0011](0011-retrait-des-prototypes.md) | Retrait des prototypes (Go, Python, Rust, Kong) du dépôt | Pragmatique |
