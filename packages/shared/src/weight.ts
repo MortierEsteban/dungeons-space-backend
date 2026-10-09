@@ -61,3 +61,14 @@ export function selectByWeight<T extends { id: string; group: number | string; w
   }
   return keep;
 }
+
+/** Natures d'événements traumatiques ou décisives : toujours nommées dans les vues d'ensemble. */
+export const LANDMARK_TYPES: ReadonlySet<string> = new Set(['narrative.death', 'character.died', 'social.betrayed']);
+
+/**
+ * Repère majeur de la campagne : une mort, une trahison, ou un moment noté d'importance maximale.
+ * Les vues d'ensemble n'affichent que ces titres (et les personnages) ; le reste se dévoile au zoom ou au focus.
+ */
+export function isLandmarkEvent(e: Pick<EventDto, 'type' | 'importance'>): boolean {
+  return LANDMARK_TYPES.has(e.type) || e.importance >= 5;
+}

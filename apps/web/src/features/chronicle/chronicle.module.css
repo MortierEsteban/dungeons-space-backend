@@ -36,6 +36,47 @@
   align-items: center;
   gap: 6px;
 }
+.searchRow {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+.searchRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.threadBar {
+  position: sticky;
+  top: -24px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid;
+  border-radius: 4px;
+  background: var(--ink-deep);
+}
+.threadList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.threadList .recentItem {
+  width: 100%;
+}
+.threadSession {
+  margin: 10px 0 4px;
+  font-family: var(--font-title);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
 .linkingBanner {
   padding: 8px 10px;
   border: 1px solid rgba(79, 179, 255, 0.5);
@@ -84,6 +125,7 @@
 }
 .recentItem {
   display: flex;
+  width: 100%;
   align-items: flex-start;
   gap: 10px;
   padding: 9px 10px;
