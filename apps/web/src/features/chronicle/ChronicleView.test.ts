@@ -1,6 +1,6 @@
 import type { EventDto } from '@ds/shared';
 import { describe, expect, it } from 'vitest';
-import { layout } from './ChronicleView';
+import { characterThread, layout } from './ChronicleView';
 
 const ev = (id: string, sessionNo: number, seq: number): EventDto =>
   ({ id, seq, sessionNo, type: 'narrative.note', category: 'narrative', payload: {}, actors: [], targets: [], importance: 2, source: 'gm' }) as unknown as EventDto;
@@ -22,5 +22,18 @@ describe('disposition 3D de la Chronique', () => {
     const { positions } = layout(events, weights);
     const radius = (id: string) => Math.hypot(positions.get(id)!.y, positions.get(id)!.z);
     expect(radius('a0')).toBeLessThan(radius('a3'));
+  });
+});
+
+describe('fil d’un personnage', () => {
+  it('garde les événements où il agit ou subit, dans l’ordre de la Chronique', () => {
+    const who = (id: string) => ({ kind: 'character' as const, id, name: id });
+    const events = [
+      { ...ev('c', 1, 3), actors: [who('brakk')] },
+      { ...ev('a', 1, 1), targets: [who('brakk')] },
+      { ...ev('b', 1, 2), actors: [who('elowen')] },
+      { ...ev('d', 1, 4), actors: [{ kind: 'free' as const, id: 'brakk', name: 'Brakk' }] },
+    ] as EventDto[];
+    expect(characterThread(events, 'brakk').map((e) => e.id)).toEqual(['a', 'c']);
   });
 });

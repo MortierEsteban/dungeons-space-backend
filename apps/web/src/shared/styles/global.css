@@ -80,6 +80,8 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+  /* Une URL ou un mot très long passe à la ligne plutôt que de déborder de sa carte. */
+  overflow-wrap: break-word;
 }
 
 body {
@@ -214,6 +216,11 @@ button:disabled {
 .ds-grow {
   flex: 1;
   min-width: 0;
+}
+/* Dans une rangée qui passe à la ligne, l'élément extensible garde une largeur lisible :
+   ce sont ses voisins (boutons, sélecteurs) qui descendent, au lieu d'écraser le texte. */
+.ds-row > .ds-grow {
+  flex: 1 1 140px;
 }
 .ds-visually-hidden {
   position: absolute !important;

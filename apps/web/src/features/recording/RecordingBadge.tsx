@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { num } from '../../shared/format';
 import { useDismiss } from '../../shared/hooks';
 import { Button, cx, Toggle } from '../../shared/ui/components';
+import { useCampaign, useUpdateCampaign } from '../campaigns/api';
 import { useCurrentCampaign } from '../campaigns/CampaignContext';
 import { useRecorder } from './RecorderProvider';
 import s from './recording.module.css';
@@ -19,8 +20,8 @@ export function RecordingBadge() {
   const ref = useDismiss<HTMLDivElement>(open, close);
 
   const live = r.live;
-  const canRecord = isGm && !!r.settings?.enabled && r.sessionNo !== null;
-  if (!live && !canRecord) return null;
+  // Le MJ voit toujours le bouton (c'est là qu'on lance l'enregistrement) ; les joueurs, seulement en cours d'enregistrement.
+  if (!live && !isGm) return null;
 
   const status = !live ? 'off' : live.status === 'paused' ? 'paused' : 'live';
   const label = status === 'live' ? 'REC' : status === 'paused' ? 'PAUSE' : 'REC';
@@ -44,7 +45,7 @@ export function RecordingBadge() {
       </button>
       {open && (
         <div className={s.panel} role="dialog" aria-label="Enregistrement de la session">
-          <div className="ds-label">Enregistrement · session {live?.sessionNo ?? r.sessionNo}</div>
+          <div className="ds-label">Enregistrement{(live?.sessionNo ?? r.sessionNo) !== null ? ` · session ${live?.sessionNo ?? r.sessionNo}` : ''}</div>
           {!isGm ? (
             <p className={s.note}>
               {status === 'live'
@@ -52,20 +53,75 @@ export function RecordingBadge() {
                 : 'L’enregistrement est en pause.'}
             </p>
           ) : (
-            <GmControls />
+            <RecorderControls onNavigate={close} />
           )}
-          {live && (
-            <Link className={s.traceLink} to={`/explorer?vue=sessions&session=${live.sessionNo}`} onClick={close}>
-              Voir la trace de la session →
-            </Link>
-          )}
+          <div className={s.links}>
+            {live && (
+              <Link className={s.traceLink} to={`/explorer?vue=sessions&session=${live.sessionNo}`} onClick={close}>
+                Trace de la session →
+              </Link>
+            )}
+            {(isGm || r.settings?.playersSeeTranscript) && (
+              <Link className={s.traceLink} to={`/explorer?vue=transcriptions${live ? `&session=${live.sessionNo}` : ''}`} onClick={close}>
+                Transcriptions →
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function GmControls() {
+/**
+ * Commandes du MJ (bouton REC de la barre supérieure et page Campagne) : guide pas à pas tant que
+ * l'enregistrement n'est pas possible (désactivé, pas de session ouverte), puis enregistrer, pause, arrêt.
+ */
+export function RecorderControls({ onNavigate }: { onNavigate?: () => void }) {
+  const r = useRecorder();
+  const { campaignId } = useCurrentCampaign();
+  const { data: campaign } = useCampaign(campaignId);
+  const update = useUpdateCampaign(campaignId ?? '');
+  const live = r.live;
+  if (!live && r.settings && !r.settings.enabled) {
+    return (
+      <div className="ds-stack" style={{ gap: 10 }}>
+        <p className={s.note}>
+          L’enregistrement des sessions est désactivé. Une fois activé, un appareil du MJ écoute la table : la transcription est conservée et les événements marquants sont inscrits dans la
+          Chronique. Prévenez vos joueurs : l’indicateur REC leur est visible.
+        </p>
+        <div className={s.actions}>
+          <Button
+            size="sm"
+            variant="primary"
+            disabled={!campaign || update.isPending}
+            onClick={() => campaign && update.mutate({ settings: { ...campaign.settings, recording: { ...campaign.settings.recording, enabled: true } } })}
+          >
+            Activer l’enregistrement
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  if (!live && r.sessionNo === null) {
+    return (
+      <div className="ds-stack" style={{ gap: 10 }}>
+        <p className={s.note}>Aucune session en cours : l’enregistrement se rattache à une session. Démarrez-la depuis la page Campagne, puis revenez ici.</p>
+        <div className={s.actions}>
+          <Link className={s.traceLink} to="/campagne" onClick={onNavigate}>
+            Démarrer une session →
+          </Link>
+        </div>
+        <Toggle checked={r.autoRecord} onChange={r.setAutoRecord}>
+          Enregistrer automatiquement chaque session depuis cet appareil
+        </Toggle>
+      </div>
+    );
+  }
+  return <LiveControls />;
+}
+
+function LiveControls() {
   const r = useRecorder();
   const live = r.live;
   const elsewhere = !!live && live.status === 'live' && !r.holding;

@@ -29,6 +29,21 @@
   backdrop-filter: blur(4px);
   cursor: default;
 }
+.searchRow {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+.searchRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.densityRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
 .side {
   display: flex;
   flex-direction: column;

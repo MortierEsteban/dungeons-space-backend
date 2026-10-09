@@ -103,18 +103,20 @@ function SpellsList({ character, combatant, onCast }: { character: CharacterDto;
                 </div>
                 <SpellTags m={m} />
               </div>
-              {higher.length > 1 && (
-                <Select value={slotLevel} onChange={(e) => setUpcast({ ...upcast, [sp.id]: Number(e.target.value) })} aria-label={`Niveau d'emplacement pour ${sp.name}`} className={s.slotSelect}>
-                  {higher.map((l) => (
-                    <option key={l} value={l}>
-                      niv {l}
-                    </option>
-                  ))}
-                </Select>
-              )}
-              <Button size="sm" variant={m.area ? 'secondary' : 'ghost'} disabled={!character.canEdit || !ready} title={ready ? undefined : 'Plus d’emplacement disponible'} onClick={() => onCast({ casterId: combatant.id, spell: sp, mech: m, slotLevel })}>
-                Lancer
-              </Button>
+              <div className={s.sheetActions}>
+                {higher.length > 1 && (
+                  <Select value={slotLevel} onChange={(e) => setUpcast({ ...upcast, [sp.id]: Number(e.target.value) })} aria-label={`Niveau d'emplacement pour ${sp.name}`} className={s.slotSelect}>
+                    {higher.map((l) => (
+                      <option key={l} value={l}>
+                        niv {l}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+                <Button size="sm" variant={m.area ? 'secondary' : 'ghost'} disabled={!character.canEdit || !ready} title={ready ? undefined : 'Plus d’emplacement disponible'} onClick={() => onCast({ casterId: combatant.id, spell: sp, mech: m, slotLevel })}>
+                  Lancer
+                </Button>
+              </div>
             </div>
           );
         })}

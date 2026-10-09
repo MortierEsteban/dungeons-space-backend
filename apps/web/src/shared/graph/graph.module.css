@@ -41,83 +41,105 @@
   pointer-events: none;
   opacity: 0.85;
 }
+/* Le bouton a exactement la taille du repère : son centre est le point projeté, les traits y aboutissent.
+   L'étiquette se place à droite, hors du flux. */
 .node {
   --depth: 1;
-  --label: 0.6;
+  --label: 0;
+  --m: 14px;
   position: absolute;
   left: 0;
   top: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px;
+  width: var(--m);
+  height: var(--m);
+  padding: 0;
   background: none;
   border: none;
   color: var(--text-soft);
   opacity: var(--depth);
-  transition: opacity 0.2s;
+  transition: opacity 0.25s;
   will-change: transform;
+}
+/* Zone cliquable confortable même pour les plus petits repères. */
+.node::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
 }
 .gem,
 .circle {
-  flex: none;
-  width: 14px;
-  height: 14px;
+  position: absolute;
+  inset: 0;
   border: 1.5px solid var(--c);
   background: var(--night);
   box-shadow: 0 0 8px color-mix(in srgb, var(--c) 35%, transparent);
   transition: background 0.2s, box-shadow 0.2s;
 }
 .gem {
+  inset: 15%;
   transform: rotate(45deg);
 }
 .circle {
-  width: 16px;
-  height: 16px;
   border-radius: 50%;
 }
 .label {
-  padding: 3px 8px;
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 2px 7px;
   background: rgba(11, 9, 18, 0.82);
   border: 1px solid rgba(201, 169, 106, 0.25);
   border-radius: 2px;
   font-family: var(--font-title);
   font-size: 11px;
+  line-height: 1.4;
   letter-spacing: 0.06em;
   white-space: nowrap;
+  pointer-events: none;
   opacity: var(--label);
   transition: opacity 0.2s;
+}
+.node[data-label='off'] .label {
+  visibility: hidden;
 }
 .node:hover .gem,
 .node:hover .circle,
 .node:focus-visible .gem,
+.node:focus-visible .circle,
 .selected .gem,
-.selected .circle {
+.selected .circle,
+.current .gem,
+.current .circle {
   background: var(--c);
 }
 .inFocus .gem,
 .inFocus .circle {
   box-shadow: 0 0 14px var(--c);
 }
-.inFocus .label,
-.node:hover .label,
-.node:focus-visible .label {
-  opacity: 1;
-}
 .selected .gem,
-.selected .circle {
+.selected .circle,
+.current .gem,
+.current .circle {
   box-shadow: 0 0 0 4px rgba(11, 9, 18, 0.8), 0 0 22px var(--c);
 }
-.selected .label {
+.selected .label,
+.current .label {
   border-color: var(--c);
   color: var(--text-strong);
-  opacity: 1;
 }
-.dimmed {
-  opacity: 0.35;
+/* Paliers de focus : voisins directs nets, second cercle discret, le reste s'efface. */
+.node[data-tier='dim'] {
+  opacity: calc(var(--depth) * 0.4);
+}
+.node[data-tier='far'] {
+  opacity: calc(var(--depth) * 0.07);
+}
+.node[data-tier='far']:hover {
+  opacity: 0.6;
 }
 .muted {
-  opacity: 0.12;
+  opacity: 0.12 !important;
 }
 .controls {
   display: flex;
@@ -147,7 +169,19 @@
   background: rgba(79, 179, 255, 0.14);
   color: var(--arcane-pale);
 }
+.zoomGroup {
+  display: inline-flex;
+  gap: 4px;
+}
+.zoomGroup .ctrl {
+  min-width: 32px;
+  padding: 6px 0;
+  font-size: 14px;
+  letter-spacing: 0;
+}
 .hint {
+  flex: 1 1 260px;
+  min-width: 0;
   font-size: 12px;
   font-style: italic;
   color: var(--muted);

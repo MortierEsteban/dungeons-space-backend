@@ -1,4 +1,4 @@
-import { eventTypeDef, LINK_TYPES, NODE_KIND_META, NODE_KINDS, type EventDto, type LinkDto, type NodeDto, type NodeKind } from '@ds/shared';
+import { eventTypeDef, isLandmarkEvent, LINK_TYPES, NODE_KIND_META, NODE_KINDS, type EventDto, type LinkDto, type NodeDto, type NodeKind } from '@ds/shared';
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { errorMessage } from '../../shared/api/client';
@@ -297,43 +297,53 @@ export function ConstellationView() {
   }, [links, evGraph]);
 
   const matches = (label: string) => !query || normalize(label).includes(normalize(query));
-  const visibleLinks = links.filter((l) => l.intensity >= minIntensity && (polarity === 'all' || (polarity === 'pos' ? l.valence > 0 : l.valence < 0)));
-  const graphNodes: GraphNode[] = [
-    ...nodes.map((n) => ({
-      id: n.id,
-      label: n.label,
-      color: n.color ?? NODE_KIND_META[n.kind].color,
-      position: positions.get(n.id) ?? { x: 0, y: 0, z: 0 },
-      shape: n.kind === 'pc' || n.kind === 'npc' ? ('circle' as const) : ('diamond' as const),
-      muted: (kinds.length > 0 && !kinds.includes(n.kind)) || !matches(n.label),
-      hint: NODE_KIND_META[n.kind].label,
-      size: 1 + Math.min(0.5, (degree.get(n.id) ?? 0) * 0.05),
-      pinLabel: n.kind === 'pc' || n.kind === 'faction' || (degree.get(n.id) ?? 0) >= 5,
-    })),
-    ...evGraph.events.map(({ id, event, weight }) => ({
-      id,
-      label: event.title,
-      color: eventTypeDef(event.type).color,
-      position: positions.get(id) ?? { x: 0, y: 0, z: 0 },
-      shape: 'diamond' as const,
-      muted: (kinds.length > 0 && !kinds.includes('event')) || !matches(event.title),
-      hint: `${eventTypeDef(event.type).label}, session ${event.sessionNo ?? 0}`,
-      size: 0.6 + weight * 0.6,
-      pinLabel: weight >= 0.9,
-      quiet: weight < 0.5,
-    })),
-  ];
-  const edges: GraphEdge[] = [
-    ...visibleLinks.map((l) => ({ from: l.fromId, to: l.toId, color: valenceColor(l.valence), width: 1 + l.intensity * 0.5, opacity: 0.55, arrow: true, dashed: !l.playerVisible && isGm, label: l.type })),
-    ...evGraph.edges.map((e) => ({ from: e.fromId, to: e.toId, color: e.color, width: 1, opacity: 0.3, arrow: e.role !== 'chain', dashed: e.role === 'chain', label: e.role === 'chain' ? 'lié à' : e.role === 'actor' ? `acteur · ${e.label}` : `cible · ${e.label}` })),
-  ];
+  const graphNodes: GraphNode[] = useMemo(
+    () => [
+      ...nodes.map((n) => {
+        const d = degree.get(n.id) ?? 0;
+        const character = n.kind === 'pc' || n.kind === 'npc';
+        return {
+          id: n.id,
+          label: n.label,
+          color: n.color ?? NODE_KIND_META[n.kind].color,
+          position: positions.get(n.id) ?? { x: 0, y: 0, z: 0 },
+          shape: character ? ('circle' as const) : ('diamond' as const),
+          muted: (kinds.length > 0 && !kinds.includes(n.kind)) || !matches(n.label),
+          hint: NODE_KIND_META[n.kind].label,
+          // Les personnages structurent la carte : nommés dès la vue d'ensemble, le reste se dévoile au zoom.
+          weight: n.kind === 'pc' ? Math.min(1, 0.8 + d * 0.02) : Math.min(0.9, (character ? 0.4 : 0.35) + d * 0.06),
+          landmark: n.kind === 'pc' || (n.kind === 'npc' && d >= 5),
+        };
+      }),
+      ...evGraph.events.map(({ id, event, weight }) => ({
+        id,
+        label: event.title,
+        color: eventTypeDef(event.type).color,
+        position: positions.get(id) ?? { x: 0, y: 0, z: 0 },
+        shape: 'diamond' as const,
+        muted: (kinds.length > 0 && !kinds.includes('event')) || !matches(event.title),
+        hint: `${eventTypeDef(event.type).label}, session ${event.sessionNo ?? 0}`,
+        weight,
+        landmark: isLandmarkEvent(event),
+      })),
+    ],
+    // `matches` ne dépend que de la recherche.
+    [nodes, evGraph, positions, degree, kinds, query],
+  );
+  const edges: GraphEdge[] = useMemo(
+    () => [
+      ...links
+        .filter((l) => l.intensity >= minIntensity && (polarity === 'all' || (polarity === 'pos' ? l.valence > 0 : l.valence < 0)))
+        .map((l) => ({ from: l.fromId, to: l.toId, color: valenceColor(l.valence), width: 1 + l.intensity * 0.5, opacity: 0.55, arrow: true, dashed: !l.playerVisible && isGm, label: l.type })),
+      ...evGraph.edges.map((e) => ({ from: e.fromId, to: e.toId, color: e.color, width: 1, opacity: 0.3, arrow: e.role !== 'chain', dashed: e.role === 'chain', label: e.role === 'chain' ? 'lié à' : e.role === 'actor' ? `acteur · ${e.label}` : `cible · ${e.label}` })),
+    ],
+    [links, evGraph, minIntensity, polarity, isGm],
+  );
   const node = nodes.find((n) => n.id === selected) ?? null;
   const selectedEvent = selected?.startsWith(EVENT_PREFIX) ? (evGraph.events.find((e) => e.id === selected)?.event ?? null) : null;
 
-  const goTo = (id: string) => {
-    onSelect(id);
-    graph.current?.focus(id);
-  };
+  /** Sélectionner suffit : la scène cadre automatiquement le nœud et ses voisins. */
+  const goTo = (id: string) => onSelect(id);
 
   const onSelect = (id: string | null) => {
     if (linking && id?.startsWith(EVENT_PREFIX)) {
@@ -395,7 +405,7 @@ export function ConstellationView() {
           }
           overlay={
             <div className={s.filters} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-              <div className="ds-row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+              <div className={s.searchRow}>
                 <Input
                   placeholder="Rechercher un nœud ou un événement…"
                   value={q}
@@ -407,17 +417,23 @@ export function ConstellationView() {
                   aria-label="Rechercher (Entrée pour s'y rendre)"
                 />
                 <Button size="sm" variant={filtersOpen ? 'secondary' : 'ghost'} onClick={() => setFiltersOpen(!filtersOpen)} aria-expanded={filtersOpen}>
-                  Filtres{kinds.length || polarity !== 'all' || minIntensity ? ' •' : ''}
+                  Filtres{kinds.length || polarity !== 'all' || minIntensity || !showEvents ? ' •' : ''}
                 </Button>
               </div>
-              <div className="ds-row" style={{ gap: 6 }}>
-                <Toggle checked={showEvents} onChange={setShowEvents}>
-                  Événements de la Chronique{showEvents ? ` · ${evGraph.events.length}${evGraph.hidden ? `/${evGraph.events.length + evGraph.hidden}` : ''}` : ''}
-                </Toggle>
-                {showEvents && <Segmented label="Niveau de détail des événements" value={eventDensity} options={DENSITIES} onChange={setEventDensity} />}
-              </div>
+              {showEvents && (
+                <div className={s.densityRow}>
+                  <Segmented label="Niveau de détail des événements" value={eventDensity} options={DENSITIES} onChange={setEventDensity} />
+                  <span className="ds-help">
+                    {evGraph.events.length}
+                    {evGraph.hidden ? `/${evGraph.events.length + evGraph.hidden}` : ''} év.
+                  </span>
+                </div>
+              )}
               {filtersOpen && (
               <>
+              <Toggle checked={showEvents} onChange={setShowEvents}>
+                Événements de la Chronique
+              </Toggle>
               {showEvents && (
                 <Select value={eventImportance} onChange={(e) => setEventImportance(Number(e.target.value))} aria-label="Importance minimale des événements" style={{ minHeight: 32, padding: '4px 30px 4px 10px', fontSize: 13 }}>
                   {[1, 2, 3, 4, 5].map((i) => (

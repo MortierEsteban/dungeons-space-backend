@@ -1,8 +1,8 @@
-import { eventOrigin, eventTypeDef, eventWeight, NARRATIVE_TYPES, type EventDto } from '@ds/shared';
-import { useMemo, useState } from 'react';
-import { Graph3D, type AxisMark, type GraphEdge, type GraphNode } from '../../shared/graph/Graph3D';
+import { eventOrigin, eventTypeDef, eventWeight, isLandmarkEvent, NARRATIVE_TYPES, type EventDto } from '@ds/shared';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Graph3D, type AxisMark, type GraphEdge, type GraphHandle, type GraphNode } from '../../shared/graph/Graph3D';
 import { useDebounced, useLocalPref } from '../../shared/hooks';
-import { Button, Chip, Input, Loading, Panel, Rule, Segmented, Toggle } from '../../shared/ui/components';
+import { Button, Chip, IconButton, Input, Loading, Panel, Rule, Segmented, Toggle } from '../../shared/ui/components';
 import { useCampaign } from '../campaigns/api';
 import { useCurrentCampaign } from '../campaigns/CampaignContext';
 import { useCampaignCharacters } from '../character/api';
@@ -58,6 +58,14 @@ export function layout(events: readonly EventDto[], weights: ReadonlyMap<string,
   return { axis, positions };
 }
 
+/** Couleurs des fils suivis, une par personnage (stable). */
+const THREAD_COLORS = ['#7cc6ff', '#f0c674', '#9be3b0', '#ff9e7a', '#d8b3e0', '#ffd1e6'];
+
+/** Événements où apparaît un personnage (acteur ou cible), dans l'ordre de la Chronique. */
+export function characterThread(events: readonly EventDto[], characterId: string): EventDto[] {
+  return events.filter((e) => [...e.actors, ...e.targets].some((a) => a.kind === 'character' && a.id === characterId)).sort((a, b) => a.seq - b.seq);
+}
+
 export function ChronicleView() {
   const { campaignId, current, isGm } = useCurrentCampaign();
   const { data: events = [], isLoading } = useNarrativeEvents(campaignId);
@@ -69,10 +77,12 @@ export function ChronicleView() {
   const [linking, setLinking] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [types, setTypes] = useState<string[]>([]);
-  const [chars, setChars] = useState<string[]>([]);
+  const [follow, setFollow] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const query = useDebounced(q, 150);
   const [flat, setFlat] = useLocalPref('chronicleFlat', false);
   const mutations = useChronicleMutations(campaignId ?? '');
+  const graph = useRef<GraphHandle>(null);
 
   /** En mode liaison, cliquer un événement crée (ou retire) le lien avec l'événement ouvert. */
   const toggleLink = (from: string, to: string) => {
@@ -90,73 +100,116 @@ export function ChronicleView() {
     return new Map(visible.map((e) => [e.id, eventWeight(e, degree.get(e.id) ?? 0)]));
   }, [visible, links]);
   const pcs = characters.filter((c) => c.kind === 'pc');
+  const followed = characters.find((c) => c.id === follow) ?? null;
+  const threadEvents = useMemo(() => (follow ? characterThread(visible, follow) : []), [visible, follow]);
+  const threadColor = THREAD_COLORS[Math.max(0, pcs.findIndex((c) => c.id === follow)) % THREAD_COLORS.length]!;
 
   const matches = useMemo(() => {
     const u = normalize(query.trim());
-    return new Set(
-      visible
-        .filter((e) => (!types.length || types.includes(e.type)) && (!chars.length || [...e.actors, ...e.targets].some((a) => a.id && chars.includes(a.id))) && (!u || normalize(`${e.title} ${e.text}`).includes(u)))
-        .map((e) => e.id),
-    );
-  }, [visible, types, chars, query]);
+    return new Set(visible.filter((e) => (!types.length || types.includes(e.type)) && (!u || normalize(`${e.title} ${e.text}`).includes(u))).map((e) => e.id));
+  }, [visible, types, query]);
 
-  const filtering = types.length > 0 || chars.length > 0 || query.trim() !== '';
+  const filtering = types.length > 0 || query.trim() !== '';
 
-  /** Niveau de détail : les plus lourds par session, plus tout ce que cherchent les filtres et le voisinage de la sélection. */
+  /** Niveau de détail : les plus lourds par session, plus tout ce que cherchent les filtres, le fil suivi et le voisinage de la sélection. */
   const shown = useMemo(() => {
     const keep = selectDensity(visible.map((e) => ({ id: e.id, group: e.sessionNo ?? 0, weight: weights.get(e.id) ?? 0 })), density, CAMPAIGN_DENSITY);
     if (filtering) for (const id of matches) keep.add(id);
+    for (const e of threadEvents) keep.add(e.id);
     if (selected) {
       keep.add(selected);
       for (const l of links) if (l.fromId === selected || l.toId === selected) (keep.add(l.fromId), keep.add(l.toId));
     }
     return visible.filter((e) => keep.has(e.id));
-  }, [visible, weights, density, filtering, matches, selected, links]);
+  }, [visible, weights, density, filtering, matches, threadEvents, selected, links]);
+
+  // Disposition calculée sur tous les événements visibles : sélectionner, filtrer ou changer le niveau de
+  // détail n'en déplace aucun (la scène ne « saute » plus).
+  const placement = useMemo(() => layout(visible, weights), [visible, weights]);
 
   const { axis, nodes, edges } = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const e of shown) counts.set(e.sessionNo ?? 0, (counts.get(e.sessionNo ?? 0) ?? 0) + 1);
     const totals = new Map<number, number>();
     for (const e of visible) totals.set(e.sessionNo ?? 0, (totals.get(e.sessionNo ?? 0) ?? 0) + 1);
-    const { axis, positions } = layout(shown, weights, totals);
+    const axis: AxisMark[] = placement.axis.map((a) => {
+      const n = Number(a.id.slice('axis-'.length));
+      const name = n === 0 ? 'PROLOGUE' : `SESSION ${n}`;
+      const c = counts.get(n) ?? 0;
+      const all = totals.get(n) ?? 0;
+      return { ...a, label: all > c ? `${name} · ${c}/${all}` : name };
+    });
     const nodes: GraphNode[] = shown.map((e) => {
       const w = weights.get(e.id) ?? 0.5;
       return {
         id: e.id,
         label: e.title,
         color: eventTypeDef(e.type).color,
-        position: positions.get(e.id)!,
+        position: placement.positions.get(e.id)!,
         muted: !matches.has(e.id),
         hint: `${eventTypeDef(e.type).label}, session ${e.sessionNo ?? 0}${eventOrigin(e) === 'recording' ? ', déduit de l’enregistrement' : ''}`,
-        size: 0.65 + w * 0.7,
-        pinLabel: w >= 0.9,
-        quiet: w < 0.5,
+        weight: w,
+        landmark: isLandmarkEvent(e),
       };
     });
     const ids = new Set(shown.map((e) => e.id));
     const edges: GraphEdge[] = [
-      ...shown.map((e) => ({ from: `axis-${e.sessionNo ?? 0}`, to: e.id, color: '#c9a96a', kind: 'spoke' as const, opacity: matches.has(e.id) ? 0.06 + (weights.get(e.id) ?? 0) * 0.14 : 0.03 })),
-      ...links.filter((l) => ids.has(l.fromId) && ids.has(l.toId)).map((l) => ({ from: l.fromId, to: l.toId, color: '#d8b3e0', opacity: matches.has(l.fromId) && matches.has(l.toId) ? 0.34 : 0.06 })),
+      ...shown.map((e) => ({ from: `axis-${e.sessionNo ?? 0}`, to: e.id, color: '#c9a96a', kind: 'spoke' as const, opacity: matches.has(e.id) ? 0.05 + (weights.get(e.id) ?? 0) * 0.12 : 0.03 })),
+      ...links.filter((l) => ids.has(l.fromId) && ids.has(l.toId)).map((l) => ({ from: l.fromId, to: l.toId, color: '#d8b3e0', opacity: matches.has(l.fromId) && matches.has(l.toId) ? 0.34 : 0.06, label: 'lié à' })),
     ];
     return { axis, nodes, edges };
-  }, [visible, shown, weights, links, matches]);
+  }, [visible, shown, weights, links, matches, placement]);
 
   const selectedEvent = visible.find((e) => e.id === selected) ?? null;
   const sessions = Math.max(0, ...visible.map((e) => e.sessionNo ?? 0));
+  const step = selected ? threadEvents.findIndex((e) => e.id === selected) : -1;
+  const thread = useMemo(() => (follow && threadEvents.length ? { ids: threadEvents.map((e) => e.id), color: threadColor, current: selected } : null), [follow, threadEvents, threadColor, selected]);
 
   const select = (id: string | null) => {
     setSelected(id);
     setMode(id ? 'detail' : 'overview');
   };
+  /** Ouvre un événement : la scène cadre automatiquement l'événement et ses voisins. */
+  const goTo = (id: string) => select(id);
+  const stepTo = (i: number) => {
+    const e = threadEvents[Math.max(0, Math.min(threadEvents.length - 1, i))];
+    if (e) goTo(e.id);
+  };
+  const startFollow = (id: string | null) => {
+    setFollow(id);
+    select(null);
+    if (!id) graph.current?.reset();
+  };
+
+  // Parcours du fil au clavier : ← et → (hors champs de saisie).
+  useEffect(() => {
+    if (!follow || !threadEvents.length) return;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if (el.closest('input, textarea, select, [contenteditable]')) return;
+      if (e.key === 'ArrowRight') stepTo(step < 0 ? 0 : step + 1);
+      else if (e.key === 'ArrowLeft') stepTo(step < 0 ? threadEvents.length - 1 : step - 1);
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   if (isLoading) return <Loading />;
+
+  const activeFilters = types.length + (showAuto ? 0 : 1);
 
   return (
     <div className={s.layout}>
       <Panel pad={false} className={s.stagePanel}>
         <Graph3D
           ariaLabel="Chronique en trois dimensions"
+          handle={graph}
           nodes={nodes}
           edges={edges}
           axis={axis}
+          thread={thread}
           selectedId={selected}
           linking={!!linking}
           flat={flat}
@@ -170,34 +223,43 @@ export function ChronicleView() {
           }}
           overlay={
             <div className={s.filters} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-              <Input placeholder="Rechercher dans la chronique…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Rechercher dans la chronique" />
+              <div className={s.searchRow}>
+                <Input placeholder="Rechercher dans la chronique…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Rechercher dans la chronique" />
+                <Button size="sm" variant={filtersOpen ? 'secondary' : 'ghost'} onClick={() => setFiltersOpen(!filtersOpen)} aria-expanded={filtersOpen}>
+                  Filtres{activeFilters ? ` · ${activeFilters}` : ''}
+                </Button>
+              </div>
               <div className={s.chips}>
                 <Segmented label="Niveau de détail" value={density} options={DENSITIES} onChange={setDensity} />
                 <span className="ds-help">
                   {shown.length}/{visible.length}
                 </span>
               </div>
-              {events.some((e) => eventOrigin(e) === 'recording') && (
-                <Toggle checked={showAuto} onChange={setShowAuto}>
-                  Événements déduits des enregistrements
-                </Toggle>
-              )}
-              <div className={s.chips}>
-                {NARRATIVE_TYPES.filter((t) => t.category === 'narrative' && t.type !== 'narrative.note').map((t) => (
-                  <Chip key={t.type} color={t.color} active={types.includes(t.type)} onClick={() => setTypes((xs) => (xs.includes(t.type) ? xs.filter((x) => x !== t.type) : [...xs, t.type]))}>
-                    {t.label}
-                  </Chip>
-                ))}
-              </div>
               {pcs.length > 0 && (
                 <div className={s.chips}>
-                  <span className="ds-label">Personnages</span>
-                  {pcs.map((c) => (
-                    <Chip key={c.id} square active={chars.includes(c.id)} onClick={() => setChars((xs) => (xs.includes(c.id) ? xs.filter((x) => x !== c.id) : [...xs, c.id]))}>
+                  <span className="ds-label">Suivre</span>
+                  {pcs.map((c, i) => (
+                    <Chip key={c.id} square color={THREAD_COLORS[i % THREAD_COLORS.length]} active={follow === c.id} onClick={() => startFollow(follow === c.id ? null : c.id)} title={`Suivre le fil de ${c.name}`}>
                       {c.name.split(' ')[0]}
                     </Chip>
                   ))}
                 </div>
+              )}
+              {filtersOpen && (
+                <>
+                  {events.some((e) => eventOrigin(e) === 'recording') && (
+                    <Toggle checked={showAuto} onChange={setShowAuto}>
+                      Événements déduits des enregistrements
+                    </Toggle>
+                  )}
+                  <div className={s.chips}>
+                    {NARRATIVE_TYPES.filter((t) => t.category === 'narrative' && t.type !== 'narrative.note').map((t) => (
+                      <Chip key={t.type} color={t.color} active={types.includes(t.type)} onClick={() => setTypes((xs) => (xs.includes(t.type) ? xs.filter((x) => x !== t.type) : [...xs, t.type]))}>
+                        {t.label}
+                      </Chip>
+                    ))}
+                  </div>
+                </>
               )}
               {linking && (
                 <div className={s.linkingBanner}>
@@ -213,6 +275,25 @@ export function ChronicleView() {
       </Panel>
 
       <Panel className={s.side}>
+        {followed && mode !== 'add' && (
+          <div className={s.threadBar} style={{ borderColor: threadColor }}>
+            <div className="ds-grow" style={{ minWidth: 0 }}>
+              <div className="ds-label" style={{ color: threadColor }}>
+                Fil de {followed.name}
+              </div>
+              <span className="ds-help">{threadEvents.length ? (step >= 0 ? `Étape ${step + 1} / ${threadEvents.length}` : `${threadEvents.length} événement${threadEvents.length > 1 ? 's' : ''} · ← → pour parcourir`) : 'Aucun événement pour l’instant'}</span>
+            </div>
+            <IconButton label="Étape précédente" disabled={!threadEvents.length || step === 0} onClick={() => stepTo(step < 0 ? threadEvents.length - 1 : step - 1)}>
+              ‹
+            </IconButton>
+            <IconButton label="Étape suivante" disabled={!threadEvents.length || step === threadEvents.length - 1} onClick={() => stepTo(step + 1)}>
+              ›
+            </IconButton>
+            <IconButton label="Ne plus suivre" onClick={() => startFollow(null)}>
+              ×
+            </IconButton>
+          </div>
+        )}
         {mode === 'add' ? (
           <EventForm
             sessions={sessions}
@@ -232,10 +313,31 @@ export function ChronicleView() {
             links={links}
             linking={linking === selectedEvent.id}
             onLinking={(on) => setLinking(on ? selectedEvent.id : null)}
-            onOpen={(id) => setSelected(id)}
+            onOpen={goTo}
             onClose={() => select(null)}
             onAddLinked={() => setMode('add')}
           />
+        ) : followed ? (
+          <ol className={s.threadList}>
+            {threadEvents.map((e, i) => {
+              const prev = threadEvents[i - 1];
+              const newSession = !prev || (prev.sessionNo ?? 0) !== (e.sessionNo ?? 0);
+              return (
+                <li key={e.id}>
+                  {newSession && <div className={s.threadSession}>{(e.sessionNo ?? 0) === 0 ? 'Prologue' : `Session ${e.sessionNo}`}</div>}
+                  <button type="button" className={s.recentItem} onClick={() => goTo(e.id)}>
+                    <span className={s.recentGem} style={{ background: eventTypeDef(e.type).color }} />
+                    <span className="ds-grow">
+                      <span className={s.recentTitle}>{e.title}</span>
+                      <span className={s.recentMeta}>
+                        {eventTypeDef(e.type).label} · {e.actors.some((a) => a.id === follow) ? 'acteur' : 'cible'}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
         ) : (
           <div className="ds-stack" style={{ gap: 16 }}>
             <div>
@@ -261,6 +363,9 @@ export function ChronicleView() {
             <Button variant="primary" block onClick={() => setMode('add')}>
               + Noter un événement
             </Button>
+            <p className="ds-help" style={{ margin: 0 }}>
+              Vue d’ensemble : seuls les moments marquants sont nommés. Zoomez pour dévoiler les autres, cliquez un événement pour isoler ce qui lui est lié, ou suivez un personnage.
+            </p>
             <Rule />
             <div className="ds-label" style={{ textAlign: 'center' }}>
               Dernières entrées
@@ -270,7 +375,7 @@ export function ChronicleView() {
                 .sort((a, b) => b.seq - a.seq)
                 .slice(0, 8)
                 .map((e) => (
-                  <button key={e.id} type="button" className={s.recentItem} onClick={() => select(e.id)}>
+                  <button key={e.id} type="button" className={s.recentItem} onClick={() => goTo(e.id)}>
                     <span className={s.recentGem} style={{ background: eventTypeDef(e.type).color }} />
                     <span className="ds-grow">
                       <span className={s.recentTitle}>{e.title}</span>
@@ -289,4 +394,3 @@ export function ChronicleView() {
     </div>
   );
 }
-

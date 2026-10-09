@@ -17,7 +17,8 @@
 .hpPanel { display: flex; flex-direction: column; gap: 12px; padding: 18px; }
 .hpValue { font-family: var(--font-title); font-size: 34px; font-weight: 500; color: var(--text-strong); line-height: 1; }
 .temp { font-family: var(--font-title); color: var(--arcane-light); }
-.hpControls { display: grid; grid-template-columns: 1fr 110px 1fr; gap: 8px; align-items: center; }
+.hpControls { display: grid; grid-template-columns: minmax(0, 1fr) 104px minmax(0, 1fr); gap: 8px; align-items: center; }
+.hpControls > button { padding-inline: 8px; letter-spacing: 0.1em; }
 .hpControls > :last-child { grid-column: 1 / -1; }
 
 /* ── Aperçu ── */
@@ -127,10 +128,21 @@
 @media (max-width: 600px) {
   .roster { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
   .roster > * { flex: none; }
-  .header { grid-template-columns: 96px minmax(0, 1fr); gap: 14px; }
-  .statRow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* En-tête mobile : portrait et nom côte à côte, statistiques et XP sur toute la largeur. */
+  .header { grid-template-columns: 84px minmax(0, 1fr); gap: 12px 14px; }
+  .identity { display: contents; }
+  .portraitCol { grid-row: span 2; }
+  .portraitCol button { height: 108px !important; padding: 6px !important; }
+  .portraitCol button span { font-size: 10px !important; letter-spacing: 0.04em; }
+  .statRow, .xp { grid-column: 1 / -1; max-width: none; }
+  .statRow { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+  .statRow > * { padding: 10px 2px; }
+  .statRow span:first-child { font-size: 9px; letter-spacing: 0.04em; }
+  .statRow span:last-child { font-size: 20px; }
+  .defs { grid-template-columns: minmax(0, 1fr); gap: 2px 0; }
+  .defs dd { margin-bottom: 8px; }
   .skills, .saves, .npcGrid { grid-template-columns: minmax(0, 1fr); }
-  .hpControls { grid-template-columns: 1fr 1fr; }
+  .hpControls { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .hpControls > :nth-child(2) { grid-column: 1 / -1; grid-row: 1; }
 }
 .effectRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px; background: rgba(14,10,20,.55); border: 1px solid var(--gold-a25); border-radius: 3px; }

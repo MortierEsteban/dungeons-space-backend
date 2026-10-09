@@ -69,7 +69,7 @@ tracker de combat « théâtre de l'esprit » pour le téléphone.
 | Rubrique | Contenu |
 |---|---|
 | Accueil | Accueil immersif (grand écran) ou classique, prochaine session |
-| Explorer | Chronique 3D par sessions (niveau de détail selon le poids des événements), **vue Sessions** (trace complète d'une soirée : frise par nature d'événement, densité de parole, transcription entrelacée avec les événements), frise filtrable, Constellation (vue à plat ou en relief, événements de la Chronique reliés à leurs acteurs, déplacement au clic molette, liens qualifiés, suggestions), campagnes publiques |
+| Explorer | Chronique 3D par sessions (lisibilité par paliers : vue d’ensemble = moments marquants, le zoom dévoile le reste par poids, la sélection isole son voisinage ; **suivre le fil d’un personnage**), **vue Sessions** (trace complète d'une soirée : frise par nature d'événement, densité de parole, transcription entrelacée avec les événements), **Transcriptions** (lecture intégrale et recherche dans toutes les sessions, accents et casse ignorés), frise filtrable, Constellation (vue à plat ou en relief, repères dimensionnés selon leur poids, événements de la Chronique reliés à leurs acteurs, liens qualifiés, suggestions), campagnes publiques |
 | Combattre | Plateau **2D ou 3D isométrique** (terrain en relief, zones, objets éclairés, mesures, portée, attaques animées), modèles 3D .glb importés par les joueurs (jeton simple par défaut), **brouillard de guerre** par joueur piloté par le MJ, initiative avec la créature active mise en avant, **fiche en combat** (sorts lancés avec leur gabarit, objets, ressources), jets de sauvegarde et résistances automatiques, PV masqués, tracker mobile, **replay** |
 | Sanctuaire | Bibliothèque SRD, **bibliothèque partagée** (import en masse des créations des autres tables) et Forge (objets, sorts, créatures, **classes homebrew** avec ressources et passifs) |
 | Personnage | Fiche complète (passifs d'espèce, de classe et d'objets appliqués, ressources, sorts, inventaire, harmonisation, notes privées/partagées, événements), PNJ |
@@ -77,7 +77,8 @@ tracker de combat « théâtre de l'esprit » pour le téléphone.
 | Campagne | Sessions et récapitulatifs, code d'invitation, membres, réglages (dont l'**enregistrement des sessions**) |
 
 ### Enregistrement des sessions
-Activé dans les réglages de la campagne, un appareil du MJ écoute la table pendant la session (indicateur **REC** visible de tous) :
+Activé dans les réglages de la campagne, un appareil du MJ écoute la table pendant la session (indicateur **REC** visible de tous).
+Le MJ le lance depuis le bouton **REC** de la barre supérieure ou le bloc Sessions de la page Campagne (qui guident pas à pas s'il manque un réglage ou une session ouverte) ;
 la transcription est conservée et un modèle de langage (Claude) en déduit les événements, inscrits au fil de l'eau dans la Chronique.
 L'analyse requiert `ANTHROPIC_API_KEY` côté serveur (modèle : `RECORDING_MODEL`, défaut `claude-opus-5-5`) ; sans clé, seule la
 transcription est conservée. La reconnaissance vocale est celle du navigateur (Chrome ou Edge). Détails : [ADR 0010](docs/adr/0010-enregistrement-des-sessions.md).

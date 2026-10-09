@@ -1,4 +1,4 @@
-import { appendSegmentsSchema, startRecordingSchema, transcriptQuerySchema } from '@ds/shared';
+import { appendSegmentsSchema, startRecordingSchema, transcriptQuerySchema, transcriptSearchSchema } from '@ds/shared';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { badRequest, parse } from '../../kernel/errors';
@@ -92,5 +92,11 @@ export async function recordingRoutes(app: FastifyInstance, { recording, access 
   app.get<{ Params: { campaignId: string; number: string } }>('/campaigns/:campaignId/sessions/:number/transcript', async (request) => {
     const v = await access.viewer(request, request.params.campaignId);
     return recording.transcript(request.params.campaignId, v, sessionNumber(request.params.number), parse(transcriptQuerySchema, request.query));
+  });
+
+  /** Recherche dans toutes les transcriptions de la campagne. */
+  app.get<P>('/campaigns/:campaignId/transcript/search', async (request) => {
+    const v = await access.viewer(request, request.params.campaignId);
+    return recording.search(request.params.campaignId, v, parse(transcriptSearchSchema, request.query));
   });
 }

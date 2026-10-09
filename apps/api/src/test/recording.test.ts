@@ -130,6 +130,22 @@ describe('transcription', () => {
     expect((await player.get(`/campaigns/${campaignId}/sessions/1/transcript`)).statusCode).toBe(200);
     await settingsWith({ playersSeeTranscript: false });
   });
+
+  it('cherche dans les transcriptions sans tenir compte des accents ni de la casse', async () => {
+    const search = (q: string, extra = '') => gm.get(`/campaigns/${campaignId}/transcript/search?q=${encodeURIComponent(q)}${extra}`);
+    const res = await search('MAITRE corvin');
+    expect(res.statusCode).toBe(200);
+    const { hits, more } = res.json();
+    expect(more).toBe(false);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]).toMatchObject({ sessionNo: 1, before: 'Vous entrez dans la crypte', after: null });
+    expect(hits[0].segment.text).toBe('Maître Corvin vous attend');
+    // Les jokers SQL sont pris littéralement.
+    expect((await search('ns')).json().hits).toHaveLength(1);
+    expect((await search('n_')).json().hits).toHaveLength(0);
+    expect((await search('crypte', '&sessionNo=2')).json().hits).toHaveLength(0);
+    expect((await player.get(`/campaigns/${campaignId}/transcript/search?q=crypte`)).statusCode).toBe(403);
+  });
 });
 
 describe('analyse par le modèle de langage', () => {

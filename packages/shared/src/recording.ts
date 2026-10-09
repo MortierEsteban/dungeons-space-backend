@@ -50,6 +50,33 @@ export const transcriptQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(2000).default(500),
 });
 
+/** Recherche plein texte dans les transcriptions (insensible à la casse et aux accents, tous les mots requis). */
+export const transcriptSearchSchema = z.object({
+  q: z.string().trim().min(2).max(120),
+  sessionNo: z.coerce.number().int().min(0).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(60),
+});
+export type TranscriptSearchQuery = z.input<typeof transcriptSearchSchema>;
+
+export interface TranscriptHitDto {
+  sessionNo: number;
+  segment: TranscriptSegmentDto;
+  /** Phrases voisines (même enregistrement), pour lire le passage en contexte. */
+  before: string | null;
+  after: string | null;
+}
+
+export interface TranscriptSearchDto {
+  hits: TranscriptHitDto[];
+  /** D'autres résultats existent au-delà de la limite. */
+  more: boolean;
+}
+
+/** Forme de recherche : minuscules sans accents (même règle côté client et côté serveur). */
+export function searchForm(text: string): string {
+  return text.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+}
+
 export interface RecordingAnalysisStateDto {
   /** Un analyseur est configuré côté serveur (clé d'API présente). */
   available: boolean;

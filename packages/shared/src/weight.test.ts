@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { EventDto } from './chronicle';
-import { eventWeight, selectByWeight } from './weight';
+import { eventWeight, isLandmarkEvent, selectByWeight } from './weight';
 
 const ev = (patch: Partial<EventDto> = {}): EventDto => ({
   id: 'e',
@@ -71,5 +71,14 @@ describe('niveau de détail', () => {
   it('garde toujours les événements au-dessus du seuil', () => {
     const kept = selectByWeight([...items, { id: 'key', group: 1, weight: 0.97 }], { budget: 5, perGroupMin: 1, alwaysAbove: 0.95 });
     expect(kept.has('key')).toBe(true);
+  });
+});
+
+describe('isLandmarkEvent', () => {
+  it('nomme les morts, les trahisons et les moments d’importance maximale', () => {
+    expect(isLandmarkEvent(ev({ type: 'narrative.death', importance: 3 }))).toBe(true);
+    expect(isLandmarkEvent(ev({ type: 'social.betrayed', importance: 2 }))).toBe(true);
+    expect(isLandmarkEvent(ev({ type: 'narrative.quest', importance: 5 }))).toBe(true);
+    expect(isLandmarkEvent(ev({ type: 'narrative.quest', importance: 4 }))).toBe(false);
   });
 });
