@@ -35,10 +35,11 @@ export function RecordingBadge() {
         aria-haspopup="dialog"
         aria-expanded={open}
         title={title}
+        aria-label={`${label} — ${title}`}
         onClick={() => setOpen(!open)}
       >
         <span className={s.dot} aria-hidden />
-        {label}
+        <span className={s.badgeText}>{label}</span>
         {isGm && r.holding && r.queued > 0 && <span className={s.queued}>{r.queued}</span>}
       </button>
       {open && (

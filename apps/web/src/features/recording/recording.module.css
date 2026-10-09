@@ -121,6 +121,14 @@
 }
 
 @media (max-width: 767px) {
+  /* Barre supérieure étroite : le point suffit, le libellé reste lu par les lecteurs d'écran. */
+  .badge {
+    padding: 8px;
+  }
+  .badgeText,
+  .queued {
+    display: none;
+  }
   .panel {
     position: fixed;
     right: 16px;

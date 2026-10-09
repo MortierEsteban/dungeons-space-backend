@@ -28,8 +28,10 @@ export function layout(events: readonly EventDto[], weights: ReadonlyMap<string,
     const n = e.sessionNo ?? 0;
     bySession.set(n, [...(bySession.get(n) ?? []), e]);
   }
-  const widths = sessions.map((n) => Math.min(420, Math.max(110, 40 + Math.sqrt(bySession.get(n)!.length) * 30)));
-  const gap = 90;
+  // Tranche peu profonde (l'axe reste lisible à plat), disque d'autant plus large que la session est riche.
+  const widths = sessions.map((n) => Math.min(260, Math.max(120, 40 + Math.sqrt(bySession.get(n)!.length) * 18)));
+  const radii = sessions.map((n) => 110 + Math.sqrt(bySession.get(n)!.length) * 12);
+  const gap = 130;
   const total = widths.reduce((a, w) => a + w, 0) + gap * Math.max(0, sessions.length - 1);
   const centers: number[] = [];
   let cursor = -total / 2;
@@ -49,7 +51,7 @@ export function layout(events: readonly EventDto[], weights: ReadonlyMap<string,
     list.forEach((e, k) => {
       const t = list.length === 1 ? 0.5 : k / (list.length - 1);
       const a = k * GOLDEN + n * 0.9;
-      const r = 70 + (1 - (weights.get(e.id) ?? 0.5)) * 130 + (k % 3) * 8;
+      const r = 50 + (1 - (weights.get(e.id) ?? 0.5)) * (radii[i]! - 50) + (k % 3) * 6;
       positions.set(e.id, { x: centers[i]! + (t - 0.5) * widths[i]! * 0.8, y: Math.sin(a) * r, z: Math.cos(a) * r });
     });
   });
@@ -126,6 +128,7 @@ export function ChronicleView() {
         hint: `${eventTypeDef(e.type).label}, session ${e.sessionNo ?? 0}${eventOrigin(e) === 'recording' ? ', déduit de l’enregistrement' : ''}`,
         size: 0.65 + w * 0.7,
         pinLabel: w >= 0.9,
+        quiet: w < 0.5,
       };
     });
     const ids = new Set(shown.map((e) => e.id));
@@ -272,7 +275,7 @@ export function ChronicleView() {
                     <span className="ds-grow">
                       <span className={s.recentTitle}>{e.title}</span>
                       <span className={s.recentMeta}>
-                        Session {e.sessionNo ?? 0} · noté par {e.author?.name ?? 'le système'}
+                        Session {e.sessionNo ?? 0} · {eventOrigin(e) === 'recording' ? 'déduit de l’enregistrement' : `noté par ${e.author?.name ?? 'le système'}`}
                         {e.visibility === 'gm_only' && isGm ? ' · secret' : ''}
                       </span>
                     </span>

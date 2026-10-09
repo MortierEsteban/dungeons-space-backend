@@ -114,7 +114,8 @@ function SessionDetail({ sessionNo }: { sessionNo: number }) {
     return d;
   }, [links]);
   const segmentTimes = useMemo(() => segmentTimeIndex(segments), [segments]);
-  const passages = useMemo(() => toPassages(segments), [segments]);
+  // En vue équilibrée, la parole entre deux événements forme un seul passage replié ; « Tout » la détaille.
+  const passages = useMemo(() => (density === 'all' ? toPassages(segments) : toPassages(segments, 6 * 60_000, 40)), [segments, density]);
   const events = useMemo(() => (trace?.events ?? []).filter((e) => !e.retracted || density === 'all'), [trace, density]);
 
   const all = useMemo(() => buildJournal(events, [], { degree, segmentTimes }).filter((j): j is Extract<JournalEntry, { kind: 'event' }> => j.kind === 'event'), [events, degree, segmentTimes]);
@@ -183,7 +184,7 @@ function SessionDetail({ sessionNo }: { sessionNo: number }) {
           </h2>
           {session && (
             <p className="ds-help" style={{ margin: 0 }}>
-              {shortDate(session.startedAt)} · {clock.format(Date.parse(session.startedAt))}
+              {shortDate(session.startedAt)}
               {session.endedAt ? ` → ${clock.format(Date.parse(session.endedAt))} (${duration(Date.parse(session.endedAt) - Date.parse(session.startedAt))})` : ' · en cours'}
             </p>
           )}

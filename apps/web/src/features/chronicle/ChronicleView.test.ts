@@ -14,7 +14,7 @@ describe('disposition 3D de la Chronique', () => {
     expect(axis.map((a) => a.label)).toEqual(['SESSION 1 · 60/200', 'SESSION 2']);
     const xs = (prefix: string) => events.filter((e) => e.id.startsWith(prefix)).map((e) => positions.get(e.id)!.x);
     const spread = (v: number[]) => Math.max(...v) - Math.min(...v);
-    expect(spread(xs('a'))).toBeGreaterThan(spread(xs('b')) * 2);
+    expect(spread(xs('a'))).toBeGreaterThan(spread(xs('b')));
     expect(Math.max(...xs('a'))).toBeLessThan(Math.min(...xs('b')));
   });
 

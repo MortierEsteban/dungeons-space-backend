@@ -320,6 +320,7 @@ export function ConstellationView() {
       hint: `${eventTypeDef(event.type).label}, session ${event.sessionNo ?? 0}`,
       size: 0.6 + weight * 0.6,
       pinLabel: weight >= 0.9,
+      quiet: weight < 0.5,
     })),
   ];
   const edges: GraphEdge[] = [
