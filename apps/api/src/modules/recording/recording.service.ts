@@ -159,7 +159,7 @@ export class RecordingService {
           lastAnalyzedAt: done[done.length - 1]?.finishedAt?.toISOString() ?? null,
           lastError: last && last.status !== 'done' && last.status !== 'running' ? last.error : null,
         },
-        audio: viewer.role === 'gm' && r.audioChunks > 0 ? { chunks: r.audioChunks, bytes: r.audioBytes } : null,
+        audio: viewer.role === 'gm' && r.audioParts.length > 0 ? { parts: r.audioParts.map(({ chunks, bytes }) => ({ chunks, bytes })) } : null,
       };
     });
   }
@@ -343,12 +343,20 @@ export class RecordingService {
 
   // ───────────────────────────── Archive audio ─────────────────────────────
 
-  private audioPath(recordingId: string) {
-    return path.join(this.deps.audioDir, `${recordingId}.audio`);
+  private audioPath(recordingId: string, part: number) {
+    return path.join(this.deps.audioDir, `${recordingId}-${part}.audio`);
   }
 
-  /** Ajoute un morceau à l'archive audio, dans l'ordre (un renvoi du même morceau est ignoré). */
-  async appendAudio(campaignId: string, viewer: Viewer, recordingId: string, input: { index: number; deviceId: string; mime: string; data: Buffer }): Promise<{ chunks: number }> {
+  /**
+   * Ajoute un morceau à l'archive audio, dans l'ordre (un renvoi du même morceau est ignoré).
+   * Chaque flux capté forme une partie lisible seule : une reprise de capture ouvre la partie suivante.
+   */
+  async appendAudio(
+    campaignId: string,
+    viewer: Viewer,
+    recordingId: string,
+    input: { part: number; index: number; deviceId: string; mime: string; data: Buffer },
+  ): Promise<{ part: number; chunks: number }> {
     this.assertGm(viewer);
     const { settings } = await this.campaign(campaignId);
     if (!settings.recording.keepAudio) throw badRequest('La conservation de l’audio est désactivée dans les réglages de la campagne.');
@@ -356,16 +364,16 @@ export class RecordingService {
     const next = previous.catch(() => undefined).then(async () => {
       const row = await this.getRecording(campaignId, recordingId);
       this.assertDevice(row, input.deviceId);
-      if (input.index < row.audioChunks) return { chunks: row.audioChunks };
-      if (input.index > row.audioChunks) throw conflict(`Morceau ${row.audioChunks} attendu.`);
+      const parts = [...row.audioParts];
+      if (input.part > parts.length) throw conflict(`Partie ${parts.length} attendue.`);
+      const current = parts[input.part] ?? { mime: input.mime, chunks: 0, bytes: 0 };
+      if (input.index < current.chunks) return { part: input.part, chunks: current.chunks };
+      if (input.index > current.chunks) throw conflict(`Morceau ${current.chunks} attendu.`);
       await mkdir(this.deps.audioDir, { recursive: true });
-      await appendFile(this.audioPath(recordingId), input.data);
-      const [updated] = await this.db
-        .update(sessionRecordings)
-        .set({ audioChunks: row.audioChunks + 1, audioBytes: row.audioBytes + input.data.length, audioMime: row.audioMime ?? input.mime })
-        .where(eq(sessionRecordings.id, recordingId))
-        .returning();
-      return { chunks: updated!.audioChunks };
+      await appendFile(this.audioPath(recordingId, input.part), input.data);
+      parts[input.part] = { ...current, chunks: current.chunks + 1, bytes: current.bytes + input.data.length };
+      await this.db.update(sessionRecordings).set({ audioParts: parts }).where(eq(sessionRecordings.id, recordingId));
+      return { part: input.part, chunks: parts[input.part]!.chunks };
     });
     this.audioChains.set(recordingId, next);
     try {
@@ -376,14 +384,15 @@ export class RecordingService {
   }
 
   /** Archive audio (MJ seulement), avec prise en charge des plages pour pouvoir se déplacer dans la lecture. */
-  async audio(campaignId: string, viewer: Viewer, recordingId: string, range: string | undefined) {
+  async audio(campaignId: string, viewer: Viewer, recordingId: string, part: number, range: string | undefined) {
     this.assertGm(viewer, 'L’archive audio est réservée au MJ.');
     const row = await this.getRecording(campaignId, recordingId);
-    if (row.audioChunks === 0) throw notFound('Aucun audio conservé pour cet enregistrement.');
-    const file = this.audioPath(recordingId);
+    const meta = row.audioParts[part];
+    if (!meta) throw notFound('Aucun audio conservé pour cet enregistrement.');
+    const file = this.audioPath(recordingId, part);
     const size = (await stat(file).catch(() => null))?.size;
     if (!size) throw notFound('Archive audio introuvable.');
-    const mime = row.audioMime ?? 'audio/webm';
+    const mime = meta.mime;
     const m = range ? /^bytes=(\d*)-(\d*)$/.exec(range) : null;
     if (m && (m[1] || m[2])) {
       const start = m[1] ? Number(m[1]) : Math.max(0, size - Number(m[2]));

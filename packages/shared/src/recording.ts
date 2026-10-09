@@ -79,8 +79,8 @@ export interface RecordingDto {
   /** Prochain numéro attendu de l'appareil (reprise après rechargement). */
   nextClientSeq: number;
   analysis: RecordingAnalysisStateDto;
-  /** Archive audio disponible (MJ). */
-  audio: { chunks: number; bytes: number } | null;
+  /** Archive audio (MJ) : une partie par flux capté, chacune lisible seule. */
+  audio: { parts: { chunks: number; bytes: number }[] } | null;
 }
 
 export interface TranscriptSegmentDto {

@@ -218,10 +218,10 @@ describe('analyse par le modèle de langage', () => {
 
 describe('archive audio', () => {
   it('n’accepte l’audio que si la campagne le conserve, morceau par morceau, dans l’ordre', async () => {
-    const put = (index: number, body: string) =>
+    const put = (index: number, body: string, part = 0) =>
       built.app.inject({
         method: 'PUT',
-        url: `/api/campaigns/${campaignId}/recordings/${recording.id}/audio/${index}?deviceId=${DEVICE}`,
+        url: `/api/campaigns/${campaignId}/recordings/${recording.id}/audio/${part}/${index}?deviceId=${DEVICE}`,
         headers: { cookie: (gm as unknown as { cookie: string }).cookie, 'content-type': 'audio/webm;codecs=opus' },
         payload: Buffer.from(body),
       });
@@ -231,19 +231,27 @@ describe('archive audio', () => {
     expect((await put(0, 'AAAA')).json().chunks).toBe(1);
     expect((await put(2, 'CCCC')).statusCode).toBe(409);
     expect((await put(1, 'BBBB')).json().chunks).toBe(2);
+    // Reprise de capture (rechargement) : nouvelle partie, lisible seule.
+    expect((await put(0, 'ZZ', 2)).statusCode).toBe(409);
+    expect((await put(0, 'ZZ', 1)).json()).toEqual({ part: 1, chunks: 1 });
+    expect((await gm.get(`/campaigns/${campaignId}/recordings/live`)).json().recording.audio.parts).toEqual([
+      { chunks: 2, bytes: 8 },
+      { chunks: 1, bytes: 2 },
+    ]);
 
-    const full = await gm.get(`/campaigns/${campaignId}/recordings/${recording.id}/audio`);
+    const full = await gm.get(`/campaigns/${campaignId}/recordings/${recording.id}/audio/0`);
     expect(full.statusCode).toBe(200);
     expect(full.headers['content-type']).toBe('audio/webm');
     expect(full.body).toBe('AAAABBBB');
     const partial = await built.app.inject({
       method: 'GET',
-      url: `/api/campaigns/${campaignId}/recordings/${recording.id}/audio`,
+      url: `/api/campaigns/${campaignId}/recordings/${recording.id}/audio/0`,
       headers: { cookie: (gm as unknown as { cookie: string }).cookie, range: 'bytes=2-5' },
     });
     expect(partial.statusCode).toBe(206);
     expect(partial.body).toBe('AABB');
-    expect((await player.get(`/campaigns/${campaignId}/recordings/${recording.id}/audio`)).statusCode).toBe(403);
+    expect((await gm.get(`/campaigns/${campaignId}/recordings/${recording.id}/audio/1`)).body).toBe('ZZ');
+    expect((await player.get(`/campaigns/${campaignId}/recordings/${recording.id}/audio/0`)).statusCode).toBe(403);
   });
 });
 

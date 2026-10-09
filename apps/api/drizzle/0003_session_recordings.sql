@@ -27,9 +27,7 @@ CREATE TABLE "session_recordings" (
 	"segment_count" integer DEFAULT 0 NOT NULL,
 	"word_count" integer DEFAULT 0 NOT NULL,
 	"analyzed_seq" integer DEFAULT 0 NOT NULL,
-	"audio_chunks" integer DEFAULT 0 NOT NULL,
-	"audio_mime" text,
-	"audio_bytes" bigint DEFAULT 0 NOT NULL
+	"audio_parts" jsonb DEFAULT '[]'::jsonb NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "transcript_segments" (

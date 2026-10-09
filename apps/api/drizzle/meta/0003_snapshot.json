@@ -1,5 +1,5 @@
 {
-  "id": "de54556c-0dee-4c00-95b5-29ee4e79d48d",
+  "id": "bf7db1d9-0f94-44f9-9982-0f7ce49f2ae5",
   "prevId": "9abc8261-8f9b-44f1-9939-9852a913651d",
   "version": "7",
   "dialect": "postgresql",
@@ -1813,25 +1813,12 @@
           "notNull": true,
           "default": 0
         },
-        "audio_chunks": {
-          "name": "audio_chunks",
-          "type": "integer",
+        "audio_parts": {
+          "name": "audio_parts",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
-          "default": 0
-        },
-        "audio_mime": {
-          "name": "audio_mime",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "audio_bytes": {
-          "name": "audio_bytes",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
+          "default": "'[]'::jsonb"
         }
       },
       "indexes": {

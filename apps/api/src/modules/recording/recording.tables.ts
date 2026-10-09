@@ -1,7 +1,13 @@
 import type { RecordingStatus } from '@ds/shared';
-import { bigint, index, integer, jsonb, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { index, integer, jsonb, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 import { campaigns } from '../campaigns/campaigns.tables';
 import { users } from '../identity/identity.tables';
+
+export interface AudioPart {
+  mime: string;
+  chunks: number;
+  bytes: number;
+}
 
 /**
  * Un enregistrement continu d'une session de jeu. Une session peut en compter plusieurs (coupure,
@@ -25,9 +31,8 @@ export const sessionRecordings = pgTable(
     wordCount: integer('word_count').notNull().default(0),
     /** Dernier segment couvert par une analyse réussie (ou abandonnée). */
     analyzedSeq: integer('analyzed_seq').notNull().default(0),
-    audioChunks: integer('audio_chunks').notNull().default(0),
-    audioMime: text('audio_mime'),
-    audioBytes: bigint('audio_bytes', { mode: 'number' }).notNull().default(0),
+    /** Archive audio : une partie par flux capté (une reprise après rechargement ouvre une nouvelle partie). */
+    audioParts: jsonb('audio_parts').$type<AudioPart[]>().notNull().default([]),
   },
   (t) => [index('session_recordings_campaign_session_idx').on(t.campaignId, t.sessionNo)],
 );
