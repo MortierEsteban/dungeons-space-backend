@@ -48,7 +48,7 @@ status: draft
 ## Observabilité et exploitation
 
 - Logs structurés, métriques (latence, erreurs, connexions temps réel), traces corrélées par `campaignId`.
-- Environnement reproductible en une commande (docker-compose existant à fiabiliser : chemin Windows en dur dans le volume Kong).
+- Environnement reproductible en une commande (`npm install && npm run dev`, PGlite embarqué : aucune base à installer).
 - CI : lint, tests, build ; déploiement automatisé d'une démo publique.
 
 ## Maintenabilité / portfolio

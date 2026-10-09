@@ -1,6 +1,6 @@
 /**
  * Source de hasard injectable : le moteur ne lit jamais Math.random directement,
- * ce qui rend les jets reproductibles (tests, replay) — même principe que le crate Rust `dnd_core`.
+ * ce qui rend les jets reproductibles (tests, replay).
  */
 export interface Rng {
   /** Entier uniforme dans [1, sides]. */

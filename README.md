@@ -104,5 +104,5 @@ Le contenu créé par les utilisateurs (la Forge) est stocké séparément du co
 
 ## Existant
 
-Les prototypes antérieurs (`node_service/`, `character_service/` en Go, stubs Python, `Docker-Compose.yaml` Kong) et le crate Rust
-`dnd_core/` sont conservés tels quels. Voir l'ADR 0005 pour l'articulation avec `dnd_core`.
+Les prototypes antérieurs (services Go + gRPC, stubs Python, Docker Compose Kong, crate Rust `dnd_core`) ont été retirés du dépôt :
+voir l'[ADR 0011](docs/adr/0011-retrait-des-prototypes.md). Ils restent consultables dans l'historique git.

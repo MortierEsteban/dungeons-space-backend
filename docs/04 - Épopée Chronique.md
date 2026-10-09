@@ -2,7 +2,6 @@
 title: Épopée Chronique (Histoire / Events)
 tags: [dungeonspace, prd, epic, chronique, events]
 status: draft
-service: event_service
 ---
 
 # 04 — Épopée Chronique

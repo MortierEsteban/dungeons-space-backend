@@ -2,7 +2,6 @@
 title: Épopée Constellation
 tags: [dungeonspace, prd, epic, constellation, graph, 3d]
 status: draft
-service: node_service
 ---
 
 # 06 — Épopée Constellation

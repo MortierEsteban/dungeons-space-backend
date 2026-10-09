@@ -1,3 +1,0 @@
-[workspace]
-resolver = "2"
-members = ["dnd_core"]
