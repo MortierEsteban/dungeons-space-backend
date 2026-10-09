@@ -16,8 +16,10 @@ créature avec certains joueurs (ou tous), passer en vision de groupe, révéler
 - **Vision calculée dans `packages/rules`** (`combat/vision.ts`), pure et testée : *shadowcasting* symétrique (si A voit B, B voit A),
   portée de vue dans le noir, lumière des feux et torches (elle aussi arrêtée par les murs), cases révélées par le MJ.
 - **Sources de vision d'un utilisateur** : ses créatures ; tous les PJ en vision de groupe ; les créatures dont le MJ lui prête les yeux
-  (`share_vision`, « * » = tous). Les PJ restent toujours visibles du groupe ; les autres créatures hors de vue disparaissent du
-  plateau, de l'initiative, du suivi et du journal (« Une créature attaque… »).
+  (`share_vision`, « * » = tous). Les PJ restent toujours visibles du groupe ; les autres créatures hors de vue quittent le
+  plateau mais **gardent leur place dans l'initiative**, anonymisées (« Créature inconnue », sans position, portrait, PV, CA ni états) :
+  l'ordre des tours est strictement celui du MJ et du serveur, quelle que soit la vision, et le tour d'une créature cachée reste
+  visible comme tel. Le journal ne les nomme pas (« Une créature attaque… »).
 - **Mémoire de la carte déduite du flux d'événements** (`FogMemory`, incrémentale) : les zones déjà vues restent assombries, avec leur
   décor. Elle est identique sur tous les appareils d'un joueur, rejouable (le replay applique le brouillard à l'instant rejoué) et
   effacée par le MJ (`fog_memory_reset`). Aucun stockage supplémentaire.

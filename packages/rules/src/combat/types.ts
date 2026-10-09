@@ -63,6 +63,8 @@ export interface Combatant {
   portraitUrl?: string | null;
   /** Modèle 3D (glTF binaire) importé par le joueur ou le MJ ; absent = jeton simple. */
   modelUrl?: string | null;
+  /** Vue d'un joueur sous le brouillard : créature hors de vue, anonymisée (jamais stocké ni envoyé par le serveur). */
+  concealed?: boolean;
   /** Modificateurs de sauvegarde (str…cha) ; absents des combats antérieurs (= 0). */
   saves?: Partial<Record<'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha', number>>;
   /** Résistances, immunités, vulnérabilités aux dégâts, appliquées automatiquement. */
