@@ -209,6 +209,70 @@ export class ChronicleService {
     return dto!;
   }
 
+  /**
+   * Révèle aux joueurs un événement secret (ex. relu par le MJ après l'analyse de l'enregistrement).
+   * Le journal reste append-only : une copie visible est ajoutée (avec ses liens) et l'original est retiré.
+   */
+  async reveal(campaignId: string, eventId: string, viewer: Viewer): Promise<EventDto> {
+    if (viewer.role !== 'gm') throw forbidden('Seul le MJ révèle un événement.');
+    const target = await this.getRow(campaignId, eventId, viewer);
+    if (target.visibility !== 'gm_only') throw badRequest('Cet événement est déjà visible des joueurs.');
+    const [original] = await this.hydrate([target], viewer);
+    if (original!.retracted) throw badRequest('Cet événement a été retiré.');
+    const copy = await this.db.transaction(async (tx) => {
+      const [row] = await this.appendMany(
+        campaignId,
+        [
+          {
+            campaignId,
+            type: target.type,
+            title: original!.title,
+            text: original!.text,
+            category: target.category,
+            importance: target.importance,
+            visibility: 'players',
+            actors: target.actors,
+            targets: target.targets,
+            places: target.places,
+            inGameDate: target.inGameDate,
+            payload: { ...target.payload, revealedFrom: target.id },
+            source: target.source,
+            authorId: target.authorId,
+            correlationId: target.correlationId,
+            sessionNo: target.sessionNo,
+            idempotencyKey: `reveal:${target.id}`,
+          },
+          {
+            campaignId,
+            type: CORRECTION,
+            title: `Révélé : ${target.title}`,
+            text: 'Révélé aux joueurs.',
+            category: 'system',
+            visibility: 'gm_only',
+            payload: { targetId: target.id, retract: true, revealed: true },
+            source: 'gm',
+            authorId: viewer.userId,
+            sessionNo: target.sessionNo,
+            idempotencyKey: `reveal-retract:${target.id}`,
+          },
+        ],
+        tx,
+      );
+      const links = await tx.select().from(eventLinks).where(or(eq(eventLinks.fromEventId, target.id), eq(eventLinks.toEventId, target.id)));
+      if (links.length) {
+        await tx
+          .insert(eventLinks)
+          .values(links.map((l) => ({ campaignId, fromEventId: l.fromEventId === target.id ? row!.id : l.fromEventId, toEventId: l.toEventId === target.id ? row!.id : l.toEventId, createdBy: viewer.userId })))
+          .onConflictDoNothing();
+      }
+      return row!;
+    });
+    await this.publish([copy]);
+    if (copy) this.realtime.changed(campaignId, 'constellation');
+    const [dto] = await this.hydrate([copy], viewer);
+    return dto!;
+  }
+
   // ───────────────────────────── Lecture ─────────────────────────────
 
   private visibilityFilter(viewer: Viewer): SQL | undefined {

@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate, Outlet, useLocation } from 'react-router
 import { useMe } from '../features/auth/api';
 import { LoginPage } from '../features/auth/LoginPage';
 import { CampaignProvider } from '../features/campaigns/CampaignContext';
+import { RecorderProvider } from '../features/recording/RecorderProvider';
 import { LocaleProvider } from '../shared/i18n/i18n';
 import { Loading } from '../shared/ui/components';
 import { AppShell } from './AppShell';
@@ -31,7 +32,10 @@ function RequireAuth() {
   return (
     <LocaleProvider locale={me.locale}>
       <CampaignProvider>
-        <Outlet />
+        {/* Au-dessus de toutes les pages : naviguer n'interrompt jamais l'enregistrement de la session. */}
+        <RecorderProvider>
+          <Outlet />
+        </RecorderProvider>
       </CampaignProvider>
     </LocaleProvider>
   );

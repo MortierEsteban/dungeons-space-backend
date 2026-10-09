@@ -1,4 +1,4 @@
-import { TONES, VARIANT_KEYS, VARIANT_LABELS } from '@ds/shared';
+import { TONES, VARIANT_KEYS, VARIANT_LABELS, type RecordingSettings } from '@ds/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -54,6 +54,8 @@ export default function CampaignPage() {
 
   const open = campaign.currentSession && !campaign.currentSession.endedAt ? campaign.currentSession : null;
   const settings = campaign.settings;
+  const rec = settings.recording;
+  const setRecording = (patch: Partial<RecordingSettings>) => update.mutate({ settings: { ...settings, recording: { ...rec, ...patch } } });
 
   return (
     <div className="ds-page">
@@ -168,6 +170,29 @@ export default function CampaignPage() {
                 </Toggle>
                 <Toggle checked={campaign.status === 'finished'} onChange={(v) => update.mutate({ status: v ? 'finished' : 'active' })}>
                   Campagne terminée
+                </Toggle>
+              </div>
+              <Rule />
+              <span className="ds-label">Enregistrement des sessions</span>
+              <p className="ds-help" style={{ margin: 0 }}>
+                Un appareil du MJ écoute la table : la transcription est conservée et un modèle de langage inscrit au fil de l’eau les événements dans la
+                Chronique. Toute la table voit l’indicateur « REC » ; prévenez vos joueurs avant d’activer l’enregistrement.
+              </p>
+              <div className={s.rulesGrid}>
+                <Toggle checked={rec.enabled} onChange={(v) => setRecording({ enabled: v })}>
+                  Enregistrer les sessions
+                </Toggle>
+                <Toggle checked={rec.autoAnalyze} disabled={!rec.enabled} onChange={(v) => setRecording({ autoAnalyze: v })}>
+                  Créer les événements automatiquement
+                </Toggle>
+                <Toggle checked={rec.autoVisibility === 'gm_only'} disabled={!rec.enabled} onChange={(v) => setRecording({ autoVisibility: v ? 'gm_only' : 'players' })}>
+                  Relire les événements avant de les révéler
+                </Toggle>
+                <Toggle checked={rec.playersSeeTranscript} disabled={!rec.enabled} onChange={(v) => setRecording({ playersSeeTranscript: v })}>
+                  Transcription lisible par les joueurs
+                </Toggle>
+                <Toggle checked={rec.keepAudio} disabled={!rec.enabled} onChange={(v) => setRecording({ keepAudio: v })}>
+                  Conserver l’audio (MJ seulement)
                 </Toggle>
               </div>
             </Panel>

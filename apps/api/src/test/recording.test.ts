@@ -216,6 +216,30 @@ describe('analyse par le modèle de langage', () => {
   });
 });
 
+describe('relecture par le MJ', () => {
+  it('garde secrets les événements automatiques puis les révèle sans réécrire le journal', async () => {
+    await settingsWith({ autoVisibility: 'gm_only' });
+    analyzer.next = (c) => [proposal({ type: 'social.betrayed', title: 'Corvin trahit les héros', importance: 4, fromSeq: c.segments[0]!.seq, toSeq: c.segments[0]!.seq })];
+    await gm.post(`/campaigns/${campaignId}/recordings/${recording.id}/segments`, { deviceId: DEVICE, segments: segs(100, ['Corvin vous trahit']) });
+    expect((await gm.post(`/campaigns/${campaignId}/recordings/${recording.id}/analyze`)).json().created).toBe(1);
+    const secret = (await gm.get(`/campaigns/${campaignId}/events?origin=recording`)).json().events.find((e: EventDto) => e.title === 'Corvin trahit les héros');
+    expect(secret.visibility).toBe('gm_only');
+    const seen = () => player.get(`/campaigns/${campaignId}/events?origin=recording`).then((r) => r.json().events.map((e: EventDto) => e.title));
+    expect(await seen()).not.toContain('Corvin trahit les héros');
+
+    expect((await player.post(`/campaigns/${campaignId}/events/${secret.id}/reveal`)).statusCode).toBe(403);
+    const revealed = await gm.post(`/campaigns/${campaignId}/events/${secret.id}/reveal`);
+    expect(revealed.statusCode).toBe(200);
+    expect(revealed.json().event).toMatchObject({ visibility: 'players', title: 'Corvin trahit les héros', payload: { origin: 'recording', revealedFrom: secret.id } });
+    expect(await seen()).toContain('Corvin trahit les héros');
+    const original = (await gm.get(`/campaigns/${campaignId}/events?origin=recording`)).json().events.find((e: EventDto) => e.id === secret.id);
+    expect(original.retracted).toBe(true);
+    expect((await gm.post(`/campaigns/${campaignId}/events/${secret.id}/reveal`)).statusCode).toBe(400);
+    await settingsWith({ autoVisibility: 'players' });
+    analyzer.next = () => [];
+  });
+});
+
 describe('archive audio', () => {
   it('n’accepte l’audio que si la campagne le conserve, morceau par morceau, dans l’ordre', async () => {
     const put = (index: number, body: string, part = 0) =>

@@ -31,6 +31,11 @@ export async function chronicleRoutes(app: FastifyInstance, { chronicle, access 
     return { event: await chronicle.correct(request.params.campaignId, request.params.eventId, v, parse(correctEventSchema, request.body)) };
   });
 
+  app.post<{ Params: { campaignId: string; eventId: string } }>('/campaigns/:campaignId/events/:eventId/reveal', async (request) => {
+    const v = await viewer(request, request.params.campaignId);
+    return { event: await chronicle.reveal(request.params.campaignId, request.params.eventId, v) };
+  });
+
   app.get<CampaignParams>('/campaigns/:campaignId/event-links', async (request) => {
     const v = await viewer(request, request.params.campaignId);
     return { links: await chronicle.listLinks(request.params.campaignId, v) };
