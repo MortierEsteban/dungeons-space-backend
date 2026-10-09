@@ -113,6 +113,11 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
 .traceLink {
   color: var(--arcane-light);
   font-family: var(--font-title);

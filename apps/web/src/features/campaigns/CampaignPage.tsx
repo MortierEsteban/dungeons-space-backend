@@ -1,13 +1,14 @@
 import { TONES, VARIANT_KEYS, VARIANT_LABELS, type RecordingSettings } from '@ds/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { errorMessage, http } from '../../shared/api/client';
 import { initials, shortDate } from '../../shared/format';
 import { Button, Chip, Empty, Field, IconButton, Input, Loading, Panel, PanelTitle, Rule, TextArea, Toggle } from '../../shared/ui/components';
 import { ImageDrop } from '../../shared/ui/ImageDrop';
 import { useToast } from '../../shared/ui/toast';
 import { useMe } from '../auth/api';
+import { RecorderControls } from '../recording/RecordingBadge';
 import { useCampaign, useCampaignAdmin, useSessions, useUpdateCampaign } from './api';
 import { useCurrentCampaign } from './CampaignContext';
 import s from './campaigns.module.css';
@@ -95,6 +96,13 @@ export default function CampaignPage() {
                     </Button>
                   </div>
                 )}
+                <div className={s.recBox}>
+                  <span className="ds-label">Enregistrement de la session</span>
+                  <RecorderControls />
+                  <Link className={s.recLink} to="/explorer?vue=transcriptions">
+                    Lire et chercher dans les transcriptions →
+                  </Link>
+                </div>
               </div>
             )}
             {sessions.length === 0 && <span className="ds-help">Aucune session jouée pour l’instant.</span>}

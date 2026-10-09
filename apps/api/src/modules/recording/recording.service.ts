@@ -10,11 +10,14 @@ import {
   type RecordingDto,
   type SessionTraceDto,
   type startRecordingSchema,
+  searchForm,
   type TranscriptPageDto,
   type transcriptQuerySchema,
+  type TranscriptSearchDto,
+  type transcriptSearchSchema,
   type TranscriptSegmentDto,
 } from '@ds/shared';
-import { and, asc, desc, eq, gt, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { and, asc, between, desc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { RecordingConfig } from '../../config';
 import type { Db } from '../../infra/db/client';
@@ -44,6 +47,10 @@ const RETRY_AFTER_FAILURE_MS = 2 * 60_000;
 const MAX_FAILURES_PER_WINDOW = 3;
 const MIN_CONFIDENCE = 0.2;
 const NARRATIVE_TYPE_IDS = new Set(NARRATIVE_TYPES.map((t) => t.type));
+
+/** Lettres accentuées et leur forme simple, pour une recherche insensible aux accents sans extension PostgreSQL. */
+const ACCENTED = 'àáâãäåçèéêëìíîïñòóôõöùúûüýÿÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ';
+const PLAIN = 'aaaaaaceeeeiiiinooooouuuuyyAAAAAACEEEEIIIINOOOOOUUUUY';
 
 export const countWords = (text: string) => (text.trim() ? text.trim().split(/\s+/u).length : 0);
 
@@ -206,6 +213,49 @@ export class RecordingService {
     return {
       segments: page.map(({ s, analyzedSeq }) => segmentDto(s, analyzedSeq)),
       nextAfter: rows.length > q.limit ? offset + q.limit : null,
+    };
+  }
+
+  /**
+   * Recherche dans toutes les transcriptions de la campagne : chaque mot doit apparaître (casse et accents
+   * ignorés). Les résultats, du plus récent au plus ancien, viennent avec la phrase d'avant et d'après.
+   */
+  async search(campaignId: string, viewer: Viewer, q: z.infer<typeof transcriptSearchSchema>): Promise<TranscriptSearchDto> {
+    const { settings } = await this.campaign(campaignId);
+    if (viewer.role !== 'gm' && !settings.recording.playersSeeTranscript) throw forbidden('La transcription est réservée au MJ.');
+    const words = searchForm(q.q).split(/\s+/u).filter(Boolean).slice(0, 8);
+    if (!words.length) return { hits: [], more: false };
+    const folded = sql`lower(translate(${transcriptSegments.text}, ${ACCENTED}, ${PLAIN}))`;
+    const rows = await this.db
+      .select({ s: transcriptSegments, analyzedSeq: sessionRecordings.analyzedSeq })
+      .from(transcriptSegments)
+      .innerJoin(sessionRecordings, eq(sessionRecordings.id, transcriptSegments.recordingId))
+      .where(
+        and(
+          eq(transcriptSegments.campaignId, campaignId),
+          q.sessionNo === undefined ? undefined : eq(transcriptSegments.sessionNo, q.sessionNo),
+          ...words.map((w) => sql`${folded} like ${`%${w.replace(/[\\%_]/g, (c) => `\\${c}`)}%`}`),
+        ),
+      )
+      .orderBy(desc(transcriptSegments.sessionNo), asc(transcriptSegments.spokenAt), asc(transcriptSegments.seq))
+      .limit(q.limit + 1);
+    const page = rows.slice(0, q.limit);
+    // Contexte : la phrase précédente et la suivante du même enregistrement.
+    const around = page.length
+      ? await this.db
+          .select({ recordingId: transcriptSegments.recordingId, seq: transcriptSegments.seq, text: transcriptSegments.text })
+          .from(transcriptSegments)
+          .where(or(...page.map(({ s }) => and(eq(transcriptSegments.recordingId, s.recordingId), between(transcriptSegments.seq, s.seq - 1, s.seq + 1)))))
+      : [];
+    const text = new Map(around.map((r) => [`${r.recordingId}:${r.seq}`, r.text]));
+    return {
+      hits: page.map(({ s, analyzedSeq }) => ({
+        sessionNo: s.sessionNo,
+        segment: segmentDto(s, analyzedSeq),
+        before: text.get(`${s.recordingId}:${s.seq - 1}`) ?? null,
+        after: text.get(`${s.recordingId}:${s.seq + 1}`) ?? null,
+      })),
+      more: rows.length > q.limit,
     };
   }
 

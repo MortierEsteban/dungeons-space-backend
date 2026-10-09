@@ -341,3 +341,20 @@
   gap: 8px;
   flex: 1;
 }
+/* ── Enregistrement (bloc Sessions) ── */
+.recBox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(224, 122, 168, 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(176, 48, 106, 0.06);
+}
+.recLink {
+  align-self: flex-start;
+  color: var(--arcane-light);
+  font-family: var(--font-title);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}

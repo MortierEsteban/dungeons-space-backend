@@ -1,4 +1,4 @@
-import type { AppendSegmentsInput, RecordingDto, SessionTraceDto, StartRecordingInput, TranscriptPageDto, TranscriptSegmentDto } from '@ds/shared';
+import type { AppendSegmentsInput, RecordingDto, SessionTraceDto, StartRecordingInput, TranscriptPageDto, TranscriptSearchDto, TranscriptSegmentDto } from '@ds/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { http, qk, toQuery } from '../../shared/api/client';
@@ -77,6 +77,17 @@ export function useTranscript(campaignId: string | null, sessionNo: number | nul
   }, [live, enabled]);
 
   return { segments, loading, refresh: () => setTick((n) => n + 1) };
+}
+
+/** Recherche dans toutes les transcriptions de la campagne (au moins deux caractères). */
+export function useTranscriptSearch(campaignId: string | null, q: string, sessionNo: number | null, enabled = true) {
+  const query = q.trim();
+  return useQuery({
+    queryKey: [...qk.recordings(campaignId ?? 'none'), 'search', query, sessionNo],
+    queryFn: () => http.get<TranscriptSearchDto>(`/campaigns/${campaignId}/transcript/search${toQuery({ q: query, sessionNo: sessionNo ?? undefined, limit: 100 })}`),
+    enabled: enabled && !!campaignId && query.length >= 2,
+    placeholderData: (prev) => prev,
+  });
 }
 
 export function useRecordingMutations(campaignId: string) {

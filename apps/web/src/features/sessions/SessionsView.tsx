@@ -99,7 +99,8 @@ function SessionDetail({ sessionNo }: { sessionNo: number }) {
   const { segments } = useTranscript(campaignId, sessionNo, transcriptOn, live);
   const [density, setDensity] = useLocalPref<Density>('sessionDensity', 'balanced');
   const [lanes, setLanes] = useState<string[]>([]);
-  const [q, setQ] = useState('');
+  const [params] = useSearchParams();
+  const [q, setQ] = useState(params.get('q') ?? '');
   const query = useDebounced(q.trim().toLowerCase(), 200);
   const [range, setRange] = useState<[number, number] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
