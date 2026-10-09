@@ -12,6 +12,8 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   white-space: nowrap;
+  max-width: 100%;
+  min-width: 0;
   transition: box-shadow 0.2s, background 0.2s, border-color 0.2s, color 0.2s;
 }
 .primary {
@@ -169,6 +171,16 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   white-space: nowrap;
+  max-width: 100%;
+  min-width: 0;
+}
+/* Étiquette (lecture seule) : un long libellé passe à la ligne au lieu de déborder de sa carte. */
+.tag {
+  white-space: normal;
+  text-align: left;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  border-radius: 10px;
 }
 .chipSquare {
   border-radius: var(--radius-sm);
@@ -364,13 +376,18 @@ button.stat:hover {
   box-shadow: 0 0 14px rgba(79, 179, 255, 0.35);
 }
 .statLabel {
+  max-width: 100%;
+  overflow: hidden;
   font-family: var(--font-title);
   font-size: 10px;
   letter-spacing: 0.14em;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
   color: var(--ash);
 }
 .statValue {
+  white-space: nowrap;
   font-family: var(--font-title);
   font-size: 24px;
   color: var(--text-strong);

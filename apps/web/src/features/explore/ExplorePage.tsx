@@ -1,5 +1,6 @@
 import { useSearchParams } from 'react-router';
-import { Empty, Panel, Segmented } from '../../shared/ui/components';
+import { useMediaQuery } from '../../shared/hooks';
+import { Empty, Panel, Segmented, Select } from '../../shared/ui/components';
 import { useCurrentCampaign } from '../campaigns/CampaignContext';
 import { ChronicleView } from '../chronicle/ChronicleView';
 import { Timeline } from '../chronicle/Timeline';
@@ -33,6 +34,9 @@ export default function ExplorePage() {
   const { current } = useCurrentCampaign();
   const view = (VIEWS.some((v) => v.value === params.get('vue')) ? params.get('vue') : 'chronique') as View;
   const needsCampaign = view !== 'campagnes' && !current;
+  // Six vues ne tiennent pas côte à côte sur un téléphone : une liste déroulante les montre toutes.
+  const narrow = useMediaQuery('(max-width: 640px)');
+  const choose = (v: View) => setParams({ vue: v }, { replace: true });
 
   return (
     <div className="ds-page">
@@ -41,7 +45,17 @@ export default function ExplorePage() {
           <div className="ds-label">Explorer{current && view !== 'campagnes' ? ` · ${current.name}` : ''}</div>
           <h1 className="ds-h1">{TITLES[view]}</h1>
         </div>
-        <Segmented label="Vue" value={view} options={VIEWS} onChange={(v) => setParams({ vue: v }, { replace: true })} />
+        {narrow ? (
+          <Select value={view} onChange={(e) => choose(e.target.value as View)} aria-label="Vue">
+            {VIEWS.map((v) => (
+              <option key={v.value} value={v.value}>
+                {v.label}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <Segmented label="Vue" value={view} options={VIEWS} onChange={choose} />
+        )}
       </div>
       {needsCampaign ? (
         <Panel>

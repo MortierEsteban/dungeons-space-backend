@@ -83,6 +83,9 @@
   align-items: center;
   gap: 14px 22px;
 }
+.head > :first-child {
+  flex: 1 1 220px;
+}
 .stats {
   display: flex;
   gap: 18px;

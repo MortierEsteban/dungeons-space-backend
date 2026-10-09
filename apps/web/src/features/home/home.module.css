@@ -392,6 +392,16 @@
   padding: 16px 20px;
   flex-wrap: wrap;
 }
+/* Le texte garde une largeur lisible : sur petit écran, le bouton passe dessous au lieu d'écraser le texte. */
+.sessionBar > div {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+@media (max-width: 520px) {
+  .sessionBar > button {
+    flex: 1 1 100%;
+  }
+}
 .sessionName {
   font-size: 16px;
   margin-top: 2px;

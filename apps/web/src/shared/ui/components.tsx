@@ -62,7 +62,7 @@ export function Chip({
 
 export function Tag({ children, color, style }: { children: ReactNode; color?: string; style?: CSSProperties }) {
   return (
-    <span className={s.chip} style={{ minHeight: 0, padding: '3px 10px', fontSize: 10, ...(color ? { color, borderColor: color } : {}), ...style }}>
+    <span className={cx(s.chip, s.tag)} style={{ minHeight: 0, padding: '3px 10px', fontSize: 10, ...(color ? { color, borderColor: color } : {}), ...style }}>
       {children}
     </span>
   );
