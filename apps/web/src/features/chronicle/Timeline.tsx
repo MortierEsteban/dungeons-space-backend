@@ -1,4 +1,4 @@
-import { CATEGORIES, eventTypeDef, type EventCategory, type EventDto } from '@ds/shared';
+import { CATEGORIES, eventConfidence, eventOrigin, eventTypeDef, eventWeight, type EventCategory, type EventDto } from '@ds/shared';
 import { useMemo, useState } from 'react';
 import { shortDate } from '../../shared/format';
 import { useDebounced } from '../../shared/hooks';
@@ -6,6 +6,7 @@ import { Button, Chip, Empty, Input, Loading, Panel, Select, Tag } from '../../s
 import { useCurrentCampaign } from '../campaigns/CampaignContext';
 import { useCampaignCharacters } from '../character/api';
 import { useTimeline } from './api';
+import { bundleMinor } from './density';
 import s from './chronicle.module.css';
 
 const CATEGORY_LABELS: Record<EventCategory, string> = {
@@ -30,10 +31,19 @@ export function Timeline() {
   const [categories, setCategories] = useState<EventCategory[]>(['narrative', 'social', 'session', 'character', 'item']);
   const [characterId, setCharacterId] = useState('');
   const [minImportance, setMinImportance] = useState(1);
+  const [origin, setOrigin] = useState<'' | 'manual' | 'recording'>('');
+  const [opened, setOpened] = useState<Set<string>>(new Set());
   const query = useDebounced(q, 300);
   const filters = useMemo(
-    () => ({ q: query || undefined, categories: categories.join(','), characterId: characterId || undefined, minImportance: minImportance > 1 ? minImportance : undefined, limit: 40 }),
-    [query, categories, characterId, minImportance],
+    () => ({
+      q: query || undefined,
+      categories: categories.join(','),
+      characterId: characterId || undefined,
+      minImportance: minImportance > 1 ? minImportance : undefined,
+      origin: origin || undefined,
+      limit: 60,
+    }),
+    [query, categories, characterId, minImportance, origin],
   );
   const timeline = useTimeline(campaignId, filters);
   const events = timeline.data?.pages.flatMap((p) => p.events) ?? [];
@@ -75,6 +85,11 @@ export function Timeline() {
             <option value={3}>◆◆◆ et plus</option>
             <option value={4}>Moments clés</option>
           </Select>
+          <Select value={origin} onChange={(e) => setOrigin(e.target.value as typeof origin)} aria-label="Origine des événements">
+            <option value="">Toutes origines</option>
+            <option value="manual">Notés par la table</option>
+            <option value="recording">Déduits des enregistrements</option>
+          </Select>
         </div>
       </Panel>
 
@@ -88,41 +103,17 @@ export function Timeline() {
               {g.session === 0 ? 'Prologue' : `Session ${g.session}`}
               <span />
             </h3>
-            {g.events.map((e) => {
-              const def = eventTypeDef(e.type);
-              return (
-                <article key={e.id} className={s.entry} style={{ borderLeftColor: def.color, opacity: e.retracted ? 0.5 : 1 }}>
-                  <div className="ds-row" style={{ gap: 8 }}>
-                    <span className="ds-label" style={{ color: def.color }}>
-                      {def.label}
-                    </span>
-                    <span className="ds-help">{shortDate(e.occurredAt)} · {e.author?.name ?? 'Système'}</span>
-                    {e.importance >= 4 && <Tag color="var(--gold-light)">Moment clé</Tag>}
-                    {e.visibility === 'gm_only' && isGm && <Tag color="var(--magenta-light)">Secret</Tag>}
-                    {e.retracted && <Tag>Retiré</Tag>}
-                    {e.corrected && !e.retracted && <Tag>Corrigé</Tag>}
-                  </div>
-                  <div className={s.entryTitle} style={{ textDecoration: e.retracted ? 'line-through' : undefined }}>
-                    {e.title}
-                  </div>
-                  {e.text && <p className={s.entryText}>{e.text}</p>}
-                  {(e.actors.length > 0 || e.targets.length > 0) && (
-                    <div className="ds-row" style={{ gap: 6 }}>
-                      {e.actors.map((a) => (
-                        <Tag key={`a${a.id ?? a.name}`} color="var(--arcane-light)">
-                          {a.name}
-                        </Tag>
-                      ))}
-                      {e.targets.map((t) => (
-                        <Tag key={`t${t.id ?? t.name}`} color="var(--magenta-light)">
-                          → {t.name}
-                        </Tag>
-                      ))}
-                    </div>
-                  )}
-                </article>
-              );
-            })}
+            {/* Les suites de détails déduits de l'enregistrement sont repliées : la frise reste lisible. */}
+            {bundleMinor(g.events, (e) => eventOrigin(e) === 'recording' && eventWeight(e) < 0.4).map((b) =>
+              b.kind === 'item' || opened.has(b.id) ? (
+                (b.kind === 'item' ? [b.item] : b.items).map((e) => <Entry key={e.id} e={e} isGm={isGm} />)
+              ) : (
+                <button key={b.id} type="button" className={s.bundle} onClick={() => setOpened((xs) => new Set(xs).add(b.id))}>
+                  + {b.items.length} détails déduits de l’enregistrement
+                  <span className="ds-help">{b.items.slice(0, 3).map((e) => e.title).join(' · ')}…</span>
+                </button>
+              ),
+            )}
           </section>
         ))}
         {timeline.hasNextPage && (
@@ -132,5 +123,44 @@ export function Timeline() {
         )}
       </div>
     </div>
+  );
+}
+
+function Entry({ e, isGm }: { e: EventDto; isGm: boolean }) {
+  const def = eventTypeDef(e.type);
+  return (
+    <article className={s.entry} style={{ borderLeftColor: def.color, opacity: e.retracted ? 0.5 : 1 }}>
+      <div className="ds-row" style={{ gap: 8 }}>
+        <span className="ds-label" style={{ color: def.color }}>
+          {def.label}
+        </span>
+        <span className="ds-help">
+          {shortDate(e.occurredAt)} · {e.author?.name ?? (eventOrigin(e) === 'recording' ? 'Enregistrement' : 'Système')}
+        </span>
+        {eventOrigin(e) === 'recording' && <Tag color="var(--arcane-light)">Auto · {Math.round(eventConfidence(e) * 100)} %</Tag>}
+        {e.importance >= 4 && <Tag color="var(--gold-light)">Moment clé</Tag>}
+        {e.visibility === 'gm_only' && isGm && <Tag color="var(--magenta-light)">Secret</Tag>}
+        {e.retracted && <Tag>Retiré</Tag>}
+        {e.corrected && !e.retracted && <Tag>Corrigé</Tag>}
+      </div>
+      <div className={s.entryTitle} style={{ textDecoration: e.retracted ? 'line-through' : undefined }}>
+        {e.title}
+      </div>
+      {e.text && <p className={s.entryText}>{e.text}</p>}
+      {(e.actors.length > 0 || e.targets.length > 0) && (
+        <div className="ds-row" style={{ gap: 6 }}>
+          {e.actors.map((a, i) => (
+            <Tag key={`a${i}`} color="var(--arcane-light)">
+              {a.name}
+            </Tag>
+          ))}
+          {e.targets.map((t, i) => (
+            <Tag key={`t${i}`} color="var(--magenta-light)">
+              → {t.name}
+            </Tag>
+          ))}
+        </div>
+      )}
+    </article>
   );
 }

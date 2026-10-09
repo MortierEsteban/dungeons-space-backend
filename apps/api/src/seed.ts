@@ -1,9 +1,13 @@
 import { scoresFromArray, type Dnd5eSheet } from '@ds/rules';
 import { recordingSettingsSchema, type CreateCharacterInput, type EntityRef, type UserDto } from '@ds/shared';
-import { sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { BuiltApp } from './app';
 import type { Db } from './infra/db/client';
+import { gameSessions } from './modules/campaigns/campaigns.tables';
+import { events } from './modules/chronicle/chronicle.tables';
 import { users } from './modules/identity/identity.tables';
+import { countWords } from './modules/recording/recording.service';
+import { sessionRecordings, transcriptSegments } from './modules/recording/recording.tables';
 
 /**
  * Données de démonstration (NFR « campagne seed ») : « Les Cendres de Valombre », tirée des maquettes.
@@ -163,6 +167,7 @@ export async function seedDemo(s: Services, db: Db): Promise<boolean> {
     campaignId: cid, type: 'social.assaulted', title: 'Brakk assomme le tavernier', text: 'Une bagarre de taverne qui a mal tourné : −3 d’affinité.',
     actors: [ref(brakk)], targets: [ref(tavernier)], source: 'player', authorId: u.tomas.id, sessionNo: 6,
   });
+  await seedRecordedSession(s, db, cid, u.gm.id, { brakk: ref(brakk), elowen: ref(elowen), ilda: ref(ilda), maelis: ref(maelis), fendrel: ref(fendrel) });
   const LINKS: [number, number][] = [[1, 2], [2, 5], [3, 12], [4, 5], [4, 6], [6, 10], [5, 13], [7, 8], [8, 9], [9, 16], [10, 11], [11, 12], [12, 14], [13, 14], [14, 15], [15, 16], [3, 15], [8, 10], [1, 3]];
   for (const [a, b] of LINKS) await s.chronicle.createLink(cid, gm, ids[a - 1]!, ids[b - 1]!);
 
@@ -273,6 +278,97 @@ export async function seedDemo(s: Services, db: Db): Promise<boolean> {
     lore: 'Une marée noire jaillit et aveugle ceux qu’elle touche.',
   });
   return true;
+}
+
+/**
+ * Session 5 enregistrée : transcription d'une soirée et événements tels que l'analyse les aurait déduits,
+ * pour montrer la trace complète d'une session sans clé d'API (aucune analyse réelle n'est déclenchée).
+ */
+async function seedRecordedSession(s: Services, db: Db, cid: string, gmId: string, c: Record<'brakk' | 'elowen' | 'ilda' | 'maelis' | 'fendrel', EntityRef>) {
+  const sessionNo = 5;
+  const start = Date.now() - 30 * 3600_000;
+  const at = (minute: number) => new Date(start + minute * 60_000);
+  // [minute, texte] — la reconnaissance vocale ne distingue pas les voix.
+  const LINES: [number, string][] = [
+    [1, 'bon tout le monde a ses fiches on peut commencer'],
+    [2, 'la dernière fois vous sortiez de la crypte avec la carte et les murmures dans la tête'],
+    [4, 'vous revenez à Valombre au petit matin la forge de Maëlis fume déjà'],
+    [6, 'Brakk entre sans frapper il pose la hache sur l enclume'],
+    [7, 'je lui demande où est le marteau de son clan les gobelins avaient son emblème'],
+    [9, 'Maëlis évite ton regard elle dit que les gobelins l ont volé la nuit du grand orage'],
+    [11, 'je fais un jet d intuition'],
+    [12, 'dix-huit'],
+    [13, 'tu sens qu elle ment ses mains tremblent sur le soufflet'],
+    [16, 'qui veut de la pizza on commande maintenant ou à la pause'],
+    [18, 'Sœur Ilda lui prend la main et lui dit qu elle peut tout nous dire que la déesse pardonne'],
+    [21, 'Maëlis s effondre elle avoue avoir vendu le marteau à Fendrel pour payer la dette de sa forge'],
+    [23, 'Brakk recule il dit qu il ne lui pardonnera jamais'],
+    [24, 'il sort de la forge en claquant la porte'],
+    [31, 'Elowen reste en arrière elle demande à Maëlis à qui Fendrel a revendu le marteau'],
+    [33, 'elle ne sait pas mais il parlait d un acheteur sous le volcan qui payait en or ancien'],
+    [41, 'vous allez au marché noir chercher Fendrel'],
+    [44, 'le tavernier vous dit que Fendrel est parti hier soir vers la route du volcan avec deux hommes en armure noire'],
+    [52, 'Elowen laisse une pièce au tavernier pour qu il prévienne si Fendrel revient'],
+    [68, 'pause cinq minutes'],
+    [83, 'sur la route du volcan vous trouvez un campement abandonné le feu est encore tiède'],
+    [86, 'il y a des traces de bottes ferrées et un symbole gravé une flamme dans un crâne'],
+    [88, 'Ilda reconnaît le symbole c est celui des chevaliers de cendre'],
+    [97, 'Elowen trouve une lettre à moitié brûlée adressée à Fendrel'],
+    [99, 'la lettre dit le marteau scelle le phylactère ne le laisse pas aux mains de la forgeronne'],
+    [104, 'Brakk dit qu on doit retrouver le marteau avant eux quoi qu il en coûte'],
+    [126, 'en redescendant vous croisez une patrouille de la garde sans capitaine depuis la mort de Garrick'],
+    [128, 'le sergent vous demande de l aide il pense que le meurtrier rôde encore en ville'],
+    [131, 'Ilda promet d aider la garde à retrouver le meurtrier de Garrick'],
+    [168, 'on s arrête là pour ce soir merci à tous'],
+  ];
+  const [rec] = await db
+    .insert(sessionRecordings)
+    .values({ campaignId: cid, sessionNo, status: 'ended', deviceId: 'demo-table', startedBy: gmId, startedAt: at(0), endedAt: at(170), lastSeenAt: at(170), segmentCount: LINES.length, wordCount: LINES.reduce((n, [, t]) => n + countWords(t), 0), analyzedSeq: LINES.length })
+    .returning();
+  await db.insert(transcriptSegments).values(
+    LINES.map(([minute, text], k) => ({ recordingId: rec!.id, campaignId: cid, sessionNo, seq: k + 1, clientSeq: k, text, words: countWords(text), offsetMs: minute * 60_000, durationMs: 5000, spokenAt: at(minute), createdAt: at(minute) })),
+  );
+  const seqOf = (minute: number) => LINES.findIndex(([m]) => m === minute) + 1;
+  const free = (name: string): EntityRef => ({ kind: 'free', id: null, name });
+  const AUTO: [number, number, string, string, string, number, number, EntityRef[], EntityRef[], string[], boolean?][] = [
+    [4, 6, 'narrative.place', 'Retour à la forge de Maëlis', 'Au petit matin, le groupe revient à Valombre et retrouve Maëlis à sa forge.', 2, 0.9, [c.brakk, c.elowen, c.ilda], [c.maelis], ['Forge de Maëlis']],
+    [9, 13, 'narrative.note', 'Maëlis ment sur le vol du marteau', 'Elle prétend que les gobelins ont volé le marteau pendant le grand orage ; Brakk sent qu’elle ment.', 2, 0.8, [c.maelis], [c.brakk], []],
+    [18, 18, 'social.helped', 'Ilda réconforte Maëlis', 'Sœur Ilda prend la main de la forgeronne et l’encourage à dire la vérité.', 1, 0.7, [c.ilda], [c.maelis], []],
+    [23, 24, 'social.insulted', 'Brakk renie Maëlis', 'Blessé par l’aveu, Brakk jure de ne jamais lui pardonner et quitte la forge.', 3, 0.85, [c.brakk], [c.maelis], ['Forge de Maëlis']],
+    [31, 33, 'narrative.discovery', 'Un acheteur sous le volcan', 'Fendrel aurait revendu le marteau à un acheteur installé sous le volcan, qui paie en or ancien.', 3, 0.75, [c.elowen], [c.fendrel], ['Volcan']],
+    [44, 44, 'narrative.discovery', 'Fendrel a fui vers le volcan', 'Selon le tavernier, Fendrel est parti la veille vers la route du volcan, escorté de deux hommes en armure noire.', 2, 0.8, [free('Le Tavernier')], [c.fendrel], ['Marché noir de Corbeval']],
+    [52, 52, 'social.promised', 'Le tavernier guettera Fendrel', 'Contre une pièce, le tavernier préviendra le groupe si Fendrel revient.', 1, 0.6, [free('Le Tavernier')], [c.elowen], []],
+    [83, 88, 'narrative.place', 'Le campement des chevaliers de cendre', 'Sur la route du volcan, un campement abandonné marqué d’une flamme dans un crâne : le symbole des chevaliers de cendre.', 2, 0.85, [c.ilda], [free('Chevaliers de cendre')], ['Route du volcan']],
+    [97, 99, 'narrative.discovery', 'La lettre à Fendrel', 'Une lettre à demi brûlée révèle que le marteau scelle le phylactère et ne doit pas rester aux mains de la forgeronne.', 4, 0.9, [c.elowen], [c.fendrel], []],
+    [104, 104, 'narrative.quest', 'Retrouver le marteau avant les chevaliers', 'Brakk décide de récupérer le marteau avant les chevaliers de cendre, quoi qu’il en coûte.', 3, 0.85, [c.brakk], [], []],
+    [126, 128, 'narrative.encounter', 'La garde sans capitaine', 'Une patrouille privée de capitaine depuis la mort de Garrick demande l’aide du groupe.', 2, 0.7, [free('Sergent de la garde')], [c.elowen, c.brakk, c.ilda], ['Valombre']],
+    [131, 131, 'social.promised', 'Ilda promet de trouver le meurtrier', 'Sœur Ilda promet à la garde de démasquer le meurtrier de Garrick.', 3, 0.8, [c.ilda], [free('Garde de Valombre')], []],
+  ];
+  for (const [k, [from, to, type, title, text, importance, confidence, actors, targets, places, secret]] of AUTO.entries()) {
+    const row = await s.chronicle.append({
+      campaignId: cid,
+      type,
+      title,
+      text,
+      importance,
+      visibility: secret ? 'gm_only' : 'players',
+      actors,
+      targets,
+      places,
+      payload: { origin: 'recording', recordingId: rec!.id, segments: [seqOf(from), seqOf(to)], confidence },
+      source: 'system',
+      sessionNo,
+      idempotencyKey: `demo-rec-${k}`,
+    });
+    await db.update(events).set({ occurredAt: at(to + 2) }).where(eq(events.id, row.id));
+  }
+  // La session elle-même et ses événements notés à la main suivent la soirée.
+  await db.update(gameSessions).set({ startedAt: at(0), endedAt: at(170) }).where(and(eq(gameSessions.campaignId, cid), eq(gameSessions.number, sessionNo)));
+  const manual = await db.select({ id: events.id, type: events.type }).from(events).where(and(eq(events.campaignId, cid), eq(events.sessionNo, sessionNo), sql`coalesce(${events.payload}->>'origin', '') <> 'recording'`));
+  for (const [i, e] of manual.entries()) {
+    const minute = e.type === 'session.started' ? 0 : e.type === 'session.ended' ? 170 : 25 + i * 60;
+    await db.update(events).set({ occurredAt: at(minute) }).where(eq(events.id, e.id));
+  }
 }
 
 // Exécution directe : `npm run seed` (base configurée par l'environnement).

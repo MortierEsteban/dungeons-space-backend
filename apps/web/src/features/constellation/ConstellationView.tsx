@@ -4,10 +4,11 @@ import { useNavigate } from 'react-router';
 import { errorMessage } from '../../shared/api/client';
 import { Graph3D, type GraphEdge, type GraphHandle, type GraphNode } from '../../shared/graph/Graph3D';
 import { useDebounced, useLocalPref } from '../../shared/hooks';
-import { Button, Chip, Empty, Field, IconButton, Input, Loading, Panel, Rule, Select, Tag, TextArea, Toggle } from '../../shared/ui/components';
+import { Button, Chip, Empty, Field, IconButton, Input, Loading, Panel, Rule, Segmented, Select, Tag, TextArea, Toggle } from '../../shared/ui/components';
 import { useToast } from '../../shared/ui/toast';
 import { useCurrentCampaign } from '../campaigns/CampaignContext';
 import { useEventLinks, useNarrativeEvents } from '../chronicle/api';
+import { DENSITIES, type Density } from '../chronicle/density';
 import { useConstellation, useConstellationMutations, useSuggestions } from './api';
 import { EVENT_PREFIX, eventGraph } from './eventGraph';
 import { forceLayout, valenceColor } from './layout';
@@ -273,6 +274,7 @@ export function ConstellationView() {
   const [flat, setFlat] = useLocalPref('constellationFlat', true);
   const [showEvents, setShowEvents] = useLocalPref('constellationEvents', true);
   const [eventImportance, setEventImportance] = useLocalPref('constellationEventImportance', 1);
+  const [eventDensity, setEventDensity] = useLocalPref<Density>('constellationEventDensity', 'balanced');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const graph = useRef<GraphHandle>(null);
   const { data: events = [] } = useNarrativeEvents(showEvents ? campaignId : null);
@@ -280,7 +282,10 @@ export function ConstellationView() {
 
   const nodes = data?.nodes ?? [];
   const links = data?.links ?? [];
-  const evGraph = useMemo(() => (showEvents ? eventGraph(nodes, events, eventLinks, eventImportance) : { events: [], edges: [] }), [showEvents, nodes, events, eventLinks, eventImportance]);
+  const evGraph = useMemo(
+    () => (showEvents ? eventGraph(nodes, events, eventLinks, eventImportance, eventDensity) : { events: [], edges: [], hidden: 0 }),
+    [showEvents, nodes, events, eventLinks, eventImportance, eventDensity],
+  );
   const positions = useMemo(
     () => forceLayout([...nodes, ...evGraph.events.map((e) => ({ id: e.id }))], [...links, ...evGraph.edges], flat),
     [nodes, links, evGraph, flat],
@@ -305,7 +310,7 @@ export function ConstellationView() {
       size: 1 + Math.min(0.5, (degree.get(n.id) ?? 0) * 0.05),
       pinLabel: n.kind === 'pc' || n.kind === 'faction' || (degree.get(n.id) ?? 0) >= 5,
     })),
-    ...evGraph.events.map(({ id, event }) => ({
+    ...evGraph.events.map(({ id, event, weight }) => ({
       id,
       label: event.title,
       color: eventTypeDef(event.type).color,
@@ -313,8 +318,8 @@ export function ConstellationView() {
       shape: 'diamond' as const,
       muted: (kinds.length > 0 && !kinds.includes('event')) || !matches(event.title),
       hint: `${eventTypeDef(event.type).label}, session ${event.sessionNo ?? 0}`,
-      size: 0.7 + event.importance * 0.08,
-      pinLabel: event.importance >= 5,
+      size: 0.6 + weight * 0.6,
+      pinLabel: weight >= 0.9,
     })),
   ];
   const edges: GraphEdge[] = [
@@ -406,8 +411,9 @@ export function ConstellationView() {
               </div>
               <div className="ds-row" style={{ gap: 6 }}>
                 <Toggle checked={showEvents} onChange={setShowEvents}>
-                  Événements de la Chronique{showEvents ? ` · ${evGraph.events.length}` : ''}
+                  Événements de la Chronique{showEvents ? ` · ${evGraph.events.length}${evGraph.hidden ? `/${evGraph.events.length + evGraph.hidden}` : ''}` : ''}
                 </Toggle>
+                {showEvents && <Segmented label="Niveau de détail des événements" value={eventDensity} options={DENSITIES} onChange={setEventDensity} />}
               </div>
               {filtersOpen && (
               <>

@@ -289,3 +289,28 @@
     border-radius: 0;
   }
 }
+.bundle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 16px;
+  border: 1px dashed rgba(124, 198, 255, 0.35);
+  border-left: 3px solid rgba(124, 198, 255, 0.45);
+  border-radius: 4px;
+  background: rgba(17, 12, 23, 0.5);
+  color: var(--arcane-light);
+  font-family: var(--font-title);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-align: left;
+}
+.bundle:hover {
+  background: rgba(79, 179, 255, 0.08);
+}
+.bundle :global(.ds-help) {
+  overflow: hidden;
+  font-family: var(--font-body);
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

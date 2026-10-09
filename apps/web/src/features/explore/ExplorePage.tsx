@@ -4,12 +4,14 @@ import { useCurrentCampaign } from '../campaigns/CampaignContext';
 import { ChronicleView } from '../chronicle/ChronicleView';
 import { Timeline } from '../chronicle/Timeline';
 import { ConstellationView } from '../constellation/ConstellationView';
+import { SessionsView } from '../sessions/SessionsView';
 import { DiscoverCampaigns } from './DiscoverCampaigns';
 
-type View = 'chronique' | 'frise' | 'constellation' | 'campagnes';
+type View = 'chronique' | 'sessions' | 'frise' | 'constellation' | 'campagnes';
 
 const VIEWS: { value: View; label: string }[] = [
   { value: 'chronique', label: 'Chronique' },
+  { value: 'sessions', label: 'Sessions' },
   { value: 'frise', label: 'Frise' },
   { value: 'constellation', label: 'Constellation' },
   { value: 'campagnes', label: 'Campagnes' },
@@ -17,6 +19,7 @@ const VIEWS: { value: View; label: string }[] = [
 
 const TITLES: Record<View, string> = {
   chronique: 'La mémoire de la campagne',
+  sessions: 'La trace de chaque session',
   frise: 'Le fil des événements',
   constellation: 'Le réseau des destinées',
   campagnes: 'Campagnes & tables',
@@ -43,6 +46,8 @@ export default function ExplorePage() {
         </Panel>
       ) : view === 'chronique' ? (
         <ChronicleView key={current!.id} />
+      ) : view === 'sessions' ? (
+        <SessionsView key={current!.id} />
       ) : view === 'frise' ? (
         <Timeline key={current!.id} />
       ) : view === 'constellation' ? (
