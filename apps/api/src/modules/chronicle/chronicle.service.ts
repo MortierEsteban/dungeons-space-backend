@@ -243,6 +243,8 @@ export class ChronicleService {
     if (q.sessionNo !== undefined) conditions.push(eq(events.sessionNo, q.sessionNo));
     if (q.minImportance) conditions.push(gte(events.importance, q.minImportance));
     if (q.correlationId) conditions.push(isUuid(q.correlationId) ? eq(events.correlationId, q.correlationId) : sql`false`);
+    if (q.origin === 'recording') conditions.push(sql`${events.payload}->>'origin' = 'recording'`);
+    if (q.origin === 'manual') conditions.push(sql`coalesce(${events.payload}->>'origin', '') <> 'recording'`);
     if (q.before) conditions.push(lt(events.seq, q.before));
 
     const rows = await this.db
@@ -253,6 +255,28 @@ export class ChronicleService {
       .limit(q.limit + 1);
     const page = rows.slice(0, q.limit);
     return { events: await this.hydrate(page, viewer), nextBefore: rows.length > q.limit ? page[page.length - 1]!.seq : null };
+  }
+
+  /**
+   * Trace d'une session : tous ses événements, toutes catégories, dans l'ordre (le détail des combats
+   * se limite aux faits marquants, le reste est rejouable depuis la rencontre).
+   */
+  async sessionEvents(campaignId: string, viewer: Viewer, sessionNo: number, limit = 3000): Promise<EventDto[]> {
+    const rows = await this.db
+      .select()
+      .from(events)
+      .where(
+        and(
+          eq(events.campaignId, campaignId),
+          eq(events.sessionNo, sessionNo),
+          ne(events.type, CORRECTION),
+          or(ne(events.category, 'combat'), gte(events.importance, 2)),
+          this.visibilityFilter(viewer),
+        ),
+      )
+      .orderBy(asc(events.seq))
+      .limit(limit);
+    return this.hydrate(rows, viewer);
   }
 
   async getRow(campaignId: string, eventId: string, viewer: Viewer): Promise<EventRow> {

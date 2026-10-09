@@ -1,5 +1,5 @@
 import { scoresFromArray, type Dnd5eSheet } from '@ds/rules';
-import type { CreateCharacterInput, EntityRef, UserDto } from '@ds/shared';
+import { recordingSettingsSchema, type CreateCharacterInput, type EntityRef, type UserDto } from '@ds/shared';
 import { sql } from 'drizzle-orm';
 import type { BuiltApp } from './app';
 import type { Db } from './infra/db/client';
@@ -45,7 +45,7 @@ export async function seedDemo(s: Services, db: Db): Promise<boolean> {
     coverUrl: null,
     visibility: 'public',
     recruiting: false,
-    settings: { startLevel: 5, statMethod: 'roll', variants: { maxCrits: true, safeLongRests: true }, diagonalRule: 'simple', playerConstellation: true },
+    settings: { startLevel: 5, statMethod: 'roll', variants: { maxCrits: true, safeLongRests: true }, diagonalRule: 'simple', playerConstellation: true, recording: { ...recordingSettingsSchema.parse({}), enabled: true } },
     invites: [],
   });
   const cid = camp.id;
@@ -234,7 +234,7 @@ export async function seedDemo(s: Services, db: Db): Promise<boolean> {
 
   // ── Autres campagnes publiques (Explorer) ──
   const other = async (owner: UserDto, name: string, synopsis: string, tone: 'Héroïque' | 'Mystère' | 'Sombre', recruiting: boolean, level: number) =>
-    s.campaigns.create(owner.id, { name, synopsis, tone, rulesetId: 'dnd5e-srd51', coverUrl: null, visibility: 'public', recruiting, settings: { startLevel: level, statMethod: 'point_buy', variants: {}, diagonalRule: 'simple', playerConstellation: false }, invites: [] });
+    s.campaigns.create(owner.id, { name, synopsis, tone, rulesetId: 'dnd5e-srd51', coverUrl: null, visibility: 'public', recruiting, settings: { startLevel: level, statMethod: 'point_buy', variants: {}, diagonalRule: 'simple', playerConstellation: false, recording: recordingSettingsSchema.parse({}) }, invites: [] });
   const lucioles = await other(u.orsane, 'La Forêt des Lucioles', 'Un bois enchanté où les sentiers changent à chaque lune.', 'Mystère', true, 1);
   await s.campaigns.joinByCode(lucioles.joinCode!, u.lyra);
   const givre = await other(u.kael, 'Le Trône de Givre', 'Intrigues de cour dans un royaume figé par un hiver sans fin.', 'Héroïque', true, 3);

@@ -6,6 +6,8 @@ export * from './combat';
 export * from './compendium';
 export * from './constellation';
 export * from './realtime';
+export * from './recording';
+export * from './weight';
 
 /** Format d'erreur unique renvoyé par l'API. */
 export interface ApiErrorBody {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { recordingSettingsSchema } from './recording';
 
 export const ROLES = ['gm', 'player'] as const;
 export type Role = (typeof ROLES)[number];
@@ -23,6 +24,8 @@ export const campaignSettingsSchema = z.object({
   diagonalRule: z.enum(['simple', 'alternate']).default('simple'),
   /** Les joueurs voient-ils une vue filtrée de la Constellation ? (CST-15) */
   playerConstellation: z.boolean().default(false),
+  /** Enregistrement permanent des sessions, analysé par un modèle de langage. */
+  recording: recordingSettingsSchema.default({}),
 });
 export type CampaignSettings = z.infer<typeof campaignSettingsSchema>;
 

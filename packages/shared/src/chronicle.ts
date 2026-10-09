@@ -97,8 +97,10 @@ export const eventQuerySchema = z.object({
   sessionNo: z.coerce.number().int().optional(),
   minImportance: z.coerce.number().int().min(1).max(5).optional(),
   correlationId: z.string().optional(),
+  /** `recording` : seulement les événements déduits de l'enregistrement ; `manual` : tous les autres. */
+  origin: z.enum(['manual', 'recording']).optional(),
   before: z.coerce.number().int().optional(),
-  limit: z.coerce.number().int().min(1).max(500).default(100),
+  limit: z.coerce.number().int().min(1).max(2000).default(100),
 });
 export type EventQuery = z.input<typeof eventQuerySchema>;
 

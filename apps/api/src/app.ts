@@ -26,6 +26,9 @@ import { ConstellationService } from './modules/constellation/constellation.serv
 import { identityRoutes } from './modules/identity/identity.routes';
 import { IdentityService } from './modules/identity/identity.service';
 import { readCookie, SESSION_COOKIE, TokenService } from './modules/identity/tokens';
+import { ClaudeSessionAnalyzer, type SessionAnalyzer } from './modules/recording/analyzer';
+import { recordingRoutes } from './modules/recording/recording.routes';
+import { RecordingService } from './modules/recording/recording.service';
 import { uploadsRoutes } from './modules/uploads/uploads.routes';
 import '@ds/rules'; // enregistre le ruleset D&D 5e
 
@@ -41,7 +44,7 @@ export interface BuiltApp {
  * Racine de composition : chaque module expose ses services ; les dépendances entre modules
  * sont explicites ici (injection par constructeur), sans conteneur magique.
  */
-function composeServices(database: Database, realtime: Realtime, config: AppConfig) {
+function composeServices(database: Database, realtime: Realtime, config: AppConfig, extra: { analyzer: SessionAnalyzer | null; onError: (err: unknown, message: string) => void }) {
   const { db } = database;
   const tokens = new TokenService(config.jwtSecret);
   const identity = new IdentityService(db);
@@ -53,10 +56,30 @@ function composeServices(database: Database, realtime: Realtime, config: AppConf
   const characters = new CharactersService(db, access, chronicle, constellation, realtime, clock);
   const combat = new CombatService(db, access, chronicle, characters, realtime);
   const compendium = new CompendiumService(db, characters);
-  return { tokens, identity, access, clock, chronicle, campaigns, constellation, characters, combat, compendium };
+  const recording = new RecordingService({
+    db,
+    realtime,
+    chronicle,
+    identity,
+    characters,
+    constellation,
+    config: config.recording,
+    analyzer: extra.analyzer,
+    audioDir: path.join(config.dataDir, 'recordings'),
+    onError: extra.onError,
+  });
+  campaigns.onSessionEnded((campaignId, sessionNo) => void recording.sessionEnded(campaignId, sessionNo).catch((err) => extra.onError(err, 'Arrêt de l’enregistrement en échec')));
+  return { tokens, identity, access, clock, chronicle, campaigns, constellation, characters, combat, compendium, recording };
 }
 
-export async function buildApp(config: AppConfig, options: { realtime?: 'socket' | 'none'; database?: Database } = {}): Promise<BuiltApp> {
+export interface BuildOptions {
+  realtime?: 'socket' | 'none';
+  database?: Database;
+  /** Analyseur des enregistrements ; par défaut, celui de la configuration (Claude ou aucun). */
+  analyzer?: SessionAnalyzer | null;
+}
+
+export async function buildApp(config: AppConfig, options: BuildOptions = {}): Promise<BuiltApp> {
   const database = options.database ?? (await openDatabase(config));
   const app = Fastify({
     logger: config.logLevel === 'silent' ? false : { level: config.logLevel },
@@ -73,7 +96,8 @@ export async function buildApp(config: AppConfig, options: { realtime?: 'socket'
       roleOf: (campaignId, userId) => lazy.services!.access.roleOf(campaignId, userId),
     });
   }
-  const services = composeServices(database, realtime, config);
+  const analyzer = options.analyzer !== undefined ? options.analyzer : config.recording.analyzer === 'claude' ? new ClaudeSessionAnalyzer(config.recording.model) : null;
+  const services = composeServices(database, realtime, config, { analyzer, onError: (err, message) => app.log.error({ err }, message) });
   lazy.services = services;
 
   await app.register(fastifyCookie);
@@ -92,6 +116,7 @@ export async function buildApp(config: AppConfig, options: { realtime?: 'socket'
       await combatRoutes(api, services);
       await constellationRoutes(api, { ...services, db: database.db });
       await compendiumRoutes(api, services);
+      await recordingRoutes(api, services);
       await uploadsRoutes(api, { uploadDir: config.uploadDir });
       api.setNotFoundHandler((_req, reply) => reply.status(404).send({ error: { code: 'not_found', message: 'Route inconnue.' } }));
     },
@@ -116,6 +141,7 @@ export async function buildApp(config: AppConfig, options: { realtime?: 'socket'
     services,
     async close() {
       if (realtime instanceof SocketRealtime) await realtime.close();
+      await services.recording.drain();
       await app.close();
       await database.close();
     },
