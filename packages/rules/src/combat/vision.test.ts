@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { SeededRng } from '../rng';
 import type { CombatantSpec } from './commands';
 import { CombatRuleError, createCombatEvent, decideCombat, type CombatActor } from './decide';
+import { describeCombatEvent } from './describe';
 import type { CombatEvent } from './events';
-import { applyCombatEvent, replayCombat } from './reducer';
+import { applyCombatEvent, initiativeOrder, replayCombat } from './reducer';
 import type { CombatState } from './types';
-import { blocksSight, fieldOfView, FogMemory, fogView, visibleCells } from './vision';
+import { blocksSight, combatantName, fieldOfView, FogMemory, fogView, visibleCells } from './vision';
 
 const GM: CombatActor = { userId: 'gm', role: 'gm' };
 const LYRA: CombatActor = { userId: 'lyra', role: 'player' };
@@ -67,9 +68,38 @@ describe('brouillard de guerre', () => {
     const lyra = visibleCells(t.state, 'lyra');
     expect(lyra.has('9,2')).toBe(false);
     const view = fogView(t.state, 'lyra', lyra, lyra);
-    expect(Object.keys(view.combatants).sort()).toEqual(['id2', 'id3']); // le gobelin est caché, Brakk (PJ) reste connu
+    // Le gobelin est caché (hors du plateau, anonyme) ; Brakk, PJ, reste connu du groupe.
+    expect(view.combatants.id4).toMatchObject({ concealed: true, position: null, short: '?', hp: null, ac: null });
+    expect(combatantName(view.combatants.id4!)).toBe('Créature inconnue');
+    expect(view.combatants.id3!.concealed).toBeUndefined();
     t.run({ type: 'update_object', objectId: 'id1', patch: { open: true } }, LYRA);
     expect(visibleCells(t.state, 'lyra').has('10,4')).toBe(true);
+  });
+
+  it('l’ordre d’initiative ne dépend jamais de ce que voit le joueur', () => {
+    const t = dungeon();
+    t.run({ type: 'set_initiative', combatantId: 'id2', value: 12 });
+    t.run({ type: 'set_initiative', combatantId: 'id3', value: 8 });
+    t.run({ type: 'set_initiative', combatantId: 'id4', value: 15 });
+    t.run({ type: 'start' });
+    // C'est au gobelin, invisible pour Lyra : il reste en tête et actif dans sa vue.
+    expect(t.state.activeId).toBe('id4');
+    const order = (s: CombatState) => initiativeOrder(s).map((c) => c.id);
+    const seenBy = (userId: string) => {
+      const v = visibleCells(t.state, userId);
+      return fogView(t.state, userId, v, v);
+    };
+    expect(order(seenBy('lyra'))).toEqual(order(t.state));
+    expect(seenBy('lyra').activeId).toBe('id4');
+    // Porte ouverte (le gobelin devient visible) puis refermée : l'ordre ne bouge pas.
+    t.run({ type: 'update_object', objectId: 'id1', patch: { open: true } });
+    expect(seenBy('lyra').combatants.id4!.concealed).toBeUndefined();
+    expect(order(seenBy('lyra'))).toEqual(order(t.state));
+    t.run({ type: 'update_object', objectId: 'id1', patch: { open: false } });
+    expect(order(seenBy('lyra'))).toEqual(order(t.state));
+    // Le journal ne nomme pas une créature hors de vue.
+    const attack: CombatEvent = { type: 'combat.attack_rolled', payload: { attackerId: 'id4', targetId: 'id2', label: 'Cimeterre', natural: 12, bonus: 4, total: 16, targetAc: 15, hit: true, crit: false } };
+    expect(describeCombatEvent(attack, seenBy('lyra'))).not.toContain('Gobelin');
   });
 
   it('le MJ partage une vision à un joueur, à tous, ou au groupe entier', () => {
@@ -99,7 +129,7 @@ describe('brouillard de guerre', () => {
     const t = dungeon();
     t.run({ type: 'reveal_cells', cells: [{ x: 10, y: 4 }], revealed: true });
     const v = visibleCells(t.state, 'lyra');
-    expect(Object.keys(fogView(t.state, 'lyra', v, v).combatants)).toContain('id4');
+    expect(fogView(t.state, 'lyra', v, v).combatants.id4!.concealed).toBeUndefined();
   });
 
   it('la mémoire de la carte se déduit du flux et le MJ peut l’effacer', () => {

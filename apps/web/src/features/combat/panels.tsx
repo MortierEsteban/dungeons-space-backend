@@ -1,5 +1,6 @@
 import {
   ABILITY_LABELS,
+  combatantName,
   CONDITIONS,
   describeCombatEvent,
   fogOf,
@@ -46,6 +47,23 @@ function Disc({ c, size = 38 }: { c: Combatant; size?: number }) {
  */
 function ActiveCard({ c, webgl, onSelect }: { c: Combatant; webgl: boolean; onSelect(id: string): void }) {
   const pct = pctOf(c);
+  if (c.concealed) {
+    // Le tour d'une créature hors de vue : on sait que quelque chose agit, pas quoi ni où.
+    return (
+      <span className={s.activeCard} style={{ borderColor: 'var(--gold-a50)' }}>
+        <span className={s.activeArt}>
+          <span className={s.activeShort}>?</span>
+        </span>
+        <span className={s.activeInfo}>
+          <span className="ds-label" style={{ color: 'var(--arcane-light)' }}>
+            À son tour
+          </span>
+          <strong>{combatantName(c)}</strong>
+          <span className="ds-help">Hors de votre vue</span>
+        </span>
+      </span>
+    );
+  }
   return (
     <button type="button" className={s.activeCard} onClick={() => onSelect(c.id)} title={`Sélectionner ${c.name}`} style={{ borderColor: c.side === 'ally' ? 'var(--arcane)' : 'var(--magenta)' }}>
       <span className={s.activeArt}>
@@ -95,12 +113,14 @@ export function InitiativeBar({ state, isGm, canEndTurn, onSelect, send, webgl =
       <div className={s.initList}>
         {order.map((c) => {
           const isActive = c.id === state.activeId;
+          // Hors de vue (brouillard) : même place dans l'ordre, mais ni nom, ni santé.
+          const hidden = !!c.concealed;
           return (
-            <button key={c.id} type="button" className={cx(s.initItem, isActive && s.initActive, c.hpBand === 'À terre' && s.tokenDead)} onClick={() => onSelect(c.id)} title={`${c.name} · initiative ${c.initiative ?? '—'}`}>
+            <button key={c.id} type="button" className={cx(s.initItem, isActive && s.initActive, !hidden && c.hpBand === 'À terre' && s.tokenDead)} onClick={() => !hidden && onSelect(c.id)} title={`${combatantName(c)} · initiative ${c.initiative ?? '—'}`}>
               <Disc c={c} />
-              <span className={s.initName}>{c.name}</span>
+              <span className={s.initName}>{combatantName(c)}</span>
               <span className={s.initHp}>
-                <span style={{ width: `${pctOf(c) * 100}%`, background: pctOf(c) < 0.34 ? 'var(--magenta-light)' : c.side === 'ally' ? 'var(--arcane)' : 'var(--gold)' }} />
+                {!hidden && <span style={{ width: `${pctOf(c) * 100}%`, background: pctOf(c) < 0.34 ? 'var(--magenta-light)' : c.side === 'ally' ? 'var(--arcane)' : 'var(--gold)' }} />}
               </span>
             </button>
           );
@@ -179,6 +199,8 @@ export function Inspector({ state, combatantId, objectId, isGm, userId, players 
   }
 
   const cc = c!;
+  // Sélectionnée puis sortie du champ de vision : on n'en montre plus rien.
+  if (cc.concealed) return null;
   const mine = isGm || cc.ownerUserId === userId;
   return (
     <div className={s.inspector}>
@@ -686,6 +708,24 @@ export function TrackerList({ state, isGm, userId, send, onAttack }: { state: Co
       </div>
       {order.map((c) => {
         const active = c.id === state.activeId;
+        if (c.concealed) {
+          // Hors de vue : la ligne garde sa place (l'ordre des tours ne bouge pas), sans rien révéler.
+          return (
+            <div key={c.id} className={cx(s.trackRow, active && s.trackActive)}>
+              <div className={s.trackInit}>
+                <span className="ds-label">Init</span>
+                <strong>{c.initiative ?? '—'}</strong>
+              </div>
+              <span className={s.initDisc} style={{ borderColor: 'var(--gold-a50)', background: 'var(--ink-deep)', width: 48, height: 48 }}>
+                ?
+              </span>
+              <div className={s.trackName}>
+                <strong>{combatantName(c)}</strong>
+                <span className="ds-help">Hors de votre vue {active ? '· À son tour' : ''}</span>
+              </div>
+            </div>
+          );
+        }
         const mine = isGm || c.ownerUserId === userId;
         return (
           <div key={c.id} className={cx(s.trackRow, active && s.trackActive)}>

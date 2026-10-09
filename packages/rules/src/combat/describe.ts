@@ -19,7 +19,10 @@ function damageLabel(type: string): string {
  * pour la vue joueur, il ne révèle donc jamais une valeur masquée.
  */
 export function describeCombatEvent(e: CombatEvent, state: CombatState | null): string {
-  const name = (id: string) => state?.combatants[id]?.name ?? 'Une créature';
+  const name = (id: string) => {
+    const c = state?.combatants[id];
+    return c && !c.concealed ? c.name : 'Une créature';
+  };
   switch (e.type) {
     case 'combat.created':
       return `Combat préparé : ${e.payload.name}`;

@@ -105,8 +105,21 @@ export function visibleCells(state: CombatState, userId: string): Set<string> {
 }
 
 /**
- * Vue d'un utilisateur sous le brouillard : les créatures qu'il ne voit pas disparaissent
- * (les PJ restent connus du groupe), le décor et le terrain des zones jamais vues aussi.
+ * Créature hors de vue : elle garde sa place dans l'ordre d'initiative — initiative, modificateur,
+ * nom et identifiant (les clés du tri) sont intacts — mais perd tout ce qui la situe ou l'identifie
+ * à l'écran : position, portrait, modèle, PV, CA, états. L'affichage la nomme « Créature inconnue ».
+ */
+export function conceal(c: Combatant): Combatant {
+  return { ...c, concealed: true, position: null, short: '?', portraitUrl: null, modelUrl: null, hp: null, maxHp: null, tempHp: 0, ac: null, conditions: [] };
+}
+
+/** Nom affichable : celui d'une créature hors de vue reste tu. */
+export const combatantName = (c: Combatant) => (c.concealed ? 'Créature inconnue' : c.name);
+
+/**
+ * Vue d'un utilisateur sous le brouillard : les créatures qu'il ne voit pas quittent le plateau
+ * mais pas l'initiative (les PJ restent connus du groupe) ; le décor et le terrain des zones jamais
+ * vues disparaissent. L'ordre des tours est donc exactement celui du MJ et du serveur.
  * `known` = cases déjà explorées, cases visibles comprises.
  */
 export function fogView(state: CombatState, userId: string, visible: ReadonlySet<string>, known: ReadonlySet<string>): CombatState {
@@ -114,7 +127,7 @@ export function fogView(state: CombatState, userId: string, visible: ReadonlySet
   const combatants: CombatState['combatants'] = {};
   for (const c of Object.values(state.combatants)) {
     const seen = c.kind === 'pc' || sources.has(c.id) || (!!c.position && footprint(c.position, c.size).some((f) => visible.has(cellKey(f))));
-    if (seen) combatants[c.id] = c;
+    combatants[c.id] = seen ? c : conceal(c);
   }
   const terrain: CombatState['map']['terrain'] = {};
   for (const [k, t] of Object.entries(state.map.terrain)) if (known.has(k)) terrain[k] = t;
