@@ -12,6 +12,7 @@
     "seed": "tsx src/seed.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1",
     "@ds/rules": "*",
     "@ds/shared": "*",
     "@electric-sql/pglite": "^0.3.6",

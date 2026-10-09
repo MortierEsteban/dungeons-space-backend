@@ -26,6 +26,11 @@ describe('données de démonstration', () => {
     const detail = (await lyra.get(`/campaigns/${valombre.id}`)).json().campaign;
     expect(detail.stats.events).toBeGreaterThanOrEqual(15);
     expect(detail.stats.sessions).toBe(6);
+    // Session 5 enregistrée : sa trace mêle événements notés et déduits ; la transcription reste au MJ.
+    const trace = (await lyra.get(`/campaigns/${valombre.id}/sessions/5/trace`)).json();
+    expect(trace.recordings).toHaveLength(1);
+    expect(trace.events.filter((e: { payload: { origin?: string } }) => e.payload.origin === 'recording').length).toBeGreaterThanOrEqual(10);
+    expect(trace.transcriptVisible).toBe(false);
     const encounters = (await lyra.get(`/campaigns/${valombre.id}/encounters`)).json().encounters;
     expect(encounters[0].status).toBe('active');
     const mine = (await lyra.get('/characters/mine')).json().characters;

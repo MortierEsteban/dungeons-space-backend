@@ -6,3 +6,4 @@ export * from '../../modules/characters/characters.tables';
 export * from '../../modules/combat/combat.tables';
 export * from '../../modules/constellation/constellation.tables';
 export * from '../../modules/compendium/compendium.tables';
+export * from '../../modules/recording/recording.tables';

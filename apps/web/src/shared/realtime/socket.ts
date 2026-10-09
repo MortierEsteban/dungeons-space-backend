@@ -53,6 +53,7 @@ export function useCampaignRealtime(campaignId: string | null): void {
     const onEvent: ServerToClientEvents['chronicle:event'] = (event) => {
       if (event.campaignId !== campaignId) return;
       void client.invalidateQueries({ queryKey: qk.events(campaignId) });
+      void client.invalidateQueries({ queryKey: ['campaign', campaignId, 'recordings', 'trace'] });
       void client.invalidateQueries({ queryKey: qk.campaign(campaignId), exact: true });
     };
     const onChange: ServerToClientEvents['campaign:changed'] = ({ campaignId: id, what, id: entityId }) => {
@@ -66,6 +67,8 @@ export function useCampaignRealtime(campaignId: string | null): void {
         void client.invalidateQueries({ queryKey: qk.eventLinks(campaignId) });
       } else if (what === 'encounters') {
         void client.invalidateQueries({ queryKey: qk.encounters(campaignId) });
+      } else if (what === 'recording') {
+        void client.invalidateQueries({ queryKey: qk.recordings(campaignId) });
       } else {
         void client.invalidateQueries({ queryKey: qk.campaign(campaignId) });
         void client.invalidateQueries({ queryKey: qk.campaigns });

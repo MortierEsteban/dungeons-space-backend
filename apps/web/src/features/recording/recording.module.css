@@ -1,0 +1,137 @@
+.wrap {
+  position: relative;
+  flex: none;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border: 1px solid rgba(167, 156, 138, 0.45);
+  border-radius: var(--radius-sm);
+  background: rgba(11, 9, 18, 0.5);
+  color: var(--ash);
+  font-family: var(--font-title);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+}
+.badge:hover {
+  color: var(--text-strong);
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.badgeLive {
+  border-color: rgba(224, 122, 168, 0.65);
+  color: var(--magenta-pale);
+}
+.badgeLive .dot {
+  background: #ff4d6d;
+  box-shadow: 0 0 10px #ff4d6d;
+  animation: rec-pulse 1.6s ease-in-out infinite;
+}
+.badgePaused {
+  border-color: var(--gold-a50);
+  color: var(--gold-light);
+}
+.queued {
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--gold-a25);
+  color: var(--text-strong);
+  letter-spacing: 0;
+}
+
+@keyframes rec-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .badgeLive .dot {
+    animation: none;
+  }
+}
+
+.panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  width: min(380px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: linear-gradient(180deg, rgba(38, 26, 46, 0.98), rgba(17, 12, 23, 0.99));
+  border: 1px solid var(--gold-a50);
+  border-radius: var(--radius);
+  box-shadow: var(--panel-shadow), 0 20px 50px rgba(0, 0, 0, 0.6);
+  animation: ds-rise 0.18s ease-out both;
+}
+.note {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 14px;
+}
+.warn {
+  margin: 0;
+  color: var(--magenta-pale);
+  font-size: 13px;
+}
+.listen {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 110px;
+  overflow: hidden;
+  padding: 8px 10px;
+  border-left: 2px solid var(--gold-a35);
+  background: rgba(11, 9, 18, 0.45);
+  color: var(--text-soft);
+  font-size: 13px;
+}
+.listen em {
+  color: var(--ash);
+}
+.stats {
+  display: flex;
+  gap: 14px;
+  color: var(--ash);
+  font-size: 12px;
+}
+.stats strong {
+  color: var(--gold-light);
+  font-family: var(--font-title);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.traceLink {
+  color: var(--arcane-light);
+  font-family: var(--font-title);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 767px) {
+  /* Barre supérieure étroite : le point suffit, le libellé reste lu par les lecteurs d'écran. */
+  .badge {
+    padding: 8px;
+  }
+  .badgeText,
+  .queued {
+    display: none;
+  }
+  .panel {
+    position: fixed;
+    right: 16px;
+    top: calc(var(--topbar-height) + 6px);
+  }
+}

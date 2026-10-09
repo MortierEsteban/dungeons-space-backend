@@ -30,4 +30,14 @@ describe('événements de la Chronique dans la Constellation', () => {
     expect(g.events.map((e) => e.event.id)).toEqual(['e1', 'e4']);
     expect(g.edges).toEqual([expect.objectContaining({ fromId: `${EVENT_PREFIX}e1`, toId: `${EVENT_PREFIX}e4`, role: 'chain' })]);
   });
+
+  it('garde les étoiles les plus lourdes quand le niveau de détail l’exige', () => {
+    const many = Array.from({ length: 80 }, (_, i) => event(`m${i}`, { importance: i === 7 ? 5 : 2, actors: [{ kind: 'character', id: 'elowen', name: 'Elowen' }] }));
+    const g = eventGraph(nodes, many, [], 1, 'essential');
+    expect(g.events.length).toBeLessThan(many.length);
+    expect(g.hidden).toBe(many.length - g.events.length);
+    expect(g.events.map((e) => e.event.id)).toContain('m7');
+    const kept = new Set(g.events.map((e) => e.id));
+    expect(g.edges.every((e) => kept.has(e.toId))).toBe(true);
+  });
 });

@@ -23,6 +23,8 @@ export interface GraphNode {
   size?: number;
   /** Libellé toujours lisible (nœuds majeurs). */
   pinLabel?: boolean;
+  /** Nœud mineur : son libellé n'apparaît qu'au survol ou au focus (scènes très peuplées). */
+  quiet?: boolean;
 }
 
 export interface GraphEdge {
@@ -92,6 +94,8 @@ export function Graph3D({ nodes, edges, axis = [], selectedId, onSelect, linking
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const nodeEls = useRef(new Map<string, HTMLButtonElement>());
+  /** Taille de chaque nœud (repère + étiquette), mesurée une fois : sert à éviter les chevauchements d'étiquettes. */
+  const nodeBoxes = useRef(new Map<string, { w: number; h: number }>());
   const axisEls = useRef(new Map<string, HTMLDivElement>());
   const cam = useRef<Cam>({ ...(flat ? FLAT_CAM : DEFAULT_CAM) });
   const anim = useRef<{ from: Cam; to: Cam; t0: number } | null>(null);
@@ -257,6 +261,7 @@ export function Graph3D({ nodes, edges, axis = [], selectedId, onSelect, linking
     }
 
     const z = cam.current.zoom;
+    const labelled: { el: HTMLButtonElement; id: string; x: number; y: number; z: number; scale: number; label: number }[] = [];
     for (const [id, el] of nodeEls.current) {
       const p = proj.get(id);
       if (!p) continue;
@@ -264,8 +269,28 @@ export function Graph3D({ nodes, edges, axis = [], selectedId, onSelect, linking
       el.style.transform = `translate3d(${p.x}px, ${p.y}px, 0) translate(-50%, -50%) scale(${scale})`;
       el.style.zIndex = String(Math.round(2000 - p.z) + (el.dataset.focus === 'on' ? 2000 : 0));
       el.style.setProperty('--depth', String(flat ? 1 : Math.max(0.45, Math.min(1, 0.35 + p.depth * 0.6))));
-      const label = el.dataset.pin === 'on' ? 0.95 : flat ? Math.max(0, Math.min(0.9, (z - 1.3) * 2)) : Math.max(0, Math.min(0.9, (p.depth - 0.75) * 2.2));
-      el.style.setProperty('--label', String(label));
+      const label = el.dataset.pin === 'on' ? 0.95 : el.dataset.quiet === 'on' ? 0 : flat ? Math.max(0, Math.min(0.9, (z - 1.3) * 2)) : Math.max(0, Math.min(0.9, (p.depth - 0.75) * 2.2));
+      labelled.push({ el, id, x: p.x, y: p.y, z: p.z, scale, label });
+    }
+    // Étiquettes sans chevauchement : les épinglées puis les plus proches passent d'abord, les autres
+    // s'effacent (le survol et le focus les font toujours apparaître).
+    const placed: [number, number, number, number][] = [];
+    labelled.sort((a, b) => Number(b.el.dataset.pin === 'on') - Number(a.el.dataset.pin === 'on') || a.z - b.z);
+    for (const n of labelled) {
+      let label = n.label;
+      if (label > 0.05) {
+        let box = nodeBoxes.current.get(n.id);
+        if (!box) {
+          box = { w: n.el.offsetWidth, h: n.el.offsetHeight };
+          nodeBoxes.current.set(n.id, box);
+        }
+        const hw = (box.w * n.scale) / 2 + 2;
+        const hh = (box.h * n.scale) / 2;
+        const r: [number, number, number, number] = [n.x - hw, n.y - hh, n.x + hw, n.y + hh];
+        if (placed.some((q) => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1])) label = 0;
+        else placed.push(r);
+      }
+      n.el.style.setProperty('--label', String(label));
     }
     for (const [id, el] of axisEls.current) {
       const p = proj.get(id);
@@ -452,10 +477,12 @@ export function Graph3D({ nodes, edges, axis = [], selectedId, onSelect, linking
               ref={(el) => {
                 if (el) nodeEls.current.set(n.id, el);
                 else nodeEls.current.delete(n.id);
+                nodeBoxes.current.delete(n.id);
               }}
               data-focus={selected || n.id === hover ? 'on' : 'off'}
               data-pin={(n.pinLabel || inFocus) && !n.muted ? 'on' : 'off'}
               data-size={n.size ?? 1}
+              data-quiet={n.quiet ? 'on' : 'off'}
               className={cx(s.node, selected && s.selected, inFocus && s.inFocus, dimmed && s.dimmed, n.muted && s.muted)}
               style={{ '--c': n.color } as CSSProperties}
               onPointerEnter={() => setHover(n.id)}

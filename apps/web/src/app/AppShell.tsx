@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useLogout, useMe } from '../features/auth/api';
 import { CampaignSwitcher } from '../features/campaigns/CampaignSwitcher';
 import { useCurrentCampaign } from '../features/campaigns/CampaignContext';
+import { RecordingBadge } from '../features/recording/RecordingBadge';
 import { useT } from '../shared/i18n/i18n';
 import { useSocketStatus } from '../shared/realtime/socket';
 import { cx, Diamond } from '../shared/ui/components';
@@ -76,6 +77,7 @@ export function AppShell({ children }: { children?: ReactNode }) {
           </div>
           <div className={s.grow} />
           <CampaignSwitcher />
+          <RecordingBadge />
           {role && <span className={cx(s.role, role === 'gm' && s.roleGm)}>{role === 'gm' ? 'MJ' : 'Joueur'}</span>}
           <span className={cx(s.live, online && s.liveOn)} title={online ? 'Synchronisé en temps réel' : 'Reconnexion…'} aria-label={online ? 'En ligne' : 'Hors ligne'} />
           {me && <UserMenu user={me} />}

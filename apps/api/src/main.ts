@@ -10,6 +10,12 @@ if (config.seedDemo) {
   if (seeded) built.app.log.info('Campagne de démonstration créée (voir apps/api/src/seed.ts pour les comptes).');
 }
 
+built.app.log.info(
+  config.recording.analyzer === 'claude'
+    ? `Analyse des enregistrements de session : ${config.recording.model}.`
+    : 'Analyse des enregistrements de session désactivée (définissez ANTHROPIC_API_KEY pour l’activer) : la transcription reste conservée.',
+);
+
 const shutdown = async (signal: string) => {
   built.app.log.info(`${signal} reçu, arrêt en cours…`);
   await built.close();

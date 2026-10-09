@@ -4,11 +4,11 @@ import { http, qk, toQuery } from '../../shared/api/client';
 
 type Filters = Omit<EventQuery, 'before'>;
 
-/** Tous les événements narratifs (vue 3D) — jusqu'à 500, filtrés côté serveur selon le rôle. */
+/** Tous les événements narratifs (vue 3D) — jusqu'à 2000, filtrés côté serveur selon le rôle. */
 export function useNarrativeEvents(campaignId: string | null) {
   return useQuery({
     queryKey: [...qk.events(campaignId ?? 'none'), 'narrative'],
-    queryFn: async () => (await http.get<EventPageDto>(`/campaigns/${campaignId}/events${toQuery({ categories: 'narrative,social', limit: 500 })}`)).events,
+    queryFn: async () => (await http.get<EventPageDto>(`/campaigns/${campaignId}/events${toQuery({ categories: 'narrative,social', limit: 2000 })}`)).events,
     enabled: !!campaignId,
   });
 }
@@ -41,6 +41,7 @@ export function useChronicleMutations(campaignId: string) {
     void client.invalidateQueries({ queryKey: qk.events(campaignId) });
     void client.invalidateQueries({ queryKey: qk.eventLinks(campaignId) });
     void client.invalidateQueries({ queryKey: qk.campaign(campaignId), exact: true });
+    void client.invalidateQueries({ queryKey: [...qk.recordings(campaignId), 'trace'] });
   };
   return {
     create: useMutation({
@@ -49,6 +50,10 @@ export function useChronicleMutations(campaignId: string) {
     }),
     correct: useMutation({
       mutationFn: async ({ id, ...input }: CorrectEventInput & { id: string }) => (await http.post<{ event: EventDto }>(`/campaigns/${campaignId}/events/${id}/corrections`, input)).event,
+      onSuccess: refresh,
+    }),
+    reveal: useMutation({
+      mutationFn: async (id: string) => (await http.post<{ event: EventDto }>(`/campaigns/${campaignId}/events/${id}/reveal`)).event,
       onSuccess: refresh,
     }),
     link: useMutation({

@@ -16,7 +16,24 @@ const envSchema = z.object({
     .optional()
     .transform((v) => (v === undefined ? undefined : v === 'true')),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  /** Analyse des enregistrements de session : `claude` (clé ANTHROPIC_API_KEY requise) ou `none`. */
+  RECORDING_ANALYZER: z.enum(['claude', 'none']).optional(),
+  RECORDING_MODEL: z.string().default('claude-opus-5-5'),
+  /** Nombre de mots transcrits qui déclenche une analyse. */
+  RECORDING_MIN_WORDS: z.coerce.number().int().min(20).default(350),
+  ANTHROPIC_API_KEY: z.string().optional(),
 });
+
+export interface RecordingConfig {
+  analyzer: 'claude' | 'none';
+  model: string;
+  /** Une analyse part dès que ce nombre de mots attend… */
+  minWords: number;
+  /** …ou quand le plus ancien segment en attente a dépassé ce délai. */
+  maxDelayMs: number;
+  /** Taille maximale d'une fenêtre d'analyse. */
+  maxWindowWords: number;
+}
 
 export interface AppConfig {
   env: 'development' | 'production' | 'test';
@@ -29,6 +46,7 @@ export interface AppConfig {
   webDist: string | null;
   seedDemo: boolean;
   logLevel: string;
+  recording: RecordingConfig;
 }
 
 const DEV_SECRET = 'dev-only-secret-change-me-dev-only-secret-change-me';
@@ -49,6 +67,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     webDist: e.WEB_DIST ?? null,
     seedDemo: e.SEED_DEMO ?? e.NODE_ENV === 'development',
     logLevel: e.LOG_LEVEL,
+    recording: {
+      analyzer: e.RECORDING_ANALYZER ?? (e.ANTHROPIC_API_KEY ? 'claude' : 'none'),
+      model: e.RECORDING_MODEL,
+      minWords: e.RECORDING_MIN_WORDS,
+      maxDelayMs: 4 * 60_000,
+      maxWindowWords: 2500,
+    },
   };
 }
 
@@ -65,6 +90,7 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     webDist: null,
     seedDemo: false,
     logLevel: 'silent',
+    recording: { analyzer: 'none', model: 'test', minWords: 40, maxDelayMs: 60_000, maxWindowWords: 400 },
     ...overrides,
   };
 }

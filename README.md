@@ -50,7 +50,7 @@ Un ruleset implémente l'interface `Ruleset` et s'enregistre dans un registre : 
 
 ### `apps/api` — monolithe modulaire
 Un dossier par domaine dans `src/modules/` : `identity`, `campaigns`, `chronicle`, `characters`, `combat`, `constellation`,
-`compendium`, `uploads`. Chaque module possède ses tables (`*.tables.ts`), son service (logique applicative) et ses routes ;
+`compendium`, `uploads`, `recording`. Chaque module possède ses tables (`*.tables.ts`), son service (logique applicative) et ses routes ;
 les dépendances entre modules sont injectées explicitement dans la racine de composition [`src/app.ts`](apps/api/src/app.ts).
 
 - **Chronique** : journal *append-only* (une séquence monotone par campagne, clé d'idempotence, corrections par événement compensatoire).
@@ -69,12 +69,18 @@ tracker de combat « théâtre de l'esprit » pour le téléphone.
 | Rubrique | Contenu |
 |---|---|
 | Accueil | Accueil immersif (grand écran) ou classique, prochaine session |
-| Explorer | Chronique 3D par sessions, frise filtrable, Constellation (vue à plat ou en relief, événements de la Chronique reliés à leurs acteurs, déplacement au clic molette, liens qualifiés, suggestions), campagnes publiques |
+| Explorer | Chronique 3D par sessions (niveau de détail selon le poids des événements), **vue Sessions** (trace complète d'une soirée : frise par nature d'événement, densité de parole, transcription entrelacée avec les événements), frise filtrable, Constellation (vue à plat ou en relief, événements de la Chronique reliés à leurs acteurs, déplacement au clic molette, liens qualifiés, suggestions), campagnes publiques |
 | Combattre | Plateau **2D ou 3D isométrique** (terrain en relief, zones, objets éclairés, mesures, portée, attaques animées), modèles 3D .glb importés par les joueurs (jeton simple par défaut), **brouillard de guerre** par joueur piloté par le MJ, initiative avec la créature active mise en avant, **fiche en combat** (sorts lancés avec leur gabarit, objets, ressources), jets de sauvegarde et résistances automatiques, PV masqués, tracker mobile, **replay** |
 | Sanctuaire | Bibliothèque SRD, **bibliothèque partagée** (import en masse des créations des autres tables) et Forge (objets, sorts, créatures, **classes homebrew** avec ressources et passifs) |
 | Personnage | Fiche complète (passifs d'espèce, de classe et d'objets appliqués, ressources, sorts, inventaire, harmonisation, notes privées/partagées, événements), PNJ |
 | Génération | Création guidée de PJ, PNJ et trésors |
-| Campagne | Sessions et récapitulatifs, code d'invitation, membres, réglages |
+| Campagne | Sessions et récapitulatifs, code d'invitation, membres, réglages (dont l'**enregistrement des sessions**) |
+
+### Enregistrement des sessions
+Activé dans les réglages de la campagne, un appareil du MJ écoute la table pendant la session (indicateur **REC** visible de tous) :
+la transcription est conservée et un modèle de langage (Claude) en déduit les événements, inscrits au fil de l'eau dans la Chronique.
+L'analyse requiert `ANTHROPIC_API_KEY` côté serveur (modèle : `RECORDING_MODEL`, défaut `claude-opus-5-5`) ; sans clé, seule la
+transcription est conservée. La reconnaissance vocale est celle du navigateur (Chrome ou Edge). Détails : [ADR 0010](docs/adr/0010-enregistrement-des-sessions.md).
 
 Les décisions structurantes sont consignées dans [`docs/adr`](docs/adr). Le cahier des charges (PRD) est dans [`docs/`](docs/00%20-%20Index.md).
 
@@ -86,7 +92,8 @@ NODE_ENV=production JWT_SECRET=… DATABASE_URL=postgres://… WEB_DIST=../web/d
 ```
 
 L'API sert alors aussi le front (une seule origine, cookies `httpOnly` + `Secure`). Variables : voir [`apps/api/src/config.ts`](apps/api/src/config.ts)
-(`PORT`, `DATABASE_URL`, `JWT_SECRET` obligatoire, `DATA_DIR` pour les fichiers téléversés, `WEB_DIST`, `SEED_DEMO`, `LOG_LEVEL`).
+(`PORT`, `DATABASE_URL`, `JWT_SECRET` obligatoire, `DATA_DIR` pour les fichiers téléversés et l'audio des sessions, `WEB_DIST`, `SEED_DEMO`, `LOG_LEVEL`,
+`ANTHROPIC_API_KEY`, `RECORDING_MODEL`, `RECORDING_MIN_WORDS`, `RECORDING_ANALYZER=claude|none`).
 Les migrations SQL (`apps/api/drizzle`) s'appliquent au démarrage.
 
 ## Contenu & licences

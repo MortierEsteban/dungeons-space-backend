@@ -14,3 +14,4 @@ Chaque décision structurante est consignée ici, en précisant s'il s'agit d'un
 | [0007](0007-plateau-3d.md) | Plateau de combat 3D isométrique, modèles .glb importés | Structurant |
 | [0008](0008-brouillard-de-guerre.md) | Brouillard de guerre par utilisateur, calculé côté client | Structurant |
 | [0009](0009-passifs-classes-homebrew-sorts.md) | Passifs typés, classes homebrew, sorts résolus sur le plateau, bibliothèque partagée | Structurant |
+| [0010](0010-enregistrement-des-sessions.md) | Enregistrement permanent des sessions analysé par un modèle de langage, pondération de l'affichage | Structurant |

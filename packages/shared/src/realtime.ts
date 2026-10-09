@@ -1,7 +1,7 @@
 import type { EventDto } from './chronicle';
 import type { CombatEventEnvelope } from './combat';
 
-export type CampaignChange = 'members' | 'settings' | 'characters' | 'constellation' | 'session' | 'encounters';
+export type CampaignChange = 'members' | 'settings' | 'characters' | 'constellation' | 'session' | 'encounters' | 'recording';
 
 /** Messages serveur → client (Socket.IO). */
 export interface ServerToClientEvents {

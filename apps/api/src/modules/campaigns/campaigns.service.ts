@@ -34,6 +34,8 @@ function sessionDto(s: typeof gameSessions.$inferSelect): SessionDto {
 }
 
 export class CampaignsService {
+  private readonly sessionEndedListeners: ((campaignId: string, sessionNo: number) => void)[] = [];
+
   constructor(
     private readonly db: Db,
     private readonly access: CampaignAccess,
@@ -302,6 +304,11 @@ export class CampaignsService {
     return sessionDto(row!);
   }
 
+  /** Les autres modules réagissent à la fin d'une session (ex. l'enregistrement s'arrête). */
+  onSessionEnded(listener: (campaignId: string, sessionNo: number) => void): void {
+    this.sessionEndedListeners.push(listener);
+  }
+
   async endSession(campaignId: string, viewer: Viewer, summary: string): Promise<SessionDto> {
     if (viewer.role !== 'gm') throw forbidden('Seul le MJ clôt une session.');
     const open = await this.db.query.gameSessions.findFirst({ where: and(eq(gameSessions.campaignId, campaignId), isNull(gameSessions.endedAt)) });
@@ -316,6 +323,7 @@ export class CampaignsService {
       authorId: viewer.userId,
       sessionNo: open.number,
     });
+    for (const listener of this.sessionEndedListeners) listener(campaignId, open.number);
     this.realtime.changed(campaignId, 'session');
     return sessionDto(row!);
   }

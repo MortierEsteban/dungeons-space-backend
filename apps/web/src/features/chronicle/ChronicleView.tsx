@@ -1,41 +1,60 @@
-import { eventTypeDef, NARRATIVE_TYPES, type EventDto } from '@ds/shared';
+import { eventOrigin, eventTypeDef, eventWeight, NARRATIVE_TYPES, type EventDto } from '@ds/shared';
 import { useMemo, useState } from 'react';
 import { Graph3D, type AxisMark, type GraphEdge, type GraphNode } from '../../shared/graph/Graph3D';
 import { useDebounced, useLocalPref } from '../../shared/hooks';
-import { Button, Chip, Input, Loading, Panel, Rule } from '../../shared/ui/components';
+import { Button, Chip, Input, Loading, Panel, Rule, Segmented, Toggle } from '../../shared/ui/components';
 import { useCampaign } from '../campaigns/api';
 import { useCurrentCampaign } from '../campaigns/CampaignContext';
 import { useCampaignCharacters } from '../character/api';
 import { useChronicleMutations, useEventLinks, useNarrativeEvents } from './api';
+import { CAMPAIGN_DENSITY, DENSITIES, selectDensity, type Density } from './density';
 import { EventDetail } from './EventDetail';
 import { EventForm } from './EventForm';
 import s from './chronicle.module.css';
 
 const normalize = (t: string) => t.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 
-/** Disposition 3D : un axe des sessions, chaque événement en couronne autour de sa session. */
-function layout(events: EventDto[]) {
+const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+
+/**
+ * Disposition 3D : un axe des sessions, chaque session occupe une tranche proportionnée à son nombre
+ * d'événements. Dans la tranche, les événements avancent dans l'ordre et s'enroulent en spirale (angle d'or) :
+ * les plus lourds près de l'axe, les détails en périphérie — lisible même avec des centaines de points.
+ */
+export function layout(events: readonly EventDto[], weights: ReadonlyMap<string, number>, totals: ReadonlyMap<number, number> = new Map()) {
   const sessions = [...new Set(events.map((e) => e.sessionNo ?? 0))].sort((a, b) => a - b);
-  const index = new Map(sessions.map((n, i) => [n, i]));
-  const axis: AxisMark[] = sessions.map((n, i) => ({
-    id: `axis-${n}`,
-    label: n === 0 ? 'PROLOGUE' : `SESSION ${n}`,
-    position: { x: (i - (sessions.length - 1) / 2) * 250, y: 0, z: 0 },
-  }));
   const bySession = new Map<number, EventDto[]>();
   for (const e of [...events].sort((a, b) => a.seq - b.seq)) {
     const n = e.sessionNo ?? 0;
     bySession.set(n, [...(bySession.get(n) ?? []), e]);
   }
-  const positions = new Map<string, { x: number; y: number; z: number }>();
-  for (const [n, list] of bySession) {
-    const i = index.get(n)!;
-    list.forEach((e, k) => {
-      const a = (k / list.length) * Math.PI * 2 + n * 0.9;
-      const r = 155 + (list.length > 8 ? (k % 2) * 40 : 0);
-      positions.set(e.id, { x: (i - (sessions.length - 1) / 2) * 250, y: Math.sin(a) * r, z: Math.cos(a) * r });
-    });
+  // Tranche peu profonde (l'axe reste lisible à plat), disque d'autant plus large que la session est riche.
+  const widths = sessions.map((n) => Math.min(260, Math.max(120, 40 + Math.sqrt(bySession.get(n)!.length) * 18)));
+  const radii = sessions.map((n) => 110 + Math.sqrt(bySession.get(n)!.length) * 12);
+  const gap = 130;
+  const total = widths.reduce((a, w) => a + w, 0) + gap * Math.max(0, sessions.length - 1);
+  const centers: number[] = [];
+  let cursor = -total / 2;
+  for (const w of widths) {
+    centers.push(cursor + w / 2);
+    cursor += w + gap;
   }
+  const axis: AxisMark[] = sessions.map((n, i) => {
+    const shown = bySession.get(n)!.length;
+    const all = totals.get(n) ?? shown;
+    const name = n === 0 ? 'PROLOGUE' : `SESSION ${n}`;
+    return { id: `axis-${n}`, label: all > shown ? `${name} · ${shown}/${all}` : name, position: { x: centers[i]!, y: 0, z: 0 } };
+  });
+  const positions = new Map<string, { x: number; y: number; z: number }>();
+  sessions.forEach((n, i) => {
+    const list = bySession.get(n)!;
+    list.forEach((e, k) => {
+      const t = list.length === 1 ? 0.5 : k / (list.length - 1);
+      const a = k * GOLDEN + n * 0.9;
+      const r = 50 + (1 - (weights.get(e.id) ?? 0.5)) * (radii[i]! - 50) + (k % 3) * 6;
+      positions.set(e.id, { x: centers[i]! + (t - 0.5) * widths[i]! * 0.8, y: Math.sin(a) * r, z: Math.cos(a) * r });
+    });
+  });
   return { axis, positions };
 }
 
@@ -62,7 +81,14 @@ export function ChronicleView() {
     else mutations.link.mutate({ fromId: from, toId: to });
   };
 
-  const visible = useMemo(() => events.filter((e) => !e.retracted), [events]);
+  const [density, setDensity] = useLocalPref<Density>('chronicleDensity', 'balanced');
+  const [showAuto, setShowAuto] = useLocalPref('chronicleAuto', true);
+  const visible = useMemo(() => events.filter((e) => !e.retracted && (showAuto || eventOrigin(e) !== 'recording')), [events, showAuto]);
+  const weights = useMemo(() => {
+    const degree = new Map<string, number>();
+    for (const l of links) for (const id of [l.fromId, l.toId]) degree.set(id, (degree.get(id) ?? 0) + 1);
+    return new Map(visible.map((e) => [e.id, eventWeight(e, degree.get(e.id) ?? 0)]));
+  }, [visible, links]);
   const pcs = characters.filter((c) => c.kind === 'pc');
 
   const matches = useMemo(() => {
@@ -74,23 +100,44 @@ export function ChronicleView() {
     );
   }, [visible, types, chars, query]);
 
+  const filtering = types.length > 0 || chars.length > 0 || query.trim() !== '';
+
+  /** Niveau de détail : les plus lourds par session, plus tout ce que cherchent les filtres et le voisinage de la sélection. */
+  const shown = useMemo(() => {
+    const keep = selectDensity(visible.map((e) => ({ id: e.id, group: e.sessionNo ?? 0, weight: weights.get(e.id) ?? 0 })), density, CAMPAIGN_DENSITY);
+    if (filtering) for (const id of matches) keep.add(id);
+    if (selected) {
+      keep.add(selected);
+      for (const l of links) if (l.fromId === selected || l.toId === selected) (keep.add(l.fromId), keep.add(l.toId));
+    }
+    return visible.filter((e) => keep.has(e.id));
+  }, [visible, weights, density, filtering, matches, selected, links]);
+
   const { axis, nodes, edges } = useMemo(() => {
-    const { axis, positions } = layout(visible);
-    const nodes: GraphNode[] = visible.map((e) => ({
-      id: e.id,
-      label: e.title,
-      color: eventTypeDef(e.type).color,
-      position: positions.get(e.id)!,
-      muted: !matches.has(e.id),
-      hint: `${eventTypeDef(e.type).label}, session ${e.sessionNo ?? 0}`,
-    }));
-    const ids = new Set(visible.map((e) => e.id));
+    const totals = new Map<number, number>();
+    for (const e of visible) totals.set(e.sessionNo ?? 0, (totals.get(e.sessionNo ?? 0) ?? 0) + 1);
+    const { axis, positions } = layout(shown, weights, totals);
+    const nodes: GraphNode[] = shown.map((e) => {
+      const w = weights.get(e.id) ?? 0.5;
+      return {
+        id: e.id,
+        label: e.title,
+        color: eventTypeDef(e.type).color,
+        position: positions.get(e.id)!,
+        muted: !matches.has(e.id),
+        hint: `${eventTypeDef(e.type).label}, session ${e.sessionNo ?? 0}${eventOrigin(e) === 'recording' ? ', déduit de l’enregistrement' : ''}`,
+        size: 0.65 + w * 0.7,
+        pinLabel: w >= 0.9,
+        quiet: w < 0.5,
+      };
+    });
+    const ids = new Set(shown.map((e) => e.id));
     const edges: GraphEdge[] = [
-      ...visible.map((e) => ({ from: `axis-${e.sessionNo ?? 0}`, to: e.id, color: '#c9a96a', kind: 'spoke' as const, opacity: matches.has(e.id) ? 0.16 : 0.04 })),
+      ...shown.map((e) => ({ from: `axis-${e.sessionNo ?? 0}`, to: e.id, color: '#c9a96a', kind: 'spoke' as const, opacity: matches.has(e.id) ? 0.06 + (weights.get(e.id) ?? 0) * 0.14 : 0.03 })),
       ...links.filter((l) => ids.has(l.fromId) && ids.has(l.toId)).map((l) => ({ from: l.fromId, to: l.toId, color: '#d8b3e0', opacity: matches.has(l.fromId) && matches.has(l.toId) ? 0.34 : 0.06 })),
     ];
     return { axis, nodes, edges };
-  }, [visible, links, matches]);
+  }, [visible, shown, weights, links, matches]);
 
   const selectedEvent = visible.find((e) => e.id === selected) ?? null;
   const sessions = Math.max(0, ...visible.map((e) => e.sessionNo ?? 0));
@@ -124,6 +171,17 @@ export function ChronicleView() {
           overlay={
             <div className={s.filters} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
               <Input placeholder="Rechercher dans la chronique…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Rechercher dans la chronique" />
+              <div className={s.chips}>
+                <Segmented label="Niveau de détail" value={density} options={DENSITIES} onChange={setDensity} />
+                <span className="ds-help">
+                  {shown.length}/{visible.length}
+                </span>
+              </div>
+              {events.some((e) => eventOrigin(e) === 'recording') && (
+                <Toggle checked={showAuto} onChange={setShowAuto}>
+                  Événements déduits des enregistrements
+                </Toggle>
+              )}
               <div className={s.chips}>
                 {NARRATIVE_TYPES.filter((t) => t.category === 'narrative' && t.type !== 'narrative.note').map((t) => (
                   <Chip key={t.type} color={t.color} active={types.includes(t.type)} onClick={() => setTypes((xs) => (xs.includes(t.type) ? xs.filter((x) => x !== t.type) : [...xs, t.type]))}>
@@ -217,7 +275,7 @@ export function ChronicleView() {
                     <span className="ds-grow">
                       <span className={s.recentTitle}>{e.title}</span>
                       <span className={s.recentMeta}>
-                        Session {e.sessionNo ?? 0} · noté par {e.author?.name ?? 'le système'}
+                        Session {e.sessionNo ?? 0} · {eventOrigin(e) === 'recording' ? 'déduit de l’enregistrement' : `noté par ${e.author?.name ?? 'le système'}`}
                         {e.visibility === 'gm_only' && isGm ? ' · secret' : ''}
                       </span>
                     </span>
